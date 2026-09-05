@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Python ${{ matrix.python-version }} quality
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install project and development tools
+        run: |
+          uv venv .venv
+          uv pip install --python .venv/bin/python -e ".[dev]"
+      - name: Ruff
+        run: .venv/bin/ruff check src tests examples/todo_cli
+      - name: Scoped mypy release-surface check
+        run: .venv/bin/mypy
+      - name: Unit, contract, integration and fault tests with coverage
+        env:
+          PYTHONPATH: src
+        run: |
+          .venv/bin/coverage run -m unittest discover -v
+          .venv/bin/coverage report
+      - name: Compile check
+        run: .venv/bin/python -m compileall -q src tests examples/todo_cli
+      - name: Offline evaluation suite
+        env:
+          PYTHONPATH: src
+        run: |
+          eval_home="${RUNNER_TEMP}/coding-agent-eval"
+          .venv/bin/python -m coding_agent.cli \
+            --agent-home "$eval_home" evaluate \
+            --suite examples/eval_suite.json \
+            --variant budgeted \
+            --output "$eval_home/report"

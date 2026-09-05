@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "final_state": "failed",
+  "transition_path": [
+    "created->preparing_workspace",
+    "preparing_workspace->building_context",
+    "building_context->calling_model",
+    "calling_model->failed"
+  ],
+  "tool_order": [],
+  "tool_status_counts": {},
+  "test_outcomes": [],
+  "metrics": {
+    "model_calls": 1,
+    "tool_calls": 0,
+    "tool_failures": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "test_runs": 0
+  },
+  "constraints": {
+    "source_unchanged": true,
+    "final_test_passed": null
+  },
+  "failure_kind": "invalid_script_response"
+}

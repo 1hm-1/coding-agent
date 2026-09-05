@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "production-coding-agent"
+version = "0.1.0"
+description = "A small, explicit, deterministic coding-agent runtime"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Coding Agent Project" }]
+dependencies = ["httpx>=0.27,<1"]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.9,<1", "coverage>=7,<8", "mypy>=1.10,<2"]
+
+[project.scripts]
+coding-agent = "coding_agent.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+# Keep the mandatory baseline stable across Ruff releases. Broader style rules can
+# be proposed separately; correctness checks must not change when a newer Ruff is used.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.mypy]
+python_version = "3.10"
+files = [
+    "src/coding_agent/command_profiles.py",
+    "src/coding_agent/evaluation.py",
+    "src/coding_agent/sandbox",
+]
+follow_imports = "skip"
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["src/coding_agent"]
+
+[tool.coverage.report]
+precision = 1
+show_missing = true
+skip_empty = true
+fail_under = 70

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "final_state": "completed",
+  "transition_path": [
+    "created->preparing_workspace",
+    "preparing_workspace->building_context",
+    "building_context->calling_model",
+    "calling_model->dispatching_tool",
+    "dispatching_tool->recording_observation",
+    "recording_observation->building_context",
+    "building_context->calling_model",
+    "calling_model->dispatching_tool",
+    "dispatching_tool->recording_observation",
+    "recording_observation->building_context",
+    "building_context->calling_model",
+    "calling_model->dispatching_tool",
+    "dispatching_tool->recording_observation",
+    "recording_observation->building_context",
+    "building_context->calling_model",
+    "calling_model->dispatching_tool",
+    "dispatching_tool->recording_observation",
+    "recording_observation->building_context",
+    "building_context->calling_model",
+    "calling_model->dispatching_tool",
+    "dispatching_tool->recording_observation",
+    "recording_observation->building_context",
+    "building_context->calling_model",
+    "calling_model->completed"
+  ],
+  "tool_order": [
+    "read_file",
+    "edit_file",
+    "restricted_test",
+    "edit_file",
+    "restricted_test"
+  ],
+  "tool_status_counts": {"success": 5},
+  "test_outcomes": [false, true],
+  "metrics": {
+    "model_calls": 6,
+    "tool_calls": 5,
+    "tool_failures": 0,
+    "input_tokens": 885,
+    "output_tokens": 84,
+    "test_runs": 2
+  },
+  "constraints": {
+    "source_unchanged": true,
+    "final_test_passed": true
+  },
+  "failure_kind": null
+}

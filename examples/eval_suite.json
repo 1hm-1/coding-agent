@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "schema_version": 1,
+      "case_id": "calculator-success",
+      "fixture": "fixture",
+      "task": "Fix add and run tests",
+      "backend": {
+        "kind": "scripted",
+        "fixture": "scripted_run.json"
+      },
+      "policy": {
+        "max_steps": 32
+      },
+      "required_facts": ["add must be fixed"],
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "kind": "changed_paths",
+          "allow": ["calculator.py"]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "calculator-task-fail",
+      "fixture": "fixture",
+      "task": "Make an impossible change",
+      "backend": {
+        "kind": "scripted",
+        "responses": [
+          {
+            "final": "No change was made."
+          }
+        ]
+      },
+      "oracles": [
+        {
+          "kind": "file",
+          "path": "calculator.py",
+          "contains": "return a * b"
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "calculator-structured-command",
+      "fixture": "fixture",
+      "task": "Run a structured workspace command and report the result",
+      "backend": {
+        "kind": "scripted",
+        "responses": [
+          {
+            "tool_calls": [
+              {
+                "id": "structured-command-1",
+                "name": "run_command",
+                "arguments": {
+                  "profile": "python_project",
+                  "argv": [
+                    "python3",
+                    "-c",
+                    "import pathlib; print(pathlib.Path('calculator.py').is_file())"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "final": "The structured command completed in the isolated workspace."
+          }
+        ]
+      },
+      "oracles": [
+        {
+          "kind": "file",
+          "path": "calculator.py",
+          "exists": true
+        },
+        {
+          "kind": "changed_paths",
+          "allow": []
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "calculator-runtime-fail",
+      "fixture": "fixture",
+      "task": "Read the repository",
+      "backend": {
+        "kind": "scripted",
+        "responses": [
+          {
+            "tool_calls": "invalid"
+          }
+        ]
+      },
+      "oracles": [
+        {
+          "kind": "file",
+          "path": "calculator.py",
+          "contains": "return a * b"
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "calculator-recovery",
+      "fixture": "fixture",
+      "task": "Read and answer",
+      "backend": {
+        "kind": "scripted",
+        "responses": [
+          {
+            "tool_calls": [
+              {
+                "id": "read-1",
+                "name": "read_file",
+                "arguments": {
+                  "path": "calculator.py"
+                }
+              }
+            ]
+          },
+          {
+            "final": "read"
+          }
+        ],
+        "fault_stage": "after_tool_result",
+        "resume": true
+      },
+      "oracles": [
+        {
+          "kind": "file",
+          "path": "calculator.py",
+          "exists": true
+        },
+        {
+          "kind": "result_schema",
+          "required": ["state", "session_id"]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "todo-recovery",
+      "fixture": "todo_cli",
+      "task": "Fix the empty input crash and run tests.",
+      "backend": {
+        "kind": "scripted",
+        "fixture": "todo_cli_scripted_run.json"
+      },
+      "policy": {
+        "max_steps": 64
+      },
+      "required_facts": ["blank input is ignored"],
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "kind": "file",
+          "path": "todo_parser.py",
+          "contains": "return None"
+        },
+        {
+          "kind": "changed_paths",
+          "allow": ["todo_parser.py"]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "todo-readonly-inspection",
+      "fixture": "todo_cli",
+      "task": "Inspect the parser and report its behavior.",
+      "backend": {
+        "kind": "scripted",
+        "responses": [
+          {
+            "tool_calls": [
+              {
+                "id": "todo-inspect-1",
+                "name": "read_file",
+                "arguments": {
+                  "path": "todo_parser.py"
+                }
+              }
+            ]
+          },
+          {
+            "final": "The parser accepts add and done commands and ignores unknown input."
+          }
+        ]
+      },
+      "oracles": [
+        {
+          "kind": "file",
+          "path": "todo_parser.py",
+          "exists": true
+        },
+        {
+          "kind": "changed_paths",
+          "allow": []
+        }
+      ]
+    }
+  ]
+}

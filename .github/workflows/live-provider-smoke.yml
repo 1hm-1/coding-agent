@@ -1,0 +1,59 @@
+name: Live provider smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: Provider adapter to exercise
+        required: true
+        default: openai-compatible
+        type: choice
+        options:
+          - openai-compatible
+          - anthropic
+      model:
+        description: Provider model identifier
+        required: true
+        type: string
+      base_url:
+        description: Optional provider-compatible base URL
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      CODING_AGENT_LIVE_PROVIDER: ${{ inputs.provider }}
+      CODING_AGENT_LIVE_MODEL: ${{ inputs.model }}
+      CODING_AGENT_LIVE_BASE_URL: ${{ inputs.base_url }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install project and development tools
+        run: |
+          uv venv .venv
+          uv pip install --python .venv/bin/python -e ".[dev]"
+      - name: Require the selected provider secret
+        shell: bash
+        run: |
+          case "$CODING_AGENT_LIVE_PROVIDER" in
+            openai-compatible) test -n "${OPENAI_API_KEY:-}" || { echo "OPENAI_API_KEY is required" >&2; exit 1; } ;;
+            anthropic) test -n "${ANTHROPIC_API_KEY:-}" || { echo "ANTHROPIC_API_KEY is required" >&2; exit 1; } ;;
+            *) echo "Unsupported provider" >&2; exit 1 ;;
+          esac
+      - name: Run explicit live adapter smoke
+        env:
+          PYTHONPATH: src
+        run: .venv/bin/python -m unittest tests.live_provider_smoke -v

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "final_state": "completed",
+  "transition_path": [
+    "created->preparing_workspace",
+    "preparing_workspace->building_context",
+    "building_context->calling_model",
+    "calling_model->dispatching_tool",
+    "dispatching_tool->recording_observation",
+    "recording_observation->building_context",
+    "building_context->calling_model",
+    "calling_model->completed"
+  ],
+  "tool_order": ["edit_file"],
+  "tool_status_counts": {"permission_denied": 1},
+  "test_outcomes": [],
+  "metrics": {
+    "model_calls": 2,
+    "tool_calls": 1,
+    "tool_failures": 1,
+    "input_tokens": 30,
+    "output_tokens": 10,
+    "test_runs": 0
+  },
+  "constraints": {
+    "source_unchanged": true,
+    "final_test_passed": null
+  },
+  "failure_kind": null
+}
