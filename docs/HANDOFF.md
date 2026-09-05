@@ -17,7 +17,8 @@ PYTHONPATH=src python3 -m unittest discover -v
 
 ## 2. 工作区事实
 
-- `/home/hmli/code/coding-agent` 已初始化独立 Git 工作区，但尚无提交历史或远程仓库；不要假设可以用历史恢复当前改动。
+- `/home/hmli/code/coding-agent` 已初始化独立 Git 工作区，初始提交 `69a16c6` 已推送到
+  `origin/main`；后续改动可以使用 Git 历史恢复。
 - `/home/hmli/code` 不是有效 Git 仓库。
 - `/home/hmli/code/hermes-agent` 是独立参考仓库，已有用户改动：
   - `agent/tool_dispatch_helpers.py`

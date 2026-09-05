@@ -76,6 +76,7 @@ coding-agent/
 │       └── harness.py                # 统一执行管线
 └── tests/
     ├── __init__.py                   # 保证 stdlib discovery 进入 tests
+    ├── native_support.py              # native sandbox capability gate（非测试模块）
     ├── golden/
     │   ├── bugfix_success.json
     │   ├── permission_denied.json

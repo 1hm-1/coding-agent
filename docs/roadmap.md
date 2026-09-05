@@ -255,8 +255,10 @@ inspection 或更广执行能力导致的 failure coverage。这是小型 script
 
 - 修正 `AGENTS.md` 与 `HANDOFF.md` 的旧里程碑描述，明确 M4.2 当前基线和 M5 条件门禁；
 - `evaluation.py` 将 `RESUME_STARTED` 纳入 `recovery_events`，并由测试断言恢复指标一致；
-- 初始化 Git 仓库并保留工作副本现状，不自动提交或改写用户历史；新增 GitHub Actions CI，
-  覆盖 Ruff、release-surface mypy、75 个默认测试、70% coverage、compile 和 offline eval；
+- 初始化 Git 仓库并保留工作副本现状，创建并推送初始提交；新增 GitHub Actions CI，覆盖
+  Ruff、release-surface mypy、75 个默认测试、native capability report、70% coverage、
+  compile 和 offline eval（native capability 可用时）；能力受限 runner 的 native-only case
+  显式 skip，且跳过 sandbox-dependent eval，不视为 native security suite 通过；
 - 新增显式、凭据门控的 `tests/live_provider_smoke.py` 与手动 workflow；本环境无凭据，未执行真实网络调用；
 - 固定 eval 扩展为 7 case/2 fixture，但仍明确标注为小型 scripted/offline 数据集，不能外推真实 Coding 任务或证明不需要 search/Git；
 - 记录 `runtime.py`、`persistence.py`、`evaluation.py` 的集中度风险，暂不进行无验收收益的拆分。

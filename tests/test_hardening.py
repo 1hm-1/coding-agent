@@ -22,6 +22,7 @@ from coding_agent.tools.builtin import build_builtin_registry
 from coding_agent.tools.harness import ToolHarness
 from coding_agent.trajectory import replay
 from coding_agent.workspace import WorkspaceManager, tree_fingerprint
+from tests.native_support import require_native_sandbox
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +34,7 @@ class EngineeringHardeningTest(unittest.TestCase):
         expected = json.loads((GOLDEN_ROOT / f"{name}.json").read_text(encoding="utf-8"))
         self.assertEqual(actual, expected)
 
+    @require_native_sandbox
     def test_success_trajectory_matches_semantic_golden(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = PROJECT_ROOT / "examples" / "fixture"
@@ -126,6 +128,7 @@ class EngineeringHardeningTest(unittest.TestCase):
                 application.replay_session(result.session_id).semantic_projection(),
             )
 
+    @require_native_sandbox
     def test_test_failure_is_observed_then_recovered_in_todo_demo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = PROJECT_ROOT / "examples" / "todo_cli"

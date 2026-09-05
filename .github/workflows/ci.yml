@@ -33,6 +33,17 @@ jobs:
         run: .venv/bin/ruff check src tests examples/todo_cli
       - name: Scoped mypy release-surface check
         run: .venv/bin/mypy
+      - name: Report native sandbox capability
+        id: sandbox
+        env:
+          PYTHONPATH: src
+        run: |
+          .venv/bin/python -c 'from coding_agent.sandbox import LinuxNamespaceExecutor; import json; print(json.dumps(LinuxNamespaceExecutor().capabilities().to_dict(), sort_keys=True))'
+          if .venv/bin/python -c 'from coding_agent.sandbox import LinuxNamespaceExecutor; import sys; sys.exit(0 if LinuxNamespaceExecutor().capabilities().available else 1)'; then
+            echo "native_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "native_available=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Unit, contract, integration and fault tests with coverage
         env:
           PYTHONPATH: src
@@ -45,6 +56,10 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
+          if [ "${{ steps.sandbox.outputs.native_available }}" != "true" ]; then
+            echo "Native sandbox capability unavailable; skipping sandbox-dependent offline eval."
+            exit 0
+          fi
           eval_home="${RUNNER_TEMP}/coding-agent-eval"
           .venv/bin/python -m coding_agent.cli \
             --agent-home "$eval_home" evaluate \

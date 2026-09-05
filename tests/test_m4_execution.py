@@ -21,6 +21,7 @@ from coding_agent.tools.base import ToolContext
 from coding_agent.tools.builtin import build_builtin_registry
 from coding_agent.tools.harness import ToolHarness
 from coding_agent.workspace import WorkspaceManager, tree_fingerprint
+from tests.native_support import require_native_sandbox
 
 
 PYTHON_EXECUTABLE = (
@@ -205,6 +206,7 @@ class StructuredExecutionTest(unittest.TestCase):
         self.assertEqual(result.data["exit_code"], 7)
         self.assertIsNone(result.error)
 
+    @require_native_sandbox
     def test_native_command_uses_direct_argv_and_m4_1_boundary(self) -> None:
         executor = LinuxNamespaceExecutor()
         capabilities = executor.capabilities()

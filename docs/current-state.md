@@ -86,7 +86,7 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 当前测试数量：75；2026-09-05 全部通过；`tests/live_provider_smoke.py` 为凭据门控的显式测试，不计入默认 discovery。
+- 当前测试数量：75；在当前 capability probe 成功的环境中全部通过；`tests/live_provider_smoke.py` 为凭据门控的显式测试，不计入默认 discovery。能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。
 - calculator smoke 产生 48 条连续事件；todo fixture 产生 72 条连续事件并保持 `false → true`。
 - Ruff 强制基线 `E4/E7/E9/F` 仍显式写入 `pyproject.toml`；已使用 `uv` 安装 Ruff 0.16.6，`ruff check src tests examples/todo_cli` 通过。
@@ -107,7 +107,8 @@
   `invalid_script_response` 和 `oracle_failure`，暂无新增 search/Git/更广执行能力的证据。
 - Release/Evidence Hardening 已加入 `RESUME_STARTED` recovery event、70% coverage 门槛（本次
   75 个默认测试实测 73.3%）、release surface 的 mypy 检查、GitHub Actions CI 和凭据门控的
-  live provider smoke。
+  live provider smoke；CI 会先报告 native capability，能力不足时 skip native-only case 和
+  sandbox-dependent eval，不把 fail-closed 结果当作 native security 通过。
 
 ## 2. 当前调用链
 
@@ -195,10 +196,14 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 7. 自研 JSON Schema 只支持内置工具使用的子集，不是完整 Draft 实现。
 8. `COMPLETED` 表示 Runtime 正常收到 final answer，不代表任务成功；M3 Eval 已用 oracle 独立评分，但当前固定 suite 只提供离线描述性结果，不代表生产成功率。
 9. 当前只支持 Linux/POSIX 进程组终止逻辑；Windows/macOS 等价 sandbox 不属于现阶段验收范围。
-10. 项目已初始化 Git 仓库并加入 GitHub Actions CI 配置，但当前工作副本尚无 remote、提交历史或已托管 CI 运行记录；评估器仍只对每个 isolated fixture 内部初始化的 Git baseline 执行 changed-path diff。
+10. 项目已初始化 Git 仓库，初始提交 `69a16c6` 已推送到 `origin/main`，并加入 GitHub
+    Actions CI 配置；当前仍没有已托管 CI 运行记录，评估器只对每个 isolated fixture 内部
+    初始化的 Git baseline 执行 changed-path diff。
 11. 当前 coverage 是 statement coverage，发布门槛为 70%；coverage 不等同于安全或任务成功率证明。
 12. mypy 当前只对 `command_profiles.py`、`evaluation.py` 和 `sandbox/` release surface 运行；全仓历史代码尚未达到 strict 类型检查标准。
 13. live provider smoke 已提供手动 workflow，但本环境无 Provider 凭据，因此未执行真实网络调用。
+   GitHub-hosted runner 的 native capability 也可能不足；native-only case 会显式 skip，相关
+   sandbox-dependent eval 也会跳过，不能以此替代具备能力环境的 M4.1/M4.2 安全证据。
 14. `runtime.py`、`persistence.py`、`evaluation.py` 仍是高集中度大模块；本轮只记录维护风险，不做无验收收益的拆分重构。
 15. 7-case、两个 fixture 的评测比单 calculator suite 更有覆盖，但仍是小型 scripted/offline 数据集，不能代表真实 Coding 任务，也不能证明不需要 search/Git。
 

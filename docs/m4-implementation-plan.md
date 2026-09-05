@@ -251,7 +251,9 @@ crash recovery；M4.1 的 7 个 sandbox tests 继续通过。固定 eval suite �
 ## 9. 部署和 CI 前置
 
 - CI runner 明确安装并锁定 sandbox backend；
-- capability test 不满足时安全 suite 失败，不标 skip 后仍声称 M4 完成；
+- CI 必须先报告 capability；native security suite 只能在 capability 满足的 runner 上作为
+  安全证据，能力不足时 native-only tests 显式 skip，portable/fail-closed CI 不能冒充 native
+  security suite 通过；
 - 普通 unit tests 可使用 fake executor，无需容器；
 - integration/security job 独立执行并限制并发；
 - base image 构建、SBOM、漏洞扫描和 digest promotion 有记录；

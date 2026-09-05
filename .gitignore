@@ -8,4 +8,5 @@ htmlcov/
 .venv/
 dist/
 build/
+*.egg-info/
 .agent-data/

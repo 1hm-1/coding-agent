@@ -9,9 +9,11 @@ from coding_agent.application import AgentApplication
 from coding_agent.domain import EventType, RunPolicy, RuntimeState
 from coding_agent.models.scripted import ScriptedBackend
 from coding_agent.workspace import tree_fingerprint
+from tests.native_support import require_native_sandbox
 
 
 class VerticalSliceTest(unittest.TestCase):
+    @require_native_sandbox
     def test_read_edit_test_final_isolated_and_replayable(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

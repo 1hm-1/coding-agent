@@ -28,7 +28,8 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前验收基线为 75 个测试全部通过；live provider smoke 需显式凭据和手动触发。
+当前验收基线为 75 个测试；在具备 native sandbox capability 的环境中全部通过，能力受限
+环境中 native-only case 会显式 skip。live provider smoke 需显式凭据和手动触发。
 
 静态检查（安装 Ruff 开发依赖后）：
 
@@ -130,9 +131,11 @@ session ID/trace path 等随机执行标识；latency 作为实际测量值保�
 | Parallelism | 两个 session 同时执行 | mount、PID、stdout 和 workspace 不串线 |
 | Observability | execution id、identity、limits、cleanup 进入 ToolResult/event | secret、完整 host path、environment value 不进入 public projection |
 
-M4.1 native security tests 需要 Linux namespace/mount capability；当前环境 probe 成功。
-在不具备能力的平台，普通 unit tests 可以使用 `FakeSandboxExecutor`，但不能把 fail-closed
-结果描述为通过了 native security suite。
+M4.1 native security tests 需要 Linux namespace/mount capability；测试会通过统一 capability
+gate 在能力不足时显式 skip native-only case。普通语义测试仍然运行，且默认 executor 仍然
+fail closed，不会回退到宿主 `subprocess` 或把 fake 结果当作 native 安全证据。具有能力的
+Linux 环境必须完整运行 native security suite；能力受限的 hosted runner 只能证明 portable
+语义和 fail-closed 路径。
 
 ## 9. M4.2 Structured execution 矩阵
 
@@ -172,10 +175,14 @@ lint
 typed-release-surface
   └─ mypy (command_profiles/evaluation/sandbox)
 unit-contract
-  └─ coverage run unittest discover + coverage report (fail-under=70)
+  └─ capability report + coverage run unittest discover + coverage report (fail-under=70)
 golden-smoke
-  └─ compileall + offline eval suite
+  └─ compileall + offline eval suite (native capability available时)
 ```
+
+GitHub-hosted runner 如果 capability report 显示 native namespace 不可用，7 个 native-only
+测试会显式 skip；这不是 native security suite 的通过证明。要取得 M4.1/M4.2 native 证据，
+应在具备所需 Linux namespace/mount capability 的 self-hosted runner 或本地环境运行。
 
 `.github/workflows/live-provider-smoke.yml` 只允许手动触发，先验证所选 Provider 的 secret
 存在，再运行 `tests/live_provider_smoke.py`；它不会把真实凭据带入普通 PR。当前环境没有

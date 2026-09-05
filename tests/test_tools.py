@@ -10,6 +10,7 @@ from coding_agent.tools.base import ToolContext, ToolDefinition, ToolOutcome, To
 from coding_agent.tools.builtin import build_builtin_registry
 from coding_agent.tools.harness import ToolHarness
 from coding_agent.workspace import WorkspaceManager
+from tests.native_support import require_native_sandbox
 
 
 class ToolHarnessTest(unittest.TestCase):
@@ -147,6 +148,7 @@ class ToolHarnessTest(unittest.TestCase):
         self.assertIs(result.status, ToolStatus.NOT_FOUND)
         self.assertEqual(result.error["kind"], "unknown_tool")
 
+    @require_native_sandbox
     def test_restricted_test_enforces_profile_timeout(self) -> None:
         profiles = TestProfileRegistry()
         profiles.register(
@@ -173,6 +175,7 @@ class ToolHarnessTest(unittest.TestCase):
         self.assertFalse(result.data["passed"])
         self.assertTrue(result.data["process_group_terminated"])
 
+    @require_native_sandbox
     def test_restricted_test_reports_test_failure_as_observation(self) -> None:
         (self.guard.root / "test_failure.py").write_text(
             "import unittest\n\n"

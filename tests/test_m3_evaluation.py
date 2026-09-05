@@ -20,6 +20,7 @@ from coding_agent.context import (
     ModelCapability,
     ModelCapabilityRegistry,
 )
+from tests.native_support import require_native_sandbox
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -129,6 +130,7 @@ class EvaluationHarnessTest(unittest.TestCase):
                 }
             )
 
+    @require_native_sandbox
     def test_runner_separates_task_success_from_runtime_completion(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             report = EvaluationRunner(

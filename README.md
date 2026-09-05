@@ -73,7 +73,7 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 
 ## Release/Evidence Hardening 已实现
 
-- Git 工作区已初始化，并提供 GitHub Actions 的离线 CI：Ruff、release-surface mypy、75 个默认测试、70% statement coverage、compile 检查和固定离线 eval；当前没有自动创建提交或远程仓库。
+- Git 工作区已初始化并推送到 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、release-surface mypy、75 个默认测试、native capability report、70% statement coverage、compile 检查和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
 - `tests/live_provider_smoke.py` 和手动 workflow 提供显式凭据门控的真实 Provider smoke；无凭据时不发起网络请求。
 - recovery 指标将 `RESUME_STARTED` 计为 recovery event；当前 todo/calculator 双 fixture eval 的基础设施失败为 0，但该样本仍不足以证明不需要 search 或 Git 能力。
 
