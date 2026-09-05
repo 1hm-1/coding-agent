@@ -195,7 +195,10 @@ def _suite_with_backend_override(
     cases: list[EvalCase] = []
     for case in suite.cases:
         raw = case.to_dict()
-        raw["backend"] = {**case.backend, **override}
+        backend = dict(case.backend)
+        backend.pop("fixture", None)
+        backend.pop("responses", None)
+        raw["backend"] = {**backend, **override}
         cases.append(EvalCase.from_dict(raw))
     return EvalSuite(schema_version=suite.schema_version, cases=tuple(cases))
 

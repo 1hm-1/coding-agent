@@ -143,6 +143,8 @@ class EvaluationHarnessTest(unittest.TestCase):
         self.assertTrue(
             all(case.backend["kind"] == "openai-compatible" for case in effective.cases)
         )
+        self.assertNotIn("fixture", effective.cases[0].backend)
+        self.assertNotIn("responses", effective.cases[0].backend)
         self.assertEqual(effective.cases[0].backend["thinking"], "disabled")
         self.assertEqual(effective.cases[3].backend["fault_stage"], "after_tool_result")
         self.assertTrue(effective.cases[3].backend["resume"])
