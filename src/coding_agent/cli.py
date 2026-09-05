@@ -104,6 +104,20 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--output", help="Evaluation output directory.")
     eval_parser.add_argument("--repetitions", type=int, default=1)
     eval_parser.add_argument(
+        "--provider",
+        choices=("openai-compatible", "anthropic"),
+        help="Override each case backend with a real provider for live baseline runs.",
+    )
+    eval_parser.add_argument("--model", help="Model used with --provider.")
+    eval_parser.add_argument("--base-url")
+    eval_parser.add_argument("--api-key-env")
+    eval_parser.add_argument(
+        "--thinking",
+        choices=("disabled",),
+        help="Disable provider thinking mode (required for DeepSeek tool loops currently).",
+    )
+    eval_parser.add_argument("--timeout", type=float, default=60.0)
+    eval_parser.add_argument(
         "--variant",
         choices=("passthrough", "budgeted", "compressed"),
         default="budgeted",
@@ -124,11 +138,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             arguments.agent_home,
             suite_root=arguments.suite_root or manifest_root,
         )
+        backend_override = _evaluation_backend_override(arguments)
         if arguments.ab:
             result = runner.run_ab(
                 suite,
                 repetitions=arguments.repetitions,
                 output_dir=arguments.output,
+                backend_override=backend_override,
             )
             serializable = {
                 key: (value.to_dict() if isinstance(value, EvaluationReport) else value)
@@ -140,6 +156,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 repetitions=arguments.repetitions,
                 variant=arguments.variant,
                 output_dir=arguments.output,
+                backend_override=backend_override,
             )
             serializable = {
                 **report.to_dict(),
@@ -301,6 +318,40 @@ def _provider_backend(
         api_key_env=api_key_env or "ANTHROPIC_API_KEY",
         timeout=timeout,
     )
+
+
+def _evaluation_backend_override(arguments: argparse.Namespace) -> dict[str, object] | None:
+    provider = arguments.provider
+    provider_options = (
+        arguments.model,
+        arguments.base_url,
+        arguments.api_key_env,
+        arguments.thinking,
+    )
+    if provider is None:
+        if any(option is not None for option in provider_options):
+            raise ValueError("evaluation provider options require --provider")
+        return None
+    if not arguments.model:
+        raise ValueError("evaluation provider override requires --model")
+    if provider == "anthropic" and arguments.thinking is not None:
+        raise ValueError("--thinking is only supported for the openai-compatible provider")
+    override: dict[str, object] = {
+        "kind": provider,
+        "model": arguments.model,
+        "timeout": arguments.timeout,
+        "base_url": arguments.base_url
+        or (
+            "https://api.openai.com/v1"
+            if provider == "openai-compatible"
+            else "https://api.anthropic.com/v1"
+        ),
+        "api_key_env": arguments.api_key_env
+        or ("OPENAI_API_KEY" if provider == "openai-compatible" else "ANTHROPIC_API_KEY"),
+    }
+    if arguments.thinking is not None:
+        override["thinking"] = arguments.thinking
+    return override
 
 
 if __name__ == "__main__":

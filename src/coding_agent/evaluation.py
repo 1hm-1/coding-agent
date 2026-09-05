@@ -180,6 +180,26 @@ class EvalSuite:
         }
 
 
+def _suite_with_backend_override(
+    suite: EvalSuite,
+    backend_override: Mapping[str, Any] | None,
+) -> EvalSuite:
+    if backend_override is None:
+        return suite
+    override = dict(backend_override)
+    kind = str(override.get("kind", ""))
+    if kind not in {"openai-compatible", "anthropic"}:
+        raise EvalValidationError("backend override must select a real provider")
+    if not str(override.get("model", "")).strip():
+        raise EvalValidationError("backend override requires a model")
+    cases: list[EvalCase] = []
+    for case in suite.cases:
+        raw = case.to_dict()
+        raw["backend"] = {**case.backend, **override}
+        cases.append(EvalCase.from_dict(raw))
+    return EvalSuite(schema_version=suite.schema_version, cases=tuple(cases))
+
+
 def load_eval_suite(path: str | Path) -> tuple[EvalSuite, Path]:
     manifest_path = Path(path).resolve(strict=True)
     if manifest_path.is_dir():
@@ -462,16 +482,18 @@ class EvaluationRunner:
         variant: str = "budgeted",
         output_dir: str | Path | None = None,
         evaluation_id: str | None = None,
+        backend_override: Mapping[str, Any] | None = None,
     ) -> EvaluationReport:
         if repetitions <= 0:
             raise ValueError("repetitions must be positive")
         if variant not in {"passthrough", "budgeted", "compressed"}:
             raise ValueError("variant must be passthrough, budgeted, or compressed")
+        effective_suite = _suite_with_backend_override(suite, backend_override)
         root = (Path(output_dir).resolve() if output_dir is not None else self.agent_home / "evals" / (evaluation_id or str(uuid.uuid4())))
         root.mkdir(parents=True, exist_ok=True)
         suite_root = self.suite_root or Path.cwd().resolve()
         runs: list[EvalRun] = []
-        for case in suite.cases:
+        for case in effective_suite.cases:
             for repetition in range(1, repetitions + 1):
                 runs.append(
                     self._run_case(
@@ -482,8 +504,12 @@ class EvaluationRunner:
                         root=root,
                     )
                 )
-        self._write_outputs(suite, variant, root, runs)
-        return EvaluationReport(root, self._aggregate(suite, variant, runs), tuple(runs))
+        self._write_outputs(effective_suite, variant, root, runs)
+        return EvaluationReport(
+            root,
+            self._aggregate(effective_suite, variant, runs),
+            tuple(runs),
+        )
 
     def run_ab(
         self,
@@ -492,6 +518,7 @@ class EvaluationRunner:
         repetitions: int = 1,
         variants: Sequence[str] = ("passthrough", "budgeted"),
         output_dir: str | Path | None = None,
+        backend_override: Mapping[str, Any] | None = None,
     ) -> dict[str, EvaluationReport | dict[str, Any]]:
         chosen = tuple(variants)
         if len(chosen) != 2 or len(set(chosen)) != 2:
@@ -506,6 +533,7 @@ class EvaluationRunner:
                 repetitions=repetitions,
                 variant=variant,
                 output_dir=base / variant,
+                backend_override=backend_override,
             )
         first = reports[chosen[0]]
         second = reports[chosen[1]]

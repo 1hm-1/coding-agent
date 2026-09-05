@@ -11,6 +11,7 @@ from coding_agent.evaluation import (
     EvaluationRunner,
     EvalCase,
     EvalSuite,
+    _suite_with_backend_override,
     load_eval_suite,
 )
 from coding_agent.application import AgentApplication
@@ -129,6 +130,22 @@ class EvaluationHarnessTest(unittest.TestCase):
                     "unknown": True,
                 }
             )
+
+        effective = _suite_with_backend_override(
+            self.suite(),
+            {
+                "kind": "openai-compatible",
+                "model": "deepseek-v4-flash",
+                "base_url": "https://api.deepseek.com",
+                "thinking": "disabled",
+            },
+        )
+        self.assertTrue(
+            all(case.backend["kind"] == "openai-compatible" for case in effective.cases)
+        )
+        self.assertEqual(effective.cases[0].backend["thinking"], "disabled")
+        self.assertEqual(effective.cases[3].backend["fault_stage"], "after_tool_result")
+        self.assertTrue(effective.cases[3].backend["resume"])
 
     @require_native_sandbox
     def test_runner_separates_task_success_from_runtime_completion(self) -> None:

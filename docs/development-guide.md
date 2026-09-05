@@ -185,6 +185,21 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 评测器每个 case/repetition 使用新的 SQLite、session 和 workspace；报告中的
 `report.json` 是去除随机执行标识的比较投影，`runs.jsonl` 保留 trace 定位信息。
 
+完成 live smoke 后，可用 provider override 对同一套 13-case fixture/oracle 做真实模型
+基线；这不会修改仓库中的 scripted manifest：
+
+```bash
+PYTHONPATH=src .venv/bin/python -m coding_agent.cli \
+  --agent-home /tmp/coding-agent-deepseek-eval \
+  evaluate --suite examples/eval_suite.json \
+  --provider openai-compatible --model deepseek-v4-flash \
+  --base-url https://api.deepseek.com --thinking disabled \
+  --repetitions 3 --variant budgeted \
+  --output /tmp/coding-agent-deepseek-eval/report
+```
+
+provider override 会出现在 `manifest.snapshot.json`；API key 只从环境变量读取。
+
 ## 6. 代码与数据约定
 
 - 兼容 Python 3.10；不要无意使用更高版本语法或 stdlib API。

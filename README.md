@@ -113,6 +113,21 @@ PYTHONPATH=src python3 -m coding_agent.cli \
   replay --session-id <session-id>
 ```
 
+使用真实 Provider 覆盖固定 Eval 中每个 case 的 scripted backend（不会修改固定 manifest）：
+
+```bash
+PYTHONPATH=src .venv/bin/python -m coding_agent.cli \
+  --agent-home /tmp/coding-agent-deepseek-eval \
+  evaluate --suite examples/eval_suite.json \
+  --provider openai-compatible --model deepseek-v4-flash \
+  --base-url https://api.deepseek.com --thinking disabled \
+  --repetitions 3 --variant budgeted \
+  --output /tmp/coding-agent-deepseek-eval/report
+```
+
+该命令读取 `OPENAI_API_KEY`，并将实际 provider 配置写入输出目录的 manifest snapshot；
+密钥本身不会写入报告、SQLite 或 trace。
+
 若 JSONL 导出被删除，可从 SQLite 重建：
 
 ```bash

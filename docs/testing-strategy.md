@@ -187,5 +187,5 @@ GitHub-hosted runner 如果 capability report 显示 native namespace 不可用�
 应在具备所需 Linux namespace/mount capability 的 self-hosted runner 或本地环境运行。
 
 `.github/workflows/live-provider-smoke.yml` 只允许手动触发，先验证所选 Provider 的 secret
-存在，再运行 `tests/live_provider_smoke.py`；它不会把真实凭据带入普通 PR。当前环境没有
-Provider 凭据，因此该 smoke 尚未执行。
+存在，再运行 `tests/live_provider_smoke.py`；它不会把真实凭据带入普通 PR。用户已在本地
+以 DeepSeek 完成一次 smoke，多次 live baseline 仍不属于默认 CI。

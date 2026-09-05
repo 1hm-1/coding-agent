@@ -31,7 +31,7 @@
 | Agent Harness | [`architecture.md`](./architecture.md) §9、[`contracts.md`](./contracts.md) §4 | 已实现 | 讲 schema、权限、deadline、归一错误和 observation |
 | 工具慢、阻塞与 timeout | [`current-state.md`](./current-state.md)、[`module-design.md`](./module-design.md) | 部分实现 | 当前同步调用且有 deadline；不要声称已有 callback/async cancellation |
 | 任务中断恢复 | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §4 | 已实现 | 只宣称状态边界中断和定义 crash window 的可解释恢复 |
-| 两类模型后端统一 | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §5 | 已实现 | 两个 adapter 通过离线 contract；未宣称已执行 live provider |
+| 两类模型后端统一 | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §5 | 已实现 | 两个 adapter 通过离线 contract，另有一次 DeepSeek opt-in smoke；未宣称多次 live baseline 或生产成功率 |
 | retry/fallback | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §5 | 已实现 | 只对分类基础设施错误；质量差不自动 fallback |
 | 重复工具调用/幂等 | [`contracts.md`](./contracts.md)、M2.2 recovery rules | 部分实现 | 已确认结果不重复；未知写操作需 resolution，不能宣称 exactly-once |
 | 上下文压缩与信息丢失 | [`architecture.md`](./architecture.md) §13、[`roadmap.md`](./roadmap.md) §7 | M3 已实现 | 不编造 Token 降幅；用 lineage、required-fact retention 和 task success A/B |

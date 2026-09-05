@@ -136,14 +136,16 @@ resolution、lease takeover 与 source/workspace resume rejection。
 
 状态：已完成（2026-09-05）。OpenAI-compatible 与 Anthropic adapter、统一 HTTP
 错误分类、持久 retry/backoff、受控 fallback 和脱敏已通过离线 contract tests。
-已检查 `OPENAI_API_KEY` 与 `ANTHROPIC_API_KEY` 均未配置，因此 live smoke 未执行。
+M2.3 完成时尚未配置 Provider 凭据；后续用户已使用 DeepSeek 完成一次 opt-in live smoke，
+多次真实 baseline 不属于 M2.3 的离线 contract 验收。
 
 ## 7. M3：Context Engineering and Evaluation（已完成）
 
 详细接口、数据结构、指标公式和 checklist 见 [`m3-implementation-plan.md`](./m3-implementation-plan.md)。
 
 M3 已按三个可独立验收的子阶段完成；实现保留在单文件模块中，避免无必要的
-package 搬迁。真实 Provider live smoke 未执行，M3 证据使用离线 ScriptedBackend。
+package 搬迁。M3 固定证据仍使用离线 ScriptedBackend；后续真实 Provider smoke 不改变该
+离线验收边界。
 
 ### 7.1 M3.1 Context Budget Baseline（已完成）
 
@@ -250,8 +252,9 @@ compression；compressed variant 中 long-history case 成功记录压缩 Token�
 或 Git。
 
 Passthrough/budgeted 单变量 A/B 各 13 个 paired runs，task success、Runtime completion、
-source invariant、工具调用和 Token 没有差异；单次 latency 波动不作结论。真实 Provider
-smoke 因没有凭据显式 skip，详细记录见 [`m5-eval-expansion.md`](./m5-eval-expansion.md)。
+source invariant、工具调用和 Token 没有差异；单次 latency 波动不作结论。DeepSeek 单次
+真实 Provider smoke 已通过，多次 live baseline 尚待执行；详细记录见
+[`m5-eval-expansion.md`](./m5-eval-expansion.md)。
 
 决策：本轮不新增 M5 工具，M5 保持条件阶段。只有新增真实任务及程序化 oracle，明确证明
 现有 `read_file`/`edit_file`/`restricted_test`/`run_command` 无法覆盖目标任务时，才重新
@@ -268,7 +271,7 @@ smoke 因没有凭据显式 skip，详细记录见 [`m5-eval-expansion.md`](./m5
   security suite 通过；
 - 新增显式、凭据门控的 `tests/live_provider_smoke.py` 与手动 workflow；DeepSeek 首次 live
   请求因过小的 smoke 输出预算得到空 `content`，现已增加预算并支持 `thinking: disabled`，
-  待重新运行确认；
+  用户已重新运行确认成功；另提供 provider override 运行真实 Eval baseline；
 - 固定 eval 扩展为 13 case/6 fixture，覆盖跨文件、多文件恢复、范围约束和长历史 compression；仍明确标注为小型 scripted/offline 数据集，不能外推真实 Coding 任务或证明不需要 search/Git；
 - 记录 `runtime.py`、`persistence.py`、`evaluation.py` 的集中度风险，暂不进行无验收收益的拆分。
 

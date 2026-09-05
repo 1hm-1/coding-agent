@@ -204,10 +204,10 @@ long-history-compression 成功产生压缩输入/输出 Token 记录，且没�
   默认关闭 thinking。
 
 当前仍未把 `reasoning_content` 写入消息、SQLite 或 trace，也没有声称支持 DeepSeek thinking
-模式下的多轮工具回传。重新执行成功的 DeepSeek smoke 后，才算完成单次 live adapter
-验证；在此之前没有把本次失败当作工具缺口证据。
+模式下的多轮工具回传。用户随后以 `thinking: disabled` 重新执行，单次 DeepSeek live adapter
+smoke 已成功；多次 live baseline 仍待执行，且本次 smoke 失败不作为工具缺口证据。
 
-有凭据后，应先单独运行 adapter smoke，再在固定 suite 上做至少多次重复，并记录：
+单次 smoke 已通过；下一步是在固定 suite 上做至少多次重复，并记录：
 
 - task success；
 - Runtime completion；
@@ -218,6 +218,20 @@ long-history-compression 成功产生压缩输入/输出 Token 记录，且没�
 - recovery；
 - source invariant；
 - provider/model/base URL 及 suite 版本。
+
+为避免复制或改写 13-case scripted manifest，CLI 支持 provider override。DeepSeek 基线命令为：
+
+    PYTHONPATH=src .venv/bin/python -m coding_agent.cli \
+      --agent-home /tmp/coding-agent-deepseek-eval \
+      evaluate --suite examples/eval_suite.json \
+      --provider openai-compatible --model deepseek-v4-flash \
+      --base-url https://api.deepseek.com --thinking disabled \
+      --repetitions 3 --variant budgeted \
+      --output /tmp/coding-agent-deepseek-eval/report
+
+override 只替换每个 case 的 model backend；fixture、程序化 oracle、fault/resume 字段和
+报告输出仍来自固定 suite。输出的 `manifest.snapshot.json` 会记录实际 provider 配置，
+不会记录 API key。
 
 ## 7. M5 工具扩展决策
 

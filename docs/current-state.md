@@ -81,6 +81,9 @@
 - 超过 `0.85 * input_budget` 才尝试有界 compression，目标为 `0.65 * input_budget`；schema/required-fact 校验失败会记录 `compression_rejected` 并保留原始历史。
 - Repository snapshot 只从 isolated workspace 构建，包含有上限文件列表、Git diff summary、已读文件 hash、workspace revision 和最近测试摘要。
 - `evaluate` 读取严格版本化 JSON suite，按 case/repetition 创建新 workspace，运行可信 test/file/diff/result oracle，分别统计 task success 与 Runtime completion。
+- `evaluate` 支持显式 provider override，在不修改固定 scripted manifest 的情况下对同一
+  组 fixture/oracle 运行真实模型 baseline；实际 backend 配置会写入 manifest snapshot，
+  secret 仍只从环境变量读取。
 - Eval 报告包含 calls、input/output/compression tokens、run/model/tool/test/compression latency、failure taxonomy、recovery、permission 和 source-invariant 指标；`report.json` 的比较投影排除随机 session ID/trace path。
 
 ### Hardening evidence
@@ -93,7 +96,7 @@
 - calculator smoke 产生 48 条连续事件；todo fixture 产生 72 条连续事件并保持 `false → true`。
 - Ruff 强制基线 `E4/E7/E9/F` 仍显式写入 `pyproject.toml`；已使用 `uv` 安装 Ruff 0.16.6，`ruff check src tests examples/todo_cli` 通过。
 - M2.2 recovery tests 覆盖 interrupt 后复用已保存模型响应、四个工具 crash window、edit hash reconciliation、三种人工 resolution、lease takeover 和 source/workspace resume rejection。
-- M2.3 adapter tests 覆盖 OpenAI-compatible/Anthropic text、tool call、usage、Unicode、HTTP error、protocol error、retry/fallback 和 secret 不落盘；无 provider 凭据，因此未执行 live API smoke。
+- M2.3 adapter tests 覆盖 OpenAI-compatible/Anthropic text、tool call、usage、Unicode、HTTP error、protocol error、retry/fallback 和 secret 不落盘；用户已用 DeepSeek 完成一次 opt-in live API smoke，多次 baseline 仍待执行。
 - M3.1/M3.2 tests 覆盖 exact/fallback counter、unknown model、section boundary/hard retention、deterministic manifest、summary round-trip、stale invalidation、required-fact rejection、compression fallback 和 raw-event preservation。
 - M3.3 tests 覆盖 strict manifest/containment、fresh repetition、test/file/diff/result oracle、eval infrastructure failure 分类、task/runtime 分离、recovery suite、指标聚合和 paired A/B。
 - M4.1 tests 覆盖 capability fail-closed、namespace workspace/rootfs/secret/network/symlink/proc/device
@@ -111,8 +114,8 @@
   约束和长历史 compression；compressed variant 的 long-history case 记录
   `compression_input_tokens=220`、`compression_output_tokens=70`，没有 compression rejection。
 - Passthrough/budgeted 单变量 A/B 各 13 个 paired runs，task success、Runtime completion、
-  source invariant、tool calls 和 Token 完全一致；单次 latency 差异不作为结论。真实 Provider
-  smoke 因没有 provider/model/key 配置而显式 skip，尚无 search/Git 新工具证据。
+  source invariant、tool calls 和 Token 完全一致；单次 latency 差异不作为结论。用户已完成
+  一次 DeepSeek live smoke，但尚无多次真实任务 failure coverage，仍无 search/Git 新工具证据。
 - Release/Evidence Hardening 已加入 `RESUME_STARTED` recovery event、70% coverage 门槛（本次
   75 个默认测试实测 73.3%）、release surface 的 mypy 检查、GitHub Actions CI、calculator/todo
   scripted smoke 和凭据门控的 live provider smoke；CI 会先报告 native capability，能力不足
@@ -188,7 +191,8 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 - approved network 的显式 approval UI/授权通道、OCI/container image backend；
 - M5 条件能力扩展（search、Git inspection、patch/edit 增强或依赖准备）尚未批准；当前
   固定 eval 没有显示现有工具覆盖率瓶颈；
-- 真实 Provider smoke 尚未在本环境执行；已提供手动、凭据门控的 adapter smoke workflow。
+- 真实 Provider 多次 baseline 尚未执行；用户已完成一次 DeepSeek adapter smoke，并提供了手动、
+  凭据门控的 smoke workflow。
 - 多 Agent、UI、消息平台、Skill 或 RAG。
 
 ## 5. 已知限制与技术债
