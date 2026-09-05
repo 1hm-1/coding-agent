@@ -5,7 +5,7 @@ from typing import Any, Mapping
 
 from coding_agent.domain import BackendError, Message, ModelRequest, ModelResponse, ToolCall, Usage
 from coding_agent.models.http import post_json, secret_from_environment
-from coding_agent.models.errors import safe_provider_metadata
+from coding_agent.models.errors import safe_provider_metadata, usage_token_count
 
 
 class OpenAICompatibleBackend:
@@ -98,15 +98,17 @@ class OpenAICompatibleBackend:
         usage_raw = body.get("usage", {})
         if not isinstance(usage_raw, Mapping):
             raise BackendError("OpenAI usage is malformed", kind="protocol_error")
+        input_tokens = usage_raw.get("prompt_tokens", usage_raw.get("input_tokens", 0))
+        output_tokens = usage_raw.get(
+            "completion_tokens", usage_raw.get("output_tokens", 0)
+        )
         finish_reason = str(choice.get("finish_reason") or "stop")
         return ModelResponse(
             text=text,
             tool_calls=calls,
             usage=Usage(
-                input_tokens=int(usage_raw.get("prompt_tokens", usage_raw.get("input_tokens", 0))),
-                output_tokens=int(
-                    usage_raw.get("completion_tokens", usage_raw.get("output_tokens", 0))
-                ),
+                input_tokens=usage_token_count(input_tokens, "OpenAI input token usage"),
+                output_tokens=usage_token_count(output_tokens, "OpenAI output token usage"),
             ),
             finish_reason=finish_reason,
             provider_metadata=safe_provider_metadata(

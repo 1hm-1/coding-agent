@@ -728,37 +728,26 @@ class AgentRuntime:
         try:
             response = self.backend.complete(request)
         except BackendError as exc:
-            self._commit_event(
-                EventType.MODEL_CALL_FAILED,
-                self.session.state,
-                {
-                    "request_id": request_id,
-                    "kind": exc.kind,
-                    "message": str(exc),
-                    "retryable": exc.retryable,
-                    "retry_after": exc.retry_after,
-                    "provider_metadata": exc.provider_metadata,
-                },
-                snapshot_after=self.session.to_snapshot(),
-                model_call=ModelCallMutation(
-                    request_id=request_id,
-                    ordinal=ordinal,
-                    attempt=attempt,
-                    backend=self.backend.name,
-                    status="failed",
-                    request=request.to_dict(),
-                    error={
-                        "kind": exc.kind,
-                        "message": str(exc),
-                        "retry_after": exc.retry_after,
-                        "provider_metadata": exc.provider_metadata,
-                    },
+            self._record_model_failure(
+                request=request,
+                request_id=request_id,
+                ordinal=ordinal,
+                attempt=attempt,
+                error=exc,
+            )
+            return
+        except Exception as exc:
+            self._record_model_failure(
+                request=request,
+                request_id=request_id,
+                ordinal=ordinal,
+                attempt=attempt,
+                error=BackendError(
+                    f"backend violated the ModelBackend error contract: {type(exc).__name__}: {exc}",
+                    kind="protocol_error",
+                    provider_metadata={"provider": self.backend.name},
                 ),
             )
-            if self._can_retry(exc):
-                self._schedule_retry(exc)
-            else:
-                self._fail(exc.kind, str(exc))
             return
 
         # Persist the normalized response before consuming tool calls or final text.
@@ -788,6 +777,47 @@ class AgentRuntime:
             self._interrupt()
             return
         self._consume_model_response(response)
+
+    def _record_model_failure(
+        self,
+        *,
+        request: ModelRequest,
+        request_id: str,
+        ordinal: int,
+        attempt: int,
+        error: BackendError,
+    ) -> None:
+        self._commit_event(
+            EventType.MODEL_CALL_FAILED,
+            self.session.state,
+            {
+                "request_id": request_id,
+                "kind": error.kind,
+                "message": str(error),
+                "retryable": error.retryable,
+                "retry_after": error.retry_after,
+                "provider_metadata": error.provider_metadata,
+            },
+            snapshot_after=self.session.to_snapshot(),
+            model_call=ModelCallMutation(
+                request_id=request_id,
+                ordinal=ordinal,
+                attempt=attempt,
+                backend=self.backend.name,
+                status="failed",
+                request=request.to_dict(),
+                error={
+                    "kind": error.kind,
+                    "message": str(error),
+                    "retry_after": error.retry_after,
+                    "provider_metadata": error.provider_metadata,
+                },
+            ),
+        )
+        if self._can_retry(error):
+            self._schedule_retry(error)
+        else:
+            self._fail(error.kind, str(error))
 
     def _consume_model_response(self, response: ModelResponse) -> None:
         request_id = self.session.active_call_id

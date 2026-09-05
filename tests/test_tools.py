@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -11,6 +12,12 @@ from coding_agent.tools.builtin import build_builtin_registry
 from coding_agent.tools.harness import ToolHarness
 from coding_agent.workspace import WorkspaceManager
 from tests.native_support import require_native_sandbox
+
+
+def _delayed_marker(context: ToolContext) -> ToolOutcome:
+    time.sleep(0.2)
+    (context.workspace.root / "late-marker").write_text("worker survived", encoding="utf-8")
+    return ToolOutcome()
 
 
 class ToolHarnessTest(unittest.TestCase):
@@ -147,6 +154,34 @@ class ToolHarnessTest(unittest.TestCase):
         )
         self.assertIs(result.status, ToolStatus.NOT_FOUND)
         self.assertEqual(result.error["kind"], "unknown_tool")
+
+    def test_generic_handler_timeout_terminates_worker(self) -> None:
+        registry = ToolRegistry()
+        registry.register(
+            ToolDefinition(
+                name="slow_read",
+                description="fault-injected blocking handler",
+                input_schema={
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": False,
+                },
+                permission=Permission.READ,
+                timeout_seconds=0.02,
+            ),
+            lambda arguments, context: _delayed_marker(context),
+        )
+        started = time.monotonic()
+        result = ToolHarness(registry).execute(
+            ToolCall(id="slow-1", name="slow_read", arguments={}),
+            self.context(Permission.READ),
+        )
+        elapsed = time.monotonic() - started
+
+        self.assertIs(result.status, ToolStatus.TIMEOUT)
+        self.assertLess(elapsed, 0.15)
+        time.sleep(0.25)
+        self.assertFalse((self.guard.root / "late-marker").exists())
 
     @require_native_sandbox
     def test_restricted_test_enforces_profile_timeout(self) -> None:

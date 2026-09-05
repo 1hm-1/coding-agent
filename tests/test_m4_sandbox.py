@@ -98,6 +98,10 @@ class SandboxContractTest(unittest.TestCase):
     def test_native_namespace_hides_host_paths_secret_and_network(self) -> None:
         executor = LinuxNamespaceExecutor()
         capabilities = executor.capabilities()
+        self.assertEqual(
+            capabilities.metadata["identity_kind"],
+            "native_runtime_sample_fingerprint",
+        )
         if not capabilities.available:
             self.assertFalse(
                 executor.execute.__name__ == "host_subprocess",

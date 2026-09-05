@@ -28,6 +28,7 @@
     {
       "schema_version": 1,
       "case_id": "calculator-task-fail",
+      "case_type": "negative_control",
       "fixture": "fixture",
       "task": "Make an impossible change",
       "backend": {
@@ -90,6 +91,7 @@
     {
       "schema_version": 1,
       "case_id": "calculator-runtime-fail",
+      "case_type": "negative_control",
       "fixture": "fixture",
       "task": "Read the repository",
       "backend": {
@@ -253,6 +255,7 @@
   {
     "schema_version": 1,
     "case_id": "checkout-location-failure",
+    "case_type": "negative_control",
     "fixture": "mini_repos/checkout_service",
     "task": "Locate the pricing implementation across this repository, fix cent rounding, and run tests.",
     "backend": {
@@ -369,6 +372,7 @@
   {
     "schema_version": 1,
     "case_id": "settings-scope-violation",
+    "case_type": "negative_control",
     "fixture": "mini_repos/settings_service",
     "task": "Fix mode parsing. Only modify settings.py, inspect the repository first, and run tests.",
     "backend": {

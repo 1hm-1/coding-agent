@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from coding_agent.domain import BackendError, Message, ModelRequest, ModelResponse, ToolCall, Usage
-from coding_agent.models.errors import safe_provider_metadata
+from coding_agent.models.errors import safe_provider_metadata, usage_token_count
 from coding_agent.models.http import post_json, secret_from_environment
 
 
@@ -108,8 +108,12 @@ class AnthropicBackend:
             text="".join(text_parts),
             tool_calls=tuple(calls),
             usage=Usage(
-                input_tokens=int(usage.get("input_tokens", 0)),
-                output_tokens=int(usage.get("output_tokens", 0)),
+                input_tokens=usage_token_count(
+                    usage.get("input_tokens", 0), "Anthropic input token usage"
+                ),
+                output_tokens=usage_token_count(
+                    usage.get("output_tokens", 0), "Anthropic output token usage"
+                ),
             ),
             finish_reason=stop_reason,
             provider_metadata=safe_provider_metadata(

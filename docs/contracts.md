@@ -60,6 +60,8 @@ class ModelBackend(Protocol):
 - tool call arguments 是 JSON object；
 - 没有 tool call 时必须有非空 final text；
 - usage 缺失时按零处理；
+- usage 中已出现的 token 字段必须是非负整数；`null`、布尔值、负数、浮点数或字符串均为
+  `protocol_error`；
 - provider 特有字段只能放入 `provider_metadata`。
 
 Backend 协议错误应抛 `BackendError(kind=...)`，不能把错误伪装成 final answer。当前
@@ -115,6 +117,7 @@ ToolDefinition(
     permission: Permission,
     timeout_seconds: float,
     recovery_mode: RecoveryMode,
+    timeout_enforcement: Literal["process", "sandbox"],
 )
 ```
 
@@ -123,9 +126,14 @@ Schema 根必须是 object，且 `additionalProperties` 必须为 `false`。当�
 ### 执行顺序
 
 ```text
-lookup → schema → permission → deadline → handler
+lookup → schema → permission → deadline → process/sandbox termination boundary → handler
        → exception mapping → output limit → audit finish
 ```
+
+普通 handler 默认在独立 Linux 进程组中执行；deadline 到达后 Harness 以 `SIGKILL` 终止整个
+worker 进程组并等待回收。`restricted_test` 和 `run_command` 显式使用 `sandbox` 模式，由
+SandboxExecutor 的 wall timeout 与进程组清理提供可终止边界。无法建立所声明边界时 fail closed，
+不退回无强制终止能力的同步调用。
 
 ### ToolResult
 
@@ -233,7 +241,9 @@ rootfs、workspace bind、环境 allowlist、process/output/resource limits 全�
 当前 Linux backend 使用 rootless user/mount/PID/network namespace、最小 chroot rootfs、
 只读 system mounts、受控 tmpfs、no-new-privileges 和 capabilities drop。没有能力时返回
 结构化 `sandbox_capability_unavailable`，不回退到宿主 `subprocess`。native rootfs 的
-`image_digest` 是内容 identity，不是 OCI image 生命周期承诺。
+兼容字段名仍为 `image_digest`，但 native backend 的 `identity_kind` 是
+`native_runtime_sample_fingerprint`：它只覆盖内核标识和声明的关键运行时文件，不是完整
+rootfs 内容摘要，也不是 OCI image 生命周期承诺。
 
 ## 7. Permission 契约
 
@@ -336,6 +346,8 @@ oracle 自身配置或 fixture 错误计为 `eval_infrastructure_failure`，不�
 compression latency、failure reasons、recovery、permission 和 source invariant。原始
 `runs.jsonl` 保留 session/trace 定位字段；`report.json` 的 comparison runs 去除随机
 session ID/trace path。A/B 只比较相同 case/repetition key，并输出 paired diff。
+case 通过 `case_type=task|negative_control` 显式分类；正常任务成功率与负控制 observed
+failure rate 分别统计，历史全体 run 指标仅为兼容字段。
 
 ## 12. Replay 与 golden 契约
 

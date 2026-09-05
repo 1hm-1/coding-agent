@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Iterable
 
 from coding_agent.domain import BackendError, ModelRequest, ModelResponse
+from coding_agent.models.base import ModelBackend
 
 
 class FallbackBackend:
@@ -12,7 +13,7 @@ class FallbackBackend:
     the next backend only after a classified, retryable infrastructure failure.
     """
 
-    def __init__(self, backends: Iterable[object]):
+    def __init__(self, backends: Iterable[ModelBackend]):
         self.backends = tuple(backends)
         if not self.backends:
             raise ValueError("at least one backend is required")
@@ -27,7 +28,7 @@ class FallbackBackend:
     def complete(self, request: ModelRequest) -> ModelResponse:
         return self.backends[self._index].complete(request)
 
-    def fallback_for(self, error: BackendError) -> object | None:
+    def fallback_for(self, error: BackendError) -> ModelBackend | None:
         if not error.retryable or self._index + 1 >= len(self.backends):
             return None
         self._index += 1

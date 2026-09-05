@@ -13,7 +13,7 @@ authors = [{ name = "Coding Agent Project" }]
 dependencies = ["httpx>=0.27,<1"]
 
 [project.optional-dependencies]
-dev = ["ruff>=0.9,<1", "coverage>=7,<8", "mypy>=1.10,<2"]
+dev = ["ruff>=0.9,<1", "coverage>=7.10,<8", "mypy>=1.10,<2"]
 
 [project.scripts]
 coding-agent = "coding_agent.cli:main"
@@ -41,14 +41,23 @@ select = ["E4", "E7", "E9", "F"]
 python_version = "3.10"
 files = [
     "src/coding_agent/command_profiles.py",
+    "src/coding_agent/context.py",
+    "src/coding_agent/domain.py",
     "src/coding_agent/evaluation.py",
+    "src/coding_agent/models",
     "src/coding_agent/sandbox",
+    "src/coding_agent/tools",
+    "src/coding_agent/workspace.py",
 ]
 follow_imports = "skip"
 ignore_missing_imports = true
 
 [tool.coverage.run]
 source = ["src/coding_agent"]
+concurrency = ["multiprocessing"]
+parallel = true
+patch = ["subprocess"]
+sigterm = true
 
 [tool.coverage.report]
 precision = 1

@@ -13,7 +13,7 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前基线应为 75 个默认测试通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化，不要直接开始 M5。
+当前基线应为 82 个默认测试通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化，不要直接开始 M5。
 
 ## 2. 工作区事实
 
@@ -58,18 +58,26 @@ M2.1 已完成 SQLite persistence foundation，M2.2/M2.3 也已严格完成：
   argv 和 workspace-relative cwd；非零退出是 observation，网络/扩展资源/approval profile
   在没有授权通道时 fail closed；非幂等 crash 进入 `WAITING_APPROVAL`。
 - Release/Evidence Hardening 已完成：recovery metrics 已将 `RESUME_STARTED` 纳入
-  recovery event；默认 75 个测试、70% statement coverage、release-surface mypy、GitHub
+  recovery event；默认 82 个测试、70% statement coverage、23/33 源码文件 mypy、GitHub
   Actions 离线 CI 和手动凭据门控 Provider smoke 已建立。
 - 当前固定 eval 有 13 个 case、覆盖 6 个 fixture，valid 13、基础设施失败为 0；新增跨文件定位、多文件恢复、范围约束和长历史 compression，但失败仍是预设 scripted/oracle 场景，因此它只能作为小型 scripted/offline 证据，不能证明真实 Coding 任务不需要 search 或 Git。详细证据见 `docs/m5-eval-expansion.md`。
+- Eval manifest 已显式区分 9 个正常任务与 4 个负控制，报告分别统计，避免将负控制混入正常任务成功率。
+- Provider usage 严格校验、model journal 异常 closure、ToolHarness worker 强制超时、`uv.lock`
+  和 subprocess/multiprocessing coverage 合并已经加入；native runner 仍由安全集成测试提供证据。
 - OpenAI-compatible adapter 现支持显式 `thinking: disabled`；DeepSeek smoke 首次请求曾因 16
   token 输出上限得到空 `content`，已增加预算并关闭 DeepSeek thinking；用户已重新运行并
   验证 smoke 成功。
 - `evaluate` 现支持 provider override，可直接对固定 13-case suite 运行真实 backend；使用
   `--provider openai-compatible --model ... --base-url https://api.deepseek.com --thinking disabled`
-  和 `--repetitions 3`，不要把 scripted 结果当作 live baseline。
+  和 `--repetitions 3`。修复后已完成 3 次 DeepSeek `budgeted` 探索性 Eval：39/39 valid、基础设施失败=0、
+  task success=0.8205、Runtime completion=0.8462、source invariant=1.0、permission violations=0；
+  其中 scripted 负控制和长历史预算问题需要单独解释，不能把 0.8205 当作最终 live baseline。
+- 真实 DeepSeek Eval 暴露的上下文裁剪拆分 assistant tool-call 组问题已修复：原子组保留和
+  fail-closed 回归测试通过，修复后的 3 次运行不再出现 Provider `invalid_request`；下一步先验证
+  `compressed` variant 的长历史路径。
 
 下一窗口先使用 `docs/m5-eval-expansion.md` 的 13-case/6-fixture 证据和真实 Provider
-baseline 门禁；先完成 DeepSeek adapter smoke，再进行多次 live baseline；只有出现新的、可重复的真实模型 failure coverage 后才进入 M5 的
+baseline 门禁；先运行同一 suite 的 `compressed` variant，解释长历史失败；只有出现新的、可重复的真实模型 failure coverage 后才进入 M5 的
 eval-driven capability expansion 设计，当前不新增工具。保持 M4.1/M4.2 的 OS isolation
 foundation；不要加入 shell 字符串、默认网络或多 Agent。
 
@@ -78,8 +86,8 @@ foundation；不要加入 shell 字符串、默认网络或多 Agent。
 - 更新 `docs/current-state.md` 中“已实现/未实现/技术债”；
 - 勾选当前里程碑文档对应 checklist；M2、M3 和 M4.1/M4.2 的 checklist 已完成；
 - 更新 `docs/roadmap.md` 的子阶段状态；
-- 运行全量测试、Ruff、calculator 和 todo smoke；DeepSeek 单次 live smoke 已通过，多次 live
-  baseline 仍待执行；
+- 运行全量测试、Ruff、calculator 和 todo smoke；DeepSeek live smoke 和修复后的 3 次探索性
+  `budgeted` Eval 已通过请求门禁；`compressed` variant 仍待验证；
 - 在最终说明中给出测试数量、golden 状态、迁移版本、覆盖率/类型检查/CI 状态和仍未实现项；当前 schema 为 v3，M4.1/M4.2 native backend 不等同于 OCI container；
 - 不使用“生产可用”“完全安全”等超出证据的表述。
 
@@ -90,7 +98,7 @@ foundation；不要加入 shell 字符串、默认网络或多 Agent。
 ```text
 请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、
 docs/contracts.md、docs/requirements-traceability.md、docs/roadmap.md 和
-docs/m4-implementation-plan.md、docs/m5-eval-expansion.md。运行 75 个默认测试的基线后，
+docs/m4-implementation-plan.md、docs/m5-eval-expansion.md。运行 82 个默认测试的基线后，
 当前 M2.1—M2.3、M3.1—M3.3、M4.1/M4.2 已完成，固定 eval 为 13-case/6-fixture；只评估
 M5 的新能力是否被真实 failure coverage 证明需要，
 保持现有 OS isolation、structured argv 和 ToolHarness 边界，不增加 shell 字符串、

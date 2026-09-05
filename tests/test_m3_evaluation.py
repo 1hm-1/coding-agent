@@ -54,6 +54,7 @@ class EvaluationHarnessTest(unittest.TestCase):
                     {
                         "schema_version": 1,
                         "case_id": "task-fail",
+                        "case_type": "negative_control",
                         "fixture": "examples/fixture",
                         "task": "Make an unrequested impossible change",
                         "backend": {
@@ -73,6 +74,7 @@ class EvaluationHarnessTest(unittest.TestCase):
                     {
                         "schema_version": 1,
                         "case_id": "runtime-fail",
+                        "case_type": "negative_control",
                         "fixture": "examples/fixture",
                         "task": "Read the repository",
                         "backend": {"kind": "scripted", "responses": [{"tool_calls": "bad"}]},
@@ -168,6 +170,16 @@ class EvaluationHarnessTest(unittest.TestCase):
             self.assertEqual(aggregate["task_success_rate"], 0.5)
             self.assertEqual(aggregate["runtime_completion_rate"], 0.75)
             self.assertEqual(aggregate["recovery_rate"], 1.0)
+            self.assertEqual(aggregate["task_runs"]["valid_run_count"], 2)
+            self.assertEqual(aggregate["task_runs"]["task_success_rate"], 1.0)
+            self.assertEqual(
+                aggregate["negative_control_runs"],
+                {
+                    "valid_run_count": 2,
+                    "observed_failure_rate": 1.0,
+                    "runtime_completion_rate": 0.5,
+                },
+            )
             self.assertTrue((report.output_dir / "manifest.snapshot.json").exists())
             self.assertTrue((report.output_dir / "runs.jsonl").exists())
             self.assertTrue((report.output_dir / "report.json").exists())
@@ -358,6 +370,18 @@ class EvaluationHarnessTest(unittest.TestCase):
         self.assertIn("todo-readonly-inspection", case_ids)
         self.assertIn("checkout-cross-file-location", case_ids)
         self.assertIn("checkout-location-failure", case_ids)
+        negative_controls = {
+            case.case_id for case in suite.cases if case.case_type == "negative_control"
+        }
+        self.assertEqual(
+            negative_controls,
+            {
+                "calculator-task-fail",
+                "calculator-runtime-fail",
+                "checkout-location-failure",
+                "settings-scope-violation",
+            },
+        )
         self.assertIn("pipeline-multi-file-recovery", case_ids)
         self.assertIn("settings-scoped-edit", case_ids)
         self.assertIn("settings-scope-violation", case_ids)

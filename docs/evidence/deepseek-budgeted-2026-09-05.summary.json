@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "sanitized_live_eval_summary",
+  "recorded_at": "2026-09-05",
+  "provider": "openai-compatible",
+  "model": "deepseek-v4-flash",
+  "base_url": "https://api.deepseek.com",
+  "thinking": "disabled",
+  "variant": "budgeted",
+  "suite_schema_version": 1,
+  "case_count": 13,
+  "repetitions": 3,
+  "requested_run_count": 39,
+  "valid_run_count": 39,
+  "infrastructure_failure_count": 0,
+  "task_success_count": 32,
+  "task_success_rate": 0.8205128205128205,
+  "runtime_completion_count": 33,
+  "runtime_completion_rate": 0.8461538461538461,
+  "source_invariant_rate": 1.0,
+  "recovery_rate": 1.0,
+  "permission_violation_count": 0,
+  "failure_reasons": {
+    "command_executable_denied": 4,
+    "compression:summarizer_unconfigured": 3,
+    "context_required_content_exceeds_budget": 3,
+    "oracle_failure": 6,
+    "step_budget_exhausted": 3
+  },
+  "per_case": {
+    "calculator-recovery": {"runs": 3, "task_success": 3, "runtime_completed": 3},
+    "calculator-runtime-fail": {"runs": 3, "task_success": 0, "runtime_completed": 3},
+    "calculator-structured-command": {"runs": 3, "task_success": 3, "runtime_completed": 3},
+    "calculator-success": {"runs": 3, "task_success": 3, "runtime_completed": 3},
+    "calculator-task-fail": {"runs": 3, "task_success": 0, "runtime_completed": 3},
+    "checkout-cross-file-location": {"runs": 3, "task_success": 3, "runtime_completed": 3},
+    "checkout-location-failure": {"runs": 3, "task_success": 2, "runtime_completed": 0},
+    "long-history-compression": {"runs": 3, "task_success": 3, "runtime_completed": 0},
+    "pipeline-multi-file-recovery": {"runs": 3, "task_success": 3, "runtime_completed": 3},
+    "settings-scoped-edit": {"runs": 3, "task_success": 3, "runtime_completed": 3},
+    "settings-scope-violation": {"runs": 3, "task_success": 3, "runtime_completed": 3},
+    "todo-readonly-inspection": {"runs": 3, "task_success": 3, "runtime_completed": 3},
+    "todo-recovery": {"runs": 3, "task_success": 3, "runtime_completed": 3}
+  },
+  "raw_artifact_sha256": {
+    "report.json": "4606a81b2bd67537c8793e711039ba80af8694f18cdb714047843d13435df500",
+    "manifest.snapshot.json": "f3e5d454d64c0b6604d38725e011895d4292122a53f516bdb6ffcf0751418bfd"
+  },
+  "provenance_limitations": [
+    "The original raw artifacts were generated under /tmp and are not checked in.",
+    "The run used commit e31aee1 plus the then-uncommitted atomic tool-call context fix.",
+    "The historical aggregate mixes normal tasks with scripted negative-control case definitions; use the per-case data when interpreting it."
+  ],
+  "contains_credentials": false
+}

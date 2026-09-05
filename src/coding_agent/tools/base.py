@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping, Protocol
+from typing import Any, Callable, Literal, Mapping, Protocol
 
 from coding_agent.domain import (
     JsonObject,
@@ -23,6 +23,7 @@ class ToolDefinition:
     permission: Permission
     timeout_seconds: float = 30.0
     recovery_mode: RecoveryMode = RecoveryMode.READ_ONLY
+    timeout_enforcement: Literal["process", "sandbox"] = "process"
 
     def model_schema(self) -> JsonObject:
         return {
@@ -69,6 +70,8 @@ class ToolRegistry:
             raise ValueError(f"duplicate tool registration: {definition.name}")
         if definition.timeout_seconds <= 0:
             raise ValueError("tool timeout must be positive")
+        if definition.timeout_enforcement not in {"process", "sandbox"}:
+            raise ValueError("unknown tool timeout enforcement mode")
         schema = definition.input_schema
         if schema.get("type") != "object":
             raise ValueError("tool input schema root must be an object")

@@ -85,6 +85,17 @@ def ensure_object(value: Any, description: str) -> Mapping[str, Any]:
     return value
 
 
+def usage_token_count(value: Any, field: str) -> int:
+    """Validate one provider token count without accepting coercible junk values."""
+
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise BackendError(
+            f"{field} must be a non-negative integer",
+            kind="protocol_error",
+        )
+    return value
+
+
 def safe_provider_metadata(provider: str, *, model: str, finish_reason: str) -> JsonObject:
     return {
         "provider": provider,

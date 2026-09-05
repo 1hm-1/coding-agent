@@ -15,7 +15,7 @@ Evaluation）；用最小能力证明完整 runtime
 - 显式有限状态机：每个状态有独立 handler 和合法迁移表；
 - `ScriptedBackend`：可复现模型决策和工具调用；
 - 每个 session 独立复制 workspace，文件路径拒绝越界；
-- 统一 Tool Harness：schema、permission、timeout、结构化错误、输出限制和审计边界；
+- 统一 Tool Harness：schema、permission、可终止 timeout 边界、结构化错误、输出限制和审计边界；
 - M1 基线工具：`read_file`、`edit_file`、`restricted_test`；M4.2 增加结构化 `run_command`；
 - 测试工具只接受可信 profile 名称，模型不能提交 command/argv；
 - SQLite schema-versioned journal、原子 snapshot/event mutation；
@@ -40,7 +40,7 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 - JSONL 是可删除的导出投影，`export-trace` 可从 SQLite 重建；
 - `INTERRUPTED`、`WAITING_APPROVAL`、lease、model/tool recovery 和 edit reconciliation 已实现；
 - OpenAI-compatible、Anthropic adapter、retry/backoff 和显式 fallback 已实现；
-- M2 完成时的 47 个回归测试、四份 semantic golden、calculator/todo smoke 全部通过；加入 M3/M4 和评测证据门禁后，默认 discovery 共 75 个测试。
+- M2 完成时的 47 个回归测试、四份 semantic golden、calculator/todo smoke 全部通过；加入 M3/M4 和发布硬化后，默认 discovery 共 82 个测试。
 
 ## M3 已实现
 
@@ -56,7 +56,7 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 - Linux 默认使用 rootless user/mount/PID/network namespace、最小 chroot、只读系统 runtime、受控 tmpfs 和唯一可写任务 workspace；
 - capability probe 失败时 fail closed，绝不回退到宿主进程；默认无网络，secret 环境不进入执行；
 - wall/CPU/memory/PID/storage/stdout/stderr 限制、子进程组清理、symlink/proc/device 回归、并行 session 和 recovery 有自动测试；
-- trajectory 保存 execution id、profile、rootfs content identity、capability snapshot、limits、truncation 和 cleanup metadata。
+- trajectory 保存 execution id、profile、native runtime sample fingerprint、capability snapshot、limits、truncation 和 cleanup metadata；该 fingerprint 不是完整 rootfs digest。
 
 ## M4.2 已实现
 
@@ -74,9 +74,9 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 
 ## Release/Evidence Hardening 已实现
 
-- Git 工作区已初始化并推送到 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、release-surface mypy、75 个默认测试、native capability report、70% statement coverage、compile 检查、calculator/todo scripted smoke 和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
+- Git 工作区已初始化并配置 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、23/33 源码文件 mypy、82 个默认测试、native capability report、70% statement coverage、compile 检查、calculator/todo scripted smoke 和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
 - `tests/live_provider_smoke.py` 和手动 workflow 提供显式凭据门控的真实 Provider smoke；无凭据时不发起网络请求。
-- recovery 指标将 `RESUME_STARTED` 计为 recovery event；扩展后的 13-case/6-fixture eval 基础设施失败为 0，但 scripted 结果仍不足以证明真实模型不需要 search 或 Git 能力；详见 [M5 评测证据](docs/m5-eval-expansion.md)。
+- recovery 指标将 `RESUME_STARTED` 计为 recovery event；扩展后的 13-case/6-fixture eval 基础设施失败为 0；修复上下文 tool-call 组裁剪问题后已完成 3 次 DeepSeek 探索性 Eval，但结果仍不足以证明真实模型需要或不需要 search/Git 能力；详见 [M5 评测证据](docs/m5-eval-expansion.md)。
 
 ## 快速运行
 

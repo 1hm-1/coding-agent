@@ -42,7 +42,9 @@ def _default_runtime_python() -> str:
     return sys.executable
 
 
-def _rootfs_identity() -> str:
+def _runtime_sample_fingerprint() -> str:
+    """Fingerprint a declared host-runtime sample, not the complete mounted rootfs."""
+
     digest = hashlib.sha256()
     digest.update(platform.system().encode("utf-8"))
     digest.update(platform.release().encode("utf-8"))
@@ -196,7 +198,7 @@ class LinuxNamespaceExecutor:
             completed = None
         finally:
             shutil.rmtree(root_dir, ignore_errors=True)
-        digest = _rootfs_identity()
+        digest = _runtime_sample_fingerprint()
         if completed is not None and completed.returncode == 0:
             return self._remember(
                 SandboxCapabilities(
@@ -206,7 +208,7 @@ class LinuxNamespaceExecutor:
                     features=_FEATURES,
                     metadata={
                         "image_digest": digest,
-                        "identity_kind": "native_rootfs_content_identity",
+                        "identity_kind": "native_runtime_sample_fingerprint",
                         "network_default": "none",
                     },
                 )
@@ -220,6 +222,7 @@ class LinuxNamespaceExecutor:
                 metadata={
                     "reason": "capability_probe_failed",
                     "image_digest": digest,
+                    "identity_kind": "native_runtime_sample_fingerprint",
                 },
             )
         )

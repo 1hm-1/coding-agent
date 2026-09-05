@@ -152,6 +152,61 @@ class ContextEngineTest(unittest.TestCase):
         self.assertLessEqual(built.total_input_tokens, built.budget_tokens)
         self.assertNotIn("old decision 0", " ".join(message.content for message in recent.messages))
 
+    def test_tool_call_turn_is_not_split_when_recent_history_is_trimmed(self) -> None:
+        messages = (
+            Message(
+                role="assistant",
+                content="assistant response",
+                metadata={
+                    "tool_calls": [
+                        {"id": "call-0", "name": "read_file", "arguments": {}},
+                        {"id": "call-1", "name": "read_file", "arguments": {}},
+                        {"id": "call-2", "name": "read_file", "arguments": {}},
+                    ]
+                },
+            ),
+            Message(role="tool", tool_call_id="call-0", content="first result"),
+            Message(role="tool", tool_call_id="call-1", content="second result " * 100),
+            Message(role="tool", tool_call_id="call-2", content="third result " * 20),
+        )
+        request = _request(messages=messages)
+        builder = BudgetedContextBuilder(
+            capability_registry=self._registry(limit=950),
+            config=ContextBudgetConfig(protocol_margin_tokens=0),
+        )
+
+        with self.assertRaises(ContextBudgetError) as captured:
+            builder.build(request)
+
+        self.assertEqual(
+            captured.exception.kind,
+            "context_required_content_exceeds_budget",
+        )
+
+    def test_incomplete_tool_call_turn_fails_closed(self) -> None:
+        messages = (
+            Message(
+                role="assistant",
+                content="assistant response",
+                metadata={
+                    "tool_calls": [
+                        {"id": "call-0", "name": "read_file", "arguments": {}},
+                        {"id": "call-1", "name": "read_file", "arguments": {}},
+                    ]
+                },
+            ),
+            Message(role="tool", tool_call_id="call-0", content="first result"),
+        )
+        request = _request(messages=messages)
+
+        with self.assertRaises(ContextBudgetError) as captured:
+            BudgetedContextBuilder(
+                capability_registry=self._registry(),
+                config=ContextBudgetConfig(protocol_margin_tokens=0),
+            ).build(request)
+
+        self.assertEqual(captured.exception.kind, "context_invalid_tool_history")
+
     def test_required_content_over_budget_is_classified(self) -> None:
         request = _request()
         with self.assertRaises(ContextBudgetError) as captured:

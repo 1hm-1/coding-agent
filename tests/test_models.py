@@ -176,6 +176,99 @@ class ModelAdapterTest(unittest.TestCase):
                 backend.complete(request())
         self.assertEqual(raised.exception.kind, "protocol_error")
 
+    def test_provider_usage_requires_non_negative_integers(self) -> None:
+        cases = (
+            (
+                OpenAICompatibleBackend,
+                {
+                    "choices": [
+                        {
+                            "message": {"role": "assistant", "content": "done"},
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {"prompt_tokens": None, "completion_tokens": 1},
+                },
+                "TEST_OPENAI_KEY",
+            ),
+            (
+                AnthropicBackend,
+                {
+                    "content": [{"type": "text", "text": "done"}],
+                    "stop_reason": "end_turn",
+                    "usage": {"input_tokens": -1, "output_tokens": 1},
+                },
+                "TEST_ANTHROPIC_KEY",
+            ),
+        )
+        for backend_type, body, key_name in cases:
+            with self.subTest(backend=backend_type.__name__):
+                with patch.dict(os.environ, {key_name: "key"}, clear=False):
+                    backend = backend_type(
+                        model="m",
+                        api_key_env=key_name,
+                        transport=FakeTransport(FakeResponse(body)),
+                    )
+                    with self.assertRaises(BackendError) as raised:
+                        backend.complete(request())
+                self.assertEqual(raised.exception.kind, "protocol_error")
+
+    def test_malformed_usage_closes_runtime_model_journal(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            transport = FakeTransport(
+                FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {"role": "assistant", "content": "done"},
+                                "finish_reason": "stop",
+                            }
+                        ],
+                        "usage": {"prompt_tokens": None, "completion_tokens": 1},
+                    }
+                )
+            )
+            with patch.dict(os.environ, {"TEST_OPENAI_KEY": "key"}, clear=False):
+                backend = OpenAICompatibleBackend(
+                    model="m",
+                    api_key_env="TEST_OPENAI_KEY",
+                    transport=transport,
+                )
+                application = AgentApplication(root / "agent-home")
+                result = application.run_task(source=source, task="answer", backend=backend)
+
+            self.assertEqual(result.failure["kind"], "protocol_error")
+            rows = application.journal.list_model_calls(result.session_id)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["status"], "failed")
+            self.assertEqual(rows[0]["error"]["kind"], "protocol_error")
+
+    def test_unexpected_backend_exception_closes_model_journal(self) -> None:
+        class BrokenBackend:
+            name = "broken"
+
+            def complete(self, model_request):
+                raise TypeError("unexpected adapter bug")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            application = AgentApplication(root / "agent-home")
+            result = application.run_task(
+                source=source,
+                task="answer",
+                backend=BrokenBackend(),
+            )
+
+            self.assertEqual(result.failure["kind"], "protocol_error")
+            rows = application.journal.list_model_calls(result.session_id)
+            self.assertEqual(rows[0]["status"], "failed")
+            self.assertEqual(rows[0]["error"]["kind"], "protocol_error")
+
     def test_fallback_does_not_handle_non_retryable_errors(self) -> None:
         class Primary:
             name = "primary"

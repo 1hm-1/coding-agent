@@ -28,7 +28,7 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前验收基线为 75 个测试；在具备 native sandbox capability 的环境中全部通过，能力受限
+当前验收基线为 82 个测试；在具备 native sandbox capability 的环境中全部通过，能力受限
 环境中 native-only case 会显式 skip。live provider smoke 需显式凭据和手动触发。
 
 静态检查（安装 Ruff 开发依赖后）：
@@ -37,6 +37,7 @@ PYTHONPATH=src python3 -m unittest discover -v
 ruff check src tests examples/todo_cli examples/mini_repos
 .venv/bin/mypy
 PYTHONPATH=src .venv/bin/coverage run -m unittest discover -v
+.venv/bin/coverage combine
 .venv/bin/coverage report
 ```
 
@@ -78,7 +79,8 @@ Fault 应在最窄边界注入：
 - backend fault 用 `ScriptedBackend` 非法项或 error response；
 - permission fault 用 `RunPolicy.allowed_permissions`；
 - tool handler fault 用测试专属 Registry/handler；
-- timeout 用测试专属可信 TestProfile；
+- 普通 handler timeout 使用阻塞 worker 并验证 deadline 前返回且延迟副作用未发生；sandbox
+  timeout 使用测试专属可信 TestProfile；
 - M2 crash fault 在事务边界注入，不用随机 `sleep` 模拟。
 
 故障用例必须断言三件事：最终 Runtime 状态、observation/event 证据、workspace/source 副作用。
@@ -93,8 +95,8 @@ Fault 应在最窄边界注入：
 | Resume | 每个非终态恢复 | workspace 缺失、checkpoint/event 不一致 |
 | Edit reconciliation | pre hash 执行、post hash补记 | hash 既非 pre 也非 post → uncertain |
 | Interrupt | step 边界安全停止 | tool/model 返回后立刻中断 |
-| OpenAI adapter | text/tool/usage mapping | 401、429、5xx、timeout、malformed JSON |
-| Anthropic adapter | content block mapping | 同上及未知 block |
+| OpenAI adapter | text/tool/usage mapping | 401、429、5xx、timeout、malformed JSON、非法 usage 与 journal closure |
+| Anthropic adapter | content block mapping | 同上及未知 block、非法 usage |
 | Retry/fallback | retryable infrastructure error | auth/invalid request 不重试，质量差不 fallback |
 | JSONL export | DB event 正确导出 | sink 失败后可从 DB 重建 |
 
@@ -174,9 +176,9 @@ case 仍保留在分母中。M5 评测与工具门禁的具体证据见 `docs/m5
 lint
   └─ ruff check
 typed-release-surface
-  └─ mypy (command_profiles/evaluation/sandbox)
+  └─ mypy (23/33 source files: models/tools/context/domain/workspace/command_profiles/evaluation/sandbox)
 unit-contract
-  └─ capability report + coverage run unittest discover + coverage report (fail-under=70)
+  └─ capability report + coverage run unittest discover + combine + report (fail-under=70)
 golden-smoke
   ├─ compileall + calculator/todo scripted smoke (native capability available时)
   └─ offline eval suite (native capability available时)
@@ -188,4 +190,5 @@ GitHub-hosted runner 如果 capability report 显示 native namespace 不可用�
 
 `.github/workflows/live-provider-smoke.yml` 只允许手动触发，先验证所选 Provider 的 secret
 存在，再运行 `tests/live_provider_smoke.py`；它不会把真实凭据带入普通 PR。用户已在本地
-以 DeepSeek 完成一次 smoke，多次 live baseline 仍不属于默认 CI。
+以 DeepSeek 完成一次 smoke 和修复后的 3 次探索性 live Eval；这些运行仍不属于默认 CI，且
+`compressed` variant 需要单独验证。

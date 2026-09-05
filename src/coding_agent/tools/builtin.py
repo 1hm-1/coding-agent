@@ -206,6 +206,7 @@ def _register_restricted_test(
         permission=Permission.EXECUTE_TEST,
         timeout_seconds=max(profile_timeouts) + 1.0,
         recovery_mode=RecoveryMode.REPEATABLE_OBSERVATION,
+        timeout_enforcement="sandbox",
         input_schema=_object_schema(
             {"profile": {"type": "string", "enum": list(test_profiles.names)}},
             ["profile"],
@@ -265,6 +266,7 @@ def _register_run_command(
         permission=Permission.EXECUTE_COMMAND,
         timeout_seconds=max(profile_timeouts) + 1.0,
         recovery_mode=RecoveryMode.NON_IDEMPOTENT,
+        timeout_enforcement="sandbox",
         input_schema=_object_schema(
             {
                 "profile": {"type": "string", "enum": list(command_profiles.names)},

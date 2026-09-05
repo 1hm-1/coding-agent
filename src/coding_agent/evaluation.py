@@ -52,6 +52,7 @@ _CASE_FIELDS = {
     "policy",
     "required_facts",
     "oracles",
+    "case_type",
 }
 _BACKEND_FIELDS = {
     "kind",
@@ -93,6 +94,7 @@ class EvalCase:
     policy: dict[str, Any]
     required_facts: tuple[str, ...]
     oracles: tuple[dict[str, Any], ...]
+    case_type: str = "task"
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, Any]) -> "EvalCase":
@@ -115,6 +117,9 @@ class EvalCase:
         policy = raw.get("policy", {})
         required_facts = raw.get("required_facts", [])
         oracles = raw.get("oracles", [])
+        case_type = str(raw.get("case_type", "task"))
+        if case_type not in {"task", "negative_control"}:
+            raise EvalValidationError("eval case_type must be task or negative_control")
         if not isinstance(backend, Mapping):
             raise EvalValidationError("eval backend must be an object")
         _strict_fields(backend, _BACKEND_FIELDS, "eval backend")
@@ -153,6 +158,7 @@ class EvalCase:
             policy=normalized_policy,
             required_facts=tuple(required_facts),
             oracles=tuple(normalized_oracles),
+            case_type=case_type,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -165,6 +171,7 @@ class EvalCase:
             "policy": dict(self.policy),
             "required_facts": list(self.required_facts),
             "oracles": [dict(oracle) for oracle in self.oracles],
+            "case_type": self.case_type,
         }
 
 
@@ -418,6 +425,7 @@ class EvalRun:
     trace_path: str | None
     metrics: dict[str, Any]
     oracles: tuple[OracleResult, ...] = ()
+    case_type: str = "task"
 
     def to_dict(self, *, include_trace: bool = True) -> dict[str, Any]:
         result = {
@@ -433,6 +441,7 @@ class EvalRun:
             "failure_reason": self.failure_reason,
             "metrics": dict(self.metrics),
             "oracles": [oracle.to_dict() for oracle in self.oracles],
+            "case_type": self.case_type,
         }
         if include_trace:
             result["trace_path"] = self.trace_path
@@ -642,6 +651,7 @@ class EvaluationRunner:
                     trace_path=str(result.trace_path),
                     metrics=collect_run_metrics(events, recovery_triggered=bool(fault_stage)),
                     oracles=oracle_results,
+                    case_type=case.case_type,
                 )
             task_success = all(oracle.passed for oracle in oracle_results)
             failure_reason = self._failure_reason(result, task_success)
@@ -659,6 +669,7 @@ class EvaluationRunner:
                 trace_path=str(result.trace_path),
                 metrics=collect_run_metrics(events, recovery_triggered=bool(fault_stage)),
                 oracles=oracle_results,
+                case_type=case.case_type,
             )
         except EvalInfrastructureFailure as exc:
             return self._infrastructure_run(case, repetition, str(exc))
@@ -856,6 +867,7 @@ class EvaluationRunner:
             failure_reason=reason,
             trace_path=None,
             metrics=collect_run_metrics([]),
+            case_type=case.case_type,
         )
 
     @staticmethod
@@ -865,6 +877,10 @@ class EvaluationRunner:
         runs: Sequence[EvalRun],
     ) -> dict[str, Any]:
         valid = [run for run in runs if run.valid and not run.infrastructure_failure]
+        task_runs = [run for run in valid if run.case_type == "task"]
+        negative_controls = [
+            run for run in valid if run.case_type == "negative_control"
+        ]
         success_count = sum(run.task_success for run in valid)
         completed_count = sum(run.runtime_completed for run in valid)
         recovery_runs = [run for run in valid if run.metrics.get("recovery_triggered")]
@@ -919,6 +935,34 @@ class EvaluationRunner:
             "recovery_rate": (
                 recovery_success / len(recovery_runs) if recovery_runs else None
             ),
+            "task_runs": {
+                "valid_run_count": len(task_runs),
+                "task_success_rate": (
+                    sum(run.task_success for run in task_runs) / len(task_runs)
+                    if task_runs
+                    else None
+                ),
+                "runtime_completion_rate": (
+                    sum(run.runtime_completed for run in task_runs) / len(task_runs)
+                    if task_runs
+                    else None
+                ),
+            },
+            "negative_control_runs": {
+                "valid_run_count": len(negative_controls),
+                "observed_failure_rate": (
+                    sum(not run.task_success for run in negative_controls)
+                    / len(negative_controls)
+                    if negative_controls
+                    else None
+                ),
+                "runtime_completion_rate": (
+                    sum(run.runtime_completed for run in negative_controls)
+                    / len(negative_controls)
+                    if negative_controls
+                    else None
+                ),
+            },
             "permission_violations": {
                 "total": sum(int(run.metrics.get("permission_violations", 0)) for run in valid),
                 "by_tool": dict(
@@ -1039,19 +1083,23 @@ def _report_markdown(report: Mapping[str, Any]) -> str:
         f"- Variant: `{report['variant']}`",
         f"- Valid runs: {report['valid_run_count']} / {report['requested_run_count']}",
         f"- Task success rate: {report['task_success_rate']}",
+        f"- Normal task success rate: {report['task_runs']['task_success_rate']}",
+        f"- Negative-control observed failure rate: "
+        f"{report['negative_control_runs']['observed_failure_rate']}",
         f"- Runtime completion rate: {report['runtime_completion_rate']}",
         f"- Source invariant rate: {report['source_invariant_rate']}",
         f"- Recovery rate: {report['recovery_rate']}",
         "",
         "## Runs",
         "",
-        "| Case | Repetition | Runtime | Task | Failure | Trace reference |",
-        "| --- | ---: | --- | --- | --- | --- |",
+        "| Case | Type | Repetition | Runtime | Task | Failure | Trace reference |",
+        "| --- | --- | ---: | --- | --- | --- | --- |",
     ]
     for run in report["runs"]:
         trace = f"runs/{run['case_id']}/{run['repetition']}"
         lines.append(
-            f"| {run['case_id']} | {run['repetition']} | {run['state']} | "
+            f"| {run['case_id']} | {run['case_type']} | {run['repetition']} | "
+            f"{run['state']} | "
             f"{run['task_success']} | {run['failure_reason'] or ''} | {trace} |"
         )
     lines.extend(("", "Infrastructure failures are excluded from valid-run denominators."))

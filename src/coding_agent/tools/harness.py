@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import multiprocessing
+import os
+import signal
 import time
 from dataclasses import dataclass
 from dataclasses import replace
@@ -17,7 +20,14 @@ from coding_agent.domain import (
     ToolStatus,
     WorkspaceViolation,
 )
-from coding_agent.tools.base import AuditSink, ToolContext, ToolOutcome, ToolRegistry, validate_schema
+from coding_agent.tools.base import (
+    AuditSink,
+    ToolContext,
+    ToolHandler,
+    ToolOutcome,
+    ToolRegistry,
+    validate_schema,
+)
 
 
 @dataclass(frozen=True)
@@ -196,7 +206,16 @@ class ToolHarness:
                     ),
                 )
             deadline = min(context.deadline, started + definition.timeout_seconds)
-            outcome = handler(call.arguments, replace(context, deadline=deadline))
+            bounded_context = replace(context, deadline=deadline)
+            if definition.timeout_enforcement == "sandbox":
+                outcome = handler(call.arguments, bounded_context)
+            else:
+                outcome = self._execute_in_worker(
+                    handler,
+                    call.arguments,
+                    bounded_context,
+                    deadline,
+                )
             if time.monotonic() > deadline:
                 raise ToolDeadlineExceeded("tool exceeded its configured timeout")
             outcome = self._limit_output(outcome, context.max_output_chars)
@@ -232,6 +251,78 @@ class ToolHarness:
                 error={"kind": "unhandled_tool_error", "message": f"{type(exc).__name__}: {exc}"},
             )
         return self._finish(call, started, outcome)
+
+    @staticmethod
+    def _execute_in_worker(
+        handler: ToolHandler,
+        arguments: dict[str, Any],
+        context: ToolContext,
+        deadline: float,
+    ) -> ToolOutcome:
+        """Run ordinary handlers behind a killable Linux process boundary."""
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ToolDeadlineExceeded("tool deadline exceeded before handler start")
+        try:
+            process_context = multiprocessing.get_context("fork")
+        except ValueError as exc:
+            raise ToolExecutionFailure(
+                "a fork process boundary is required for tool timeout enforcement",
+                kind="timeout_boundary_unavailable",
+            ) from exc
+        parent, child = process_context.Pipe(duplex=False)
+        process = process_context.Process(
+            target=_handler_worker,
+            args=(child, handler, arguments, context),
+            daemon=False,
+        )
+        process.start()
+        child.close()
+        try:
+            remaining = max(0.0, deadline - time.monotonic())
+            if not parent.poll(remaining):
+                _kill_worker_process_group(process)
+                raise ToolDeadlineExceeded("tool exceeded its configured timeout")
+            try:
+                payload = parent.recv()
+            except EOFError as exc:
+                raise ToolExecutionFailure(
+                    "tool worker exited without returning a result",
+                    kind="tool_worker_failure",
+                ) from exc
+            process.join(timeout=1.0)
+            if not isinstance(payload, dict):
+                raise ToolExecutionFailure(
+                    "tool worker returned a malformed result",
+                    kind="tool_worker_failure",
+                )
+            if payload.get("kind") == "outcome" and isinstance(
+                payload.get("outcome"), ToolOutcome
+            ):
+                return payload["outcome"]
+            error_kind = str(payload.get("error_kind", "unhandled_tool_error"))
+            message = str(payload.get("message", "tool worker failed"))
+            data = payload.get("data")
+            if error_kind == "deadline":
+                raise ToolDeadlineExceeded(message)
+            if error_kind == "permission":
+                raise PermissionError(message)
+            if error_kind == "workspace":
+                raise WorkspaceViolation(message)
+            if error_kind == "file_not_found":
+                raise FileNotFoundError(message)
+            if error_kind == "tool_execution":
+                raise ToolExecutionFailure(
+                    message,
+                    kind=str(payload.get("tool_kind", "tool_execution_failure")),
+                    data=dict(data) if isinstance(data, dict) else {},
+                )
+            raise RuntimeError(message)
+        finally:
+            parent.close()
+            if process.is_alive():
+                _kill_worker_process_group(process)
 
     def _finish(self, call: ToolCall, started: float, outcome: ToolOutcome) -> ToolResult:
         result = ToolResult(
@@ -272,6 +363,62 @@ class ToolHarness:
 
     def _audit(self, event: str, call: ToolCall, payload: dict[str, Any]) -> None:
         self.audit_sink({"event": event, "call_id": call.id, "tool_name": call.name, **payload})
+
+
+def _handler_worker(
+    connection: Any,
+    handler: ToolHandler,
+    arguments: dict[str, Any],
+    context: ToolContext,
+) -> None:
+    try:
+        os.setsid()
+        try:
+            outcome = handler(arguments, context)
+            if not isinstance(outcome, ToolOutcome):
+                raise TypeError("tool handler must return ToolOutcome")
+            payload: dict[str, Any] = {"kind": "outcome", "outcome": outcome}
+        except ToolDeadlineExceeded as exc:
+            payload = {"kind": "error", "error_kind": "deadline", "message": str(exc)}
+        except PermissionError as exc:
+            payload = {"kind": "error", "error_kind": "permission", "message": str(exc)}
+        except WorkspaceViolation as exc:
+            payload = {"kind": "error", "error_kind": "workspace", "message": str(exc)}
+        except FileNotFoundError as exc:
+            payload = {"kind": "error", "error_kind": "file_not_found", "message": str(exc)}
+        except ToolExecutionFailure as exc:
+            payload = {
+                "kind": "error",
+                "error_kind": "tool_execution",
+                "tool_kind": exc.kind,
+                "message": str(exc),
+                "data": exc.data,
+            }
+        except Exception as exc:
+            payload = {
+                "kind": "error",
+                "error_kind": "unhandled",
+                "message": f"{type(exc).__name__}: {exc}",
+            }
+        connection.send(payload)
+    finally:
+        connection.close()
+
+
+def _kill_worker_process_group(process: Any) -> None:
+    pid = process.pid
+    if pid is not None:
+        try:
+            if os.getpgid(pid) == pid:
+                os.killpg(pid, signal.SIGKILL)
+            else:
+                process.kill()
+        except ProcessLookupError:
+            pass
+    process.join(timeout=1.0)
+    if process.is_alive():
+        process.kill()
+        process.join(timeout=1.0)
 
 
 def _redact_args(arguments: dict[str, Any]) -> dict[str, Any]:

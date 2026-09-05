@@ -54,6 +54,7 @@ def post_json(
     except TimeoutError as exc:
         raise BackendError(str(exc) or "provider request timed out", kind="timeout") from exc
     except Exception as exc:
+        timeout_types: tuple[type[BaseException], ...]
         try:
             import httpx
 

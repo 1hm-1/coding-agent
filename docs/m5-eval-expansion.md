@@ -1,7 +1,7 @@
 # M5 Eval-driven Capability Expansion 评测证据记录
 
 > 记录日期：2026-09-05
-> 当前决策：M5 的评测扩展已完成；search_files、Git inspection、patch/edit 增强和依赖准备等能力扩展暂不实现。
+> 当前决策：M5 的评测扩展已完成；已完成 DeepSeek 3 次重复的探索性 live Eval，并修复一个上下文协议边界问题。search_files、Git inspection、patch/edit 增强和依赖准备等能力扩展暂不实现。
 
 ## 1. 这次工作要回答什么问题
 
@@ -28,6 +28,10 @@ M5 不是“工具越多越好”的阶段，而是要用任务失败证据回�
 每个 fixture 的总行数都在 20～200 行范围内。它们都是独立的、可复制的小仓库；评测运行时仍由 WorkspaceManager 复制到隔离 workspace，不能修改 source fixture。
 
 扩展后 suite 共 13 个 case、6 个 fixture：
+
+manifest 使用 `case_type=task|negative_control` 明确区分 9 个正常任务和 4 个故意失败的
+负控制。报告仍保留历史全体 run 聚合字段，但能力成功率应读取 `task_runs`，负控制只读取
+`negative_control_runs.observed_failure_rate`。
 
 | Case | 类型 | 观察目标 | Oracle |
 |---|---|---|---|
@@ -124,6 +128,10 @@ long_history fixture 由 150 行的确定性 audit history、测试和 README �
 | source_invariant_rate | 1.0 |
 | recovery_rate | 1.0 |
 
+分类后的指标：正常任务 9/9 成功、Runtime completion 9/9；4 个负控制 observed failure
+rate 为 4/4，Runtime completion 为 3/4。原始 `task_success_rate=0.6923` 仅为兼容历史报告，
+不再作为正常任务成功率。
+
 失败由预设场景组成：
 
 - 1 个 invalid_script_response；
@@ -149,6 +157,8 @@ long_history fixture 由 150 行的确定性 audit history、测试和 README �
 | runtime_completion_rate | 0.9231 |
 | source_invariant_rate | 1.0 |
 | recovery_rate | 1.0 |
+
+分类后的指标同样为正常任务 9/9 成功、负控制 4/4 被 oracle/Runtime 识别。
 
 long-history-compression 成功产生压缩输入/输出 Token 记录，且没有 compression rejection。其余 case 没有因为压缩配置错误而被算作基础设施失败。
 
@@ -205,7 +215,8 @@ long-history-compression 成功产生压缩输入/输出 Token 记录，且没�
 
 当前仍未把 `reasoning_content` 写入消息、SQLite 或 trace，也没有声称支持 DeepSeek thinking
 模式下的多轮工具回传。用户随后以 `thinking: disabled` 重新执行，单次 DeepSeek live adapter
-smoke 已成功；多次 live baseline 仍待执行，且本次 smoke 失败不作为工具缺口证据。
+smoke 已成功。随后完成了一次 13-case 的探索性 live Eval；多次 live baseline 仍待执行，且
+smoke 的首次失败不作为工具缺口证据。
 
 单次 smoke 已通过；下一步是在固定 suite 上做至少多次重复，并记录：
 
@@ -233,6 +244,83 @@ override 只替换每个 case 的 model backend；fixture、程序化 oracle、f
 报告输出仍来自固定 suite。输出的 `manifest.snapshot.json` 会记录实际 provider 配置，
 不会记录 API key。
 
+### 6.1 单次 DeepSeek live Eval（探索性结果）
+
+报告已写入：
+
+    /tmp/coding-agent-deepseek-eval/report/report.json
+
+本次使用 `budgeted` variant、13 个 case、每个 case 1 次运行。只从报告提取以下汇总：
+
+| 指标 | 结果 |
+|---|---:|
+| valid runs | 13/13 |
+| infrastructure failures | 0 |
+| task success rate | 0.6923（9/13） |
+| Runtime completion rate | 0.8462（11/13） |
+| source invariant rate | 1.0 |
+| permission violations | 0 |
+| mean model calls / tool calls | 3.6154 / 4.6923 |
+| mean latency | 6031 ms |
+
+这个 9/13 不能作为最终真实模型成功率。provider override 会移除 scripted backend 的
+`responses`，因此 `calculator-runtime-fail`、`calculator-task-fail` 等预设负控制不再保持
+原本的 scripted fault 语义；它们仍可帮助检查报告分类，但不应直接用于工具能力排名。
+
+本次 live trace 暴露了一个协议风险：`long-history-compression` 的上下文裁剪保留了
+assistant 的 3 个 tool call，却只保留了其中 2 个 tool result，DeepSeek 因缺少对应
+`tool_call_id` 返回 `invalid_request`。已在 `BudgetedContextBuilder` 中修复：assistant
+tool-call turn 与全部结果现在作为不可拆分组参与裁剪；完整组无法放入预算时分类为
+`context_required_content_exceeds_budget`，不再发送非法 Provider 请求；不完整历史则以
+`context_invalid_tool_history` fail closed。新增了两个 M3.1 回归测试。
+
+另一个值得继续观察的信号是 `checkout-location-failure` 中出现了 4 次
+`workspace_path`（模型重复尝试绝对路径）。这说明真实模型可能需要更好的路径定位提示或能力，
+但单次运行且该 case 本身是定位失败控制，尚不足以批准 `search_files`。
+
+### 6.2 三次重复 DeepSeek live Eval
+
+修复后使用相同的 `budgeted` 命令运行 3 次，报告仍保存在：
+
+    /tmp/coding-agent-deepseek-eval-postfix/report/report.json
+
+仓库同时保存脱敏聚合、逐 case 计数、原始 artifact SHA-256 与 provenance 限制：
+[`evidence/deepseek-budgeted-2026-09-05.summary.json`](./evidence/deepseek-budgeted-2026-09-05.summary.json)。
+它不包含凭据、session ID、trace path 或模型原文；原始 `/tmp` artifact 未入库，因此该摘要提升
+了审计性，但不能替代具有稳定 artifact 存储与精确代码 revision 的重跑证据。
+
+| 指标 | 结果 |
+|---|---:|
+| requested / valid runs | 39 / 39 |
+| infrastructure failures | 0 |
+| task success rate | 0.8205（32/39） |
+| Runtime completion rate | 0.8462（33/39） |
+| source invariant rate | 1.0 |
+| permission violations | 0 |
+| 每次 task success | 11/13、10/13、11/13 |
+| 每次 Runtime completion | 11/13、11/13、11/13 |
+| recovery case | 3/3 成功，recovery events=3 |
+
+失败分类不是互斥计数：
+
+- `context_required_content_exceeds_budget`：3 次，全部来自 `long-history-compression`。
+  该 case 的 `max_output_tokens=12000` 配合 fallback context limit=16384，只剩 4128 个输入
+  Token；实际硬保留内容约 4221～4300，且 `budgeted` 没有配置 summarizer，因此现在安全失败，
+  不再向 Provider 发出非法请求。需要验证 compression variant 后，才能判断这是预算配置问题还是
+  长历史能力缺口。
+- `step_budget_exhausted`：3 次，全部来自 `checkout-location-failure` 控制 case。模型反复尝试
+  读取/修改，但没有在 16 步内完成；这属于重复的行为信号，但该 case 是预设失败控制，不能单独
+  证明需要 `search_files`。
+- `oracle_failure`：6 次，来自两个原本用于 scripted fault/不可能任务的负控制；provider override
+  移除了它们的 scripted response，所以不纳入真实模型能力评分。
+- `command_executable_denied`：4 次，是非致命 observation；模型尝试使用不在 profile allowlist
+  中的 `python`，随后仍完成相关任务。这证明 M4.2 边界在工作，不是新增工具证据。
+- `compression:summarizer_unconfigured`：3 次，是 `budgeted` 的有界 fallback 记录，不是基础设施失败。
+
+三次重复没有出现 `workspace_path` 失败、权限违规、基础设施失败或新的 Provider 协议错误。
+因此当前证据仍不足以批准 search/Git；下一步优先运行同一 suite 的 `compressed` variant，单独
+验证长历史上下文路径，再决定是否需要 context 配置/压缩改进。
+
 ## 7. M5 工具扩展决策
 
 当前证据的结论是：
@@ -241,7 +329,7 @@ override 只替换每个 case 的 model backend；fixture、程序化 oracle、f
 2. 预设的定位失败和范围越界能被 oracle 捕获，但它们不是由真实模型反复产生的 failure coverage。
 3. ScriptedBackend 能验证 Runtime、Harness、oracle 和报告语义，不能证明真实模型需要某个新工具。
 4. A/B 没有显示新增工具或当前 context policy 带来可归因的成功率提升。
-5. 真正的 live Provider baseline 尚未执行。
+5. 已完成 3 次探索性 live Provider Eval，但由于负控制混入、budgeted 长历史预算不足，尚不能作为最终真实模型能力分数。
 
 因此本轮不实现：
 
@@ -272,20 +360,24 @@ M5 继续保持“条件阶段”。只有真实模型在多次重复中明确�
 - Release/Evidence Hardening：已完成；
 - M5 评测门禁扩展：本轮完成；
 - M5 新工具能力：0%，尚未满足启动条件；
-- 真实 Provider 多次 baseline：待凭据；
+- 真实 Provider 多次 baseline：DeepSeek 已完成 3 次探索性重复；需补充 compressed variant 并单独解释负控制后再形成工具决策；
 - 当前总体工程进度：约 90% 的既定路线图已实现，剩余部分取决于真实模型证据，不按工具数量估算。
 
-下一步不是自动新增工具，而是获得真实 Provider 凭据后执行 live smoke 和多次 Eval；在此之前继续保持现有安全边界和四工具集合。
+下一步不是自动新增工具，而是使用同一真实 Provider 执行 `compressed` variant，验证长历史 case 的压缩路径；在此之前继续保持现有安全边界和四工具集合。
 
 ## 9. 门禁清单
 
-- [x] 保持 75 个默认 unittest、四份 semantic golden 和 M4.1/M4.2 边界测试通过。
+- [x] 保持 82 个默认 unittest、四份 semantic golden 和 M4.1/M4.2 边界测试通过。
 - [x] 将新 fixture 纳入 Ruff、compile 和 CI 的 calculator/todo scripted smoke 边界。
 - [x] 扩展到 13 个 case、6 个 fixture，并为每个 case 配置程序化 oracle。
 - [x] 覆盖跨文件定位、多文件测试失败恢复、changed-path 范围和长历史 compression。
 - [x] 运行 budgeted/compressed Eval，并确认 infrastructure failure 为 0。
 - [x] 运行 passthrough/budgeted 单变量 A/B，并确认 paired keys 与指标可比较。
 - [x] 修复并回归 `RESUME_STARTED` recovery event 计数（现有代码已覆盖）。
-- [ ] 配置真实 Provider 后完成单次 live adapter smoke。
-- [ ] 配置真实 Provider 后对新版 suite 做多次 live baseline。
+- [x] 配置真实 Provider 后完成单次 live adapter smoke。
+- [x] 配置真实 Provider 后对新版 suite 完成 3 次 live baseline（结果仍标记为探索性，待 compressed variant 补充）。
+- [x] Eval manifest/report 分离正常任务与负控制统计。
+- [x] 保存脱敏 live-eval 汇总、逐 case 计数、原始 artifact hash 与 provenance 限制。
+- [x] 修复 Provider usage 协议校验与异常 model journal closure。
+- [x] 为普通 Tool handler 增加可终止的 Linux worker 进程边界，保留 sandbox 自有超时边界。
 - [ ] 只有 live failure coverage 明确指向工具缺口时，才新增工具 decision record 和实现。

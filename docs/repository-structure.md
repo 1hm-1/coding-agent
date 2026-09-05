@@ -9,6 +9,7 @@ coding-agent/
 ├── AGENTS.md                         # 后续 Coding Agent 的项目级约束
 ├── README.md                         # 项目概览和演示入口
 ├── pyproject.toml                    # package/build metadata 和稳定 lint 基线
+├── uv.lock                           # Python 运行/开发依赖解析锁
 ├── .gitignore                        # 运行产物、虚拟环境和 coverage 缓存
 ├── .github/
 │   └── workflows/
@@ -20,6 +21,7 @@ coding-agent/
 │   ├── architecture.md               # 目标架构、当前边界和不变量
 │   ├── contracts.md                  # 当前 M4.2 精确契约
 │   ├── current-state.md              # 已实现、未实现、已知限制
+│   ├── evidence/                     # 脱敏、可提交的评测证据摘要
 │   ├── development-guide.md          # 从零上手和变更流程
 │   ├── module-design.md              # 模块职责、依赖和扩展边界
 │   ├── requirements-traceability.md  # 原始需求和面试能力证据映射
@@ -86,6 +88,7 @@ coding-agent/
     │   ├── runtime_failure.json
     │   └── test_failure_recovery.json
     ├── test_hardening.py
+    ├── test_cli.py                    # CLI 入口/子命令 subprocess smoke
     ├── test_m2_recovery.py
     ├── test_models.py
     ├── test_m3_context.py
@@ -170,7 +173,8 @@ src/coding_agent/
 
 `command_profiles.py` 管理固定 executable allowlist、argv/cwd 限制、环境和资源策略；
 `run_command` 通过同一 ToolHarness、SQLite journal 和 M4 sandbox 执行，不接受 shell 字符串。
-M4.1/M4.2 使用 native rootfs content identity，不宣称 Docker/Podman 或 OCI image backend。
+M4.1/M4.2 使用 native runtime sample fingerprint；它不是完整 rootfs digest，也不宣称
+Docker/Podman 或 OCI image backend。
 批准网络和扩展资源 profile 仍 fail closed，等待未来明确授权通道。模块职责以
 [`module-design.md`](./module-design.md) 为准，里程碑顺序以 [`roadmap.md`](./roadmap.md) 为准。
 

@@ -28,17 +28,18 @@ git --version
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-预期：当前应发现 75 个默认测试；在 native sandbox capability 可用时全部通过，能力受限环境中 7 个 native-only case 会显式 skip。`tests/live_provider_smoke.py` 不以 `test_` 命名，不属于默认 discovery；它只在显式配置凭据后运行。若输出 `Ran 0 tests`，检查 `tests/__init__.py` 是否存在，以及命令是否从项目根执行。
+预期：当前应发现 82 个默认测试；在 native sandbox capability 可用时全部通过，能力受限环境中 7 个 native-only case 会显式 skip。`tests/live_provider_smoke.py` 不以 `test_` 命名，不属于默认 discovery；它只在显式配置凭据后运行。若输出 `Ran 0 tests`，检查 `tests/__init__.py` 是否存在，以及命令是否从项目根执行。
 
 可以使用 `uv` 创建虚拟环境并安装项目及开发工具：
 
 ```bash
 uv venv .venv
-uv pip install --python .venv/bin/python -e ".[dev]"
+uv sync --locked --extra dev
 PYTHONPATH=src .venv/bin/python -m unittest discover -v
 .venv/bin/ruff check src tests examples/todo_cli examples/mini_repos
 .venv/bin/mypy
 PYTHONPATH=src .venv/bin/coverage run -m unittest discover -q
+.venv/bin/coverage combine
 .venv/bin/coverage report
 ```
 
@@ -154,6 +155,7 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 
 ```bash
 PYTHONPATH=src .venv/bin/coverage run -m unittest discover -q
+.venv/bin/coverage combine
 .venv/bin/coverage report
 ```
 

@@ -20,7 +20,9 @@
 
 - 提供 `ScriptedBackend`、OpenAI-compatible 和 Anthropic adapter，并可用 `FallbackBackend` 组合。
 - Backend 按固定 JSON 序列返回 tool calls 或 final answer。
-- 非法响应、HTTP 错误、timeout、rate limit 和脚本耗尽映射为分类 `BackendError`；retry/fallback 由 Runtime 按持久 policy 驱动。
+- 非法响应、HTTP 错误、timeout、rate limit 和脚本耗尽映射为分类 `BackendError`；Provider
+  usage 字段严格要求非负整数。Backend 意外抛出非 `BackendError` 时也会以 `protocol_error`
+  原子关闭 model journal，不遗留 `running`；retry/fallback 由 Runtime 按持久 policy 驱动。
 - 每次接收到的 `ModelRequest` 会保存在 backend 实例中，供测试验证 observation 回填。
 - provider API key 只从对应环境变量读取，不写入 request journal、event、JSONL 或错误文本。
 - OpenAI-compatible adapter 支持显式发送 `thinking: disabled`；当前 Runtime 不持久化或回传
@@ -29,7 +31,8 @@
 ### Tools
 
 - 有 `read_file`、`edit_file`、`restricted_test`、`run_command`。
-- `ToolHarness` 统一执行注册查找、受限 JSON Schema 校验、权限检查、deadline、异常映射、输出限制和 audit callback。
+- `ToolHarness` 统一执行注册查找、受限 JSON Schema 校验、权限检查、deadline、异常映射、输出限制和 audit callback。普通 handler 默认在可杀死的 Linux worker 进程组中运行；sandbox
+  工具由 SandboxExecutor 强制 wall timeout，二者均不再只做事后超时判定。
 - 权限枚举的真实名称是 `READ`、`WRITE`、`EXECUTE_TEST`、`EXECUTE_COMMAND`。
 - `restricted_test` 只接收可信 profile 名称；当前默认 profile 是 `python_unittest`。
 - `run_command` 只接收可信 command profile、结构化 `argv` 和受限相对 `cwd`；不接受
@@ -54,10 +57,10 @@
 - 默认无网络，环境变量是 allowlist；运行身份设置 `no-new-privileges` 并清空 Linux
   capabilities。wall/CPU/memory/PID/writable-storage/stdout/stderr 均有上限，超时或资源
   耗尽后清理整个执行进程组。
-- `ExecutionSpec`、`ExecutionResult`、capability snapshot、native rootfs content identity、
+- `ExecutionSpec`、`ExecutionResult`、capability snapshot、native runtime sample fingerprint、
   limits、execution id、output truncation 和 cleanup 状态通过 `ToolResult` 进入
   `tool_call_finished`；公共事件投影不保存完整 workspace 路径或环境值。
-- native backend 的 identity 是当前运行时内容哈希，不是已拉取的 OCI image；M4.1 不提供
+- native backend 的 fingerprint 只覆盖声明的运行时样本，不是完整 rootfs digest 或已拉取的 OCI image；M4.1 不提供
   通用 Shell、approved network 或跨平台等价实现。
 - M4.2 的 `run_command` 使用 `EXECUTE_COMMAND` 和 `NON_IDEMPOTENT` journal mode；profile
   固定 executable allowlist、image、环境、limits 和 cwd 默认值，模型只能提交 argv。
@@ -78,9 +81,12 @@
 ### Context 与 Evaluation
 
 - `BudgetedContextBuilder` 按 `system → task_runtime → repository → summary → recent` 装配上下文；model capability registry 提供显式上下文上限、protocol margin 和 exact/命名 fallback counter。
+- recent history 中的 assistant tool-call turn 与其全部 tool result 作为原子组裁剪；完整组无法适配预算或历史组不完整时 fail closed，避免向 Provider 发送不合法的 tool-call 消息序列。
 - 超过 `0.85 * input_budget` 才尝试有界 compression，目标为 `0.65 * input_budget`；schema/required-fact 校验失败会记录 `compression_rejected` 并保留原始历史。
 - Repository snapshot 只从 isolated workspace 构建，包含有上限文件列表、Git diff summary、已读文件 hash、workspace revision 和最近测试摘要。
 - `evaluate` 读取严格版本化 JSON suite，按 case/repetition 创建新 workspace，运行可信 test/file/diff/result oracle，分别统计 task success 与 Runtime completion。
+- Eval case 显式标记 `task` 或 `negative_control`；报告分别统计 9 个正常任务的成功率与 4 个
+  负控制的 observed failure rate，同时保留全体 run 聚合字段兼容历史报告。
 - `evaluate` 支持显式 provider override，在不修改固定 scripted manifest 的情况下对同一
   组 fixture/oracle 运行真实模型 baseline；实际 backend 配置会写入 manifest snapshot，
   secret 仍只从环境变量读取。
@@ -91,13 +97,13 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 当前测试数量：75；在当前 capability probe 成功的环境中全部通过；`tests/live_provider_smoke.py` 为凭据门控的显式测试，不计入默认 discovery。能力受限 runner 会对 7 个 native-only case 显式 skip。
+- 当前测试数量：82；在当前 capability probe 成功的环境中全部通过；`tests/live_provider_smoke.py` 为凭据门控的显式测试，不计入默认 discovery。能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。
 - calculator smoke 产生 48 条连续事件；todo fixture 产生 72 条连续事件并保持 `false → true`。
 - Ruff 强制基线 `E4/E7/E9/F` 仍显式写入 `pyproject.toml`；已使用 `uv` 安装 Ruff 0.16.6，`ruff check src tests examples/todo_cli` 通过。
 - M2.2 recovery tests 覆盖 interrupt 后复用已保存模型响应、四个工具 crash window、edit hash reconciliation、三种人工 resolution、lease takeover 和 source/workspace resume rejection。
-- M2.3 adapter tests 覆盖 OpenAI-compatible/Anthropic text、tool call、usage、Unicode、HTTP error、protocol error、retry/fallback 和 secret 不落盘；用户已用 DeepSeek 完成一次 opt-in live API smoke，多次 baseline 仍待执行。
-- M3.1/M3.2 tests 覆盖 exact/fallback counter、unknown model、section boundary/hard retention、deterministic manifest、summary round-trip、stale invalidation、required-fact rejection、compression fallback 和 raw-event preservation。
+- M2.3 adapter tests 覆盖 OpenAI-compatible/Anthropic text、tool call、usage、Unicode、HTTP error、protocol error、retry/fallback 和 secret 不落盘；用户已用 DeepSeek 完成 opt-in live API smoke，并在上下文修复后完成 3 次探索性 live Eval。
+- M3.1/M3.2 tests 覆盖 exact/fallback counter、unknown model、section boundary/hard retention、tool-call group preservation、deterministic manifest、summary round-trip、stale invalidation、required-fact rejection、compression fallback 和 raw-event preservation。
 - M3.3 tests 覆盖 strict manifest/containment、fresh repetition、test/file/diff/result oracle、eval infrastructure failure 分类、task/runtime 分离、recovery suite、指标聚合和 paired A/B。
 - M4.1 tests 覆盖 capability fail-closed、namespace workspace/rootfs/secret/network/symlink/proc/device
   边界、wall/CPU/memory/PID/storage/output 限制、子进程清理、并行 session 和 SQLite
@@ -115,9 +121,16 @@
   `compression_input_tokens=220`、`compression_output_tokens=70`，没有 compression rejection。
 - Passthrough/budgeted 单变量 A/B 各 13 个 paired runs，task success、Runtime completion、
   source invariant、tool calls 和 Token 完全一致；单次 latency 差异不作为结论。用户已完成
-  一次 DeepSeek live smoke，但尚无多次真实任务 failure coverage，仍无 search/Git 新工具证据。
+  一次 DeepSeek live smoke，并在上下文修复后完成 3 次 13-case 探索性 live Eval：39/39 valid、
+  基础设施失败=0、task success=0.8205（32/39）、Runtime completion=0.8462（33/39）、
+  source invariant=1.0、permission violations=0，单次 task success 为 11/13、10/13、11/13。
+  该结果混入 scripted 负控制，不能作为最终真实模型成功率；修复前暴露的 tool-call 组截断问题
+  已改为原子组裁剪和 fail-closed，修复后不再出现 Provider `invalid_request`。`budgeted` 长历史
+  case 仍因没有 summarizer 且硬保留内容略超预算而安全失败，需用 `compressed` variant 单独
+  验证；当前仍无 search/Git 新工具证据。
 - Release/Evidence Hardening 已加入 `RESUME_STARTED` recovery event、70% coverage 门槛（本次
-  75 个默认测试实测 73.3%）、release surface 的 mypy 检查、GitHub Actions CI、calculator/todo
+  82 个默认测试启用 subprocess/multiprocessing 合并后实测 74.7%）、23/33 源码文件的 mypy
+  检查、`uv.lock`、GitHub Actions CI、calculator/todo
   scripted smoke 和凭据门控的 live provider smoke；CI 会先报告 native capability，能力不足
   时 skip native-only case 和 sandbox-dependent eval，不把 fail-closed 结果当作 native security
   通过。
@@ -191,8 +204,9 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 - approved network 的显式 approval UI/授权通道、OCI/container image backend；
 - M5 条件能力扩展（search、Git inspection、patch/edit 增强或依赖准备）尚未批准；当前
   固定 eval 没有显示现有工具覆盖率瓶颈；
-- 真实 Provider 多次 baseline 尚未执行；用户已完成一次 DeepSeek adapter smoke，并提供了手动、
-  凭据门控的 smoke workflow。
+- 真实 Provider 的 3 次 DeepSeek `budgeted` 探索性重复已经执行；用户已完成 adapter smoke，并提供
+  手动、凭据门控的 smoke workflow。三次结果仍混入 scripted 负控制，且长历史 case 需要用
+  `compressed` variant 复核，因此尚未形成可直接比较的最终工具能力 baseline。
 - 多 Agent、UI、消息平台、Skill 或 RAG。
 
 ## 5. 已知限制与技术债
@@ -203,7 +217,7 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
    namespace/mount 能力时 fail closed。它不是抵御内核/隔离运行时漏洞的完整安全边界。
 4. source fingerprint 仍是运行后不变量证据，不替代 workspace mount；M4.1 的测试代码
    只能看到 session workspace，但 workspace 内部仍可能被测试代码任意修改。
-5. M4.1/M4.2 使用 native rootfs content identity，不包含 OCI image 构建、SBOM、漏洞
+5. M4.1/M4.2 使用 native runtime sample fingerprint，不是完整 rootfs digest，也不包含 OCI image 构建、SBOM、漏洞
    扫描或依赖安装流程；M4.2 elevated profile 只做 approval fail-closed。
 6. Runtime 和 backend 是同步调用。M2 的中断先保证状态边界安全，不应在没有取消语义前假装支持任意时刻抢占；sandbox timeout/崩溃清理已验证。
 7. 自研 JSON Schema 只支持内置工具使用的子集，不是完整 Draft 实现。
@@ -213,10 +227,16 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
     Actions CI 配置；当前仍没有已托管 CI 运行记录，评估器只对每个 isolated fixture 内部
     初始化的 Git baseline 执行 changed-path diff。
 11. 当前 coverage 是 statement coverage，发布门槛为 70%；coverage 不等同于安全或任务成功率证明。
-12. mypy 当前只对 `command_profiles.py`、`evaluation.py` 和 `sandbox/` release surface 运行；全仓历史代码尚未达到 strict 类型检查标准。
+    CLI 通过 subprocess smoke 纳入合并数据；namespace runner 为保持 sandbox 环境 allowlist 不注入
+    宿主 coverage hook，当前仍显示 0%，其行为证据来自 native integration/security tests。
+12. mypy 当前覆盖 models、tools、context、domain、workspace、command profiles、evaluation 和
+    sandbox，共 23/33 个源码文件；其余 Runtime/Application/Persistence/CLI/Compression 历史代码
+    尚未达到全仓类型检查标准（当前全仓扫描剩余 76 个错误，集中在 6 个文件）。
 13. live provider smoke 已提供手动 workflow；本地首次 DeepSeek 尝试已到达 Provider，但因
    smoke 原先只有 16 个输出 token，最终 `content` 为空而失败。现已增加输出预算，并支持
-   DeepSeek `thinking: disabled` 配置；仍需凭据环境重新运行成功后，才能记录 live baseline。
+   DeepSeek `thinking: disabled` 配置；adapter smoke 已成功，修复上下文组裁剪后也已完成 3 次
+   `budgeted` live Eval。该结果仍受 scripted 负控制和未配置 summarizer 的长历史预算影响，需
+   `compressed` variant 后再形成最终能力结论。
    GitHub-hosted runner 的 native capability 也可能不足；native-only case 会显式 skip，相关
    sandbox-dependent eval 也会跳过，不能以此替代具备能力环境的 M4.1/M4.2 安全证据。
 14. `runtime.py`、`persistence.py`、`evaluation.py` 仍是高集中度大模块；本轮只记录维护风险，不做无验收收益的拆分重构。

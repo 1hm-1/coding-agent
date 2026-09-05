@@ -209,11 +209,11 @@ no-new-privileges/drop capabilities，wall/CPU/memory/PID/storage/output 有界�
 
 `tests/test_m4_sandbox.py` 的 7 个测试覆盖成功、资源/边界失败、输出上限、子进程清理、
 并行 session、trajectory metadata 和 SQLite tool recovery；M4.1 阶段全量回归为 68/68，四份
-semantic golden 保持通过。native backend 的 content identity 是当前 rootfs runtime
-哈希，不宣称 OCI image/container lifecycle 已实现。
+semantic golden 保持通过。native backend 只记录关键运行时样本 fingerprint，不是完整
+rootfs digest，也不宣称 OCI image/container lifecycle 已实现。
 
 M4.1 不提供任意时刻抢占；中断仍使用 M2 的安全状态边界，sandbox timeout/崩溃清理已
-验证。native backend 的 content identity 仍不是 OCI image 生命周期承诺。
+验证。native backend 的 runtime sample fingerprint 仍不是 OCI image 生命周期承诺。
 
 ### 8.2 M4.2 Structured Execution Extension（已完成，2026-09-05）
 
@@ -252,8 +252,11 @@ compression；compressed variant 中 long-history case 成功记录压缩 Token�
 或 Git。
 
 Passthrough/budgeted 单变量 A/B 各 13 个 paired runs，task success、Runtime completion、
-source invariant、工具调用和 Token 没有差异；单次 latency 波动不作结论。DeepSeek 单次
-真实 Provider smoke 已通过，多次 live baseline 尚待执行；详细记录见
+source invariant、工具调用和 Token 没有差异；单次 latency 波动不作结论。DeepSeek 真实
+Provider smoke 已通过，并已完成修复后的 3 次 13-case 探索性 live Eval：39/39 valid、基础设施
+失败=0、task success=0.8205、Runtime completion=0.8462、source invariant=1.0、permission
+violations=0。其聚合结果混入 scripted 负控制，不能作为最终真实模型成功率；budgeted 长历史
+case 仍需用 `compressed` variant 验证。tool-call 组裁剪问题已修复，详细记录见
 [`m5-eval-expansion.md`](./m5-eval-expansion.md)。
 
 决策：本轮不新增 M5 工具，M5 保持条件阶段。只有新增真实任务及程序化 oracle，明确证明
@@ -265,14 +268,20 @@ source invariant、工具调用和 Token 没有差异；单次 latency 波动不
 - 修正 `AGENTS.md` 与 `HANDOFF.md` 的旧里程碑描述，明确 M4.2 当前基线和 M5 条件门禁；
 - `evaluation.py` 将 `RESUME_STARTED` 纳入 `recovery_events`，并由测试断言恢复指标一致；
 - 初始化 Git 仓库并保留工作副本现状，创建并推送初始提交；新增 GitHub Actions CI，覆盖
-  Ruff、release-surface mypy、75 个默认测试、native capability report、70% coverage、
+  Ruff、23/33 源码文件 mypy、82 个默认测试、native capability report、70% coverage、
   compile、calculator/todo scripted smoke 和 offline eval（native capability 可用时）；能力
   受限 runner 的 native-only case 显式 skip，且跳过 sandbox-dependent eval，不视为 native
   security suite 通过；
 - 新增显式、凭据门控的 `tests/live_provider_smoke.py` 与手动 workflow；DeepSeek 首次 live
   请求因过小的 smoke 输出预算得到空 `content`，现已增加预算并支持 `thinking: disabled`，
-  用户已重新运行确认成功；另提供 provider override 运行真实 Eval baseline；
+  用户已重新运行确认成功；另提供 provider override 运行真实 Eval baseline；上下文 tool-call
+  组裁剪问题已修复，修复后已完成 3 次 `budgeted` 探索性 Eval，`compressed` variant 仍待执行；
 - 固定 eval 扩展为 13 case/6 fixture，覆盖跨文件、多文件恢复、范围约束和长历史 compression；仍明确标注为小型 scripted/offline 数据集，不能外推真实 Coding 任务或证明不需要 search/Git；
+- Eval case 显式区分正常任务和负控制，报告分别给出正常任务成功率与负控制 observed failure
+  rate；保留全体 run 聚合字段只为历史兼容；
+- Provider usage 与 model journal 异常提交语义、普通 Tool handler 的可终止进程边界已完成回归；
+- mypy 门禁扩大到 23/33 个源码文件，coverage 合并 multiprocessing/subprocess 数据，并加入
+  `uv.lock`；namespace runner 仍因隔离环境不注入宿主 coverage；
 - 记录 `runtime.py`、`persistence.py`、`evaluation.py` 的集中度风险，暂不进行无验收收益的拆分。
 
 ## 11. 持续风险登记

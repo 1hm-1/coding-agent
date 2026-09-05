@@ -604,6 +604,13 @@ class BudgetedContextBuilder:
         hard_names = {"system", "task_runtime", "repository"}
         hard_tokens = sum(by_name[name].estimated_tokens for name in hard_names)
         recent = by_name["recent"]
+        _, incomplete_groups = self._recent_tool_call_groups(recent.messages)
+        if incomplete_groups:
+            raise ContextBudgetError(
+                "recent history contains an incomplete assistant tool-call turn",
+                kind="context_invalid_tool_history",
+                details={"message_indices": sorted(incomplete_groups)},
+            )
         required_indices = self._required_recent_indices(recent.messages)
         required_messages = tuple(
             message
@@ -721,7 +728,15 @@ class BudgetedContextBuilder:
         counter: TokenCounter,
     ) -> ContextSection:
         messages = section.messages
-        selected_indices = set(required_indices)
+        groups, incomplete = self._recent_tool_call_groups(messages)
+        selected_indices = self._expand_recent_indices(required_indices, groups)
+        invalid_required = sorted(selected_indices & incomplete)
+        if invalid_required:
+            raise ContextBudgetError(
+                "recent history contains an incomplete assistant tool-call turn",
+                kind="context_invalid_tool_history",
+                details={"message_indices": invalid_required},
+            )
         selected = tuple(messages[index] for index in sorted(selected_indices))
         required_tokens = counter.count_messages(request.provider, request.model, selected)
         if required_tokens > available:
@@ -734,12 +749,16 @@ class BudgetedContextBuilder:
         for index in range(len(messages) - 1, -1, -1):
             if index in selected_indices:
                 continue
-            candidate = tuple(messages[item] for item in sorted((*selected_indices, index)))
+            group = groups.get(index, (index,))
+            if any(item in incomplete for item in group):
+                continue
+            candidate_indices = selected_indices | set(group)
+            candidate = tuple(messages[item] for item in sorted(candidate_indices))
             candidate_tokens = counter.count_messages(
                 request.provider, request.model, candidate
             )
             if candidate_tokens <= available:
-                selected_indices.add(index)
+                selected_indices = candidate_indices
                 remaining = available - candidate_tokens
             if remaining <= 0:
                 break
@@ -756,6 +775,7 @@ class BudgetedContextBuilder:
 
     @staticmethod
     def _required_recent_indices(messages: Sequence[Message]) -> set[int]:
+        groups, _ = BudgetedContextBuilder._recent_tool_call_groups(messages)
         required: set[int] = set()
         last_tool = next(
             (
@@ -784,7 +804,70 @@ class BudgetedContextBuilder:
             if messages[index].role == "assistant" and messages[index].metadata.get("tool_calls"):
                 required.add(index)
                 break
-        return required
+        return BudgetedContextBuilder._expand_recent_indices(required, groups)
+
+    @staticmethod
+    def _recent_tool_call_groups(
+        messages: Sequence[Message],
+    ) -> tuple[dict[int, tuple[int, ...]], set[int]]:
+        """Return atomic assistant-tool groups and indices of incomplete groups.
+
+        OpenAI-compatible providers require every tool result for an assistant
+        tool-call message to follow that message before the next assistant
+        turn. The context fitter may therefore omit a whole group, but it must
+        never select only part of one.
+        """
+        groups: dict[int, tuple[int, ...]] = {}
+        incomplete: set[int] = set()
+        for index, message in enumerate(messages):
+            if message.role != "assistant":
+                continue
+            raw_calls = message.metadata.get("tool_calls")
+            if not isinstance(raw_calls, list) or not raw_calls:
+                continue
+
+            call_ids: list[str] = []
+            valid_calls = True
+            for raw_call in raw_calls:
+                if not isinstance(raw_call, Mapping) or not raw_call.get("id"):
+                    valid_calls = False
+                    continue
+                call_ids.append(str(raw_call["id"]))
+
+            result_indices: list[int] = []
+            cursor = index + 1
+            while cursor < len(messages) and messages[cursor].role == "tool":
+                result_indices.append(cursor)
+                cursor += 1
+            group = (index, *result_indices)
+            for member in group:
+                groups[member] = group
+
+            result_ids = [
+                messages[item].tool_call_id
+                for item in result_indices
+                if messages[item].tool_call_id is not None
+            ]
+            complete = (
+                valid_calls
+                and len(call_ids) == len(set(call_ids))
+                and len(result_ids) == len(result_indices)
+                and len(result_ids) == len(set(result_ids))
+                and set(call_ids) == set(result_ids)
+            )
+            if not complete:
+                incomplete.update(group)
+        return groups, incomplete
+
+    @staticmethod
+    def _expand_recent_indices(
+        indices: set[int],
+        groups: Mapping[int, tuple[int, ...]],
+    ) -> set[int]:
+        expanded: set[int] = set()
+        for index in indices:
+            expanded.update(groups.get(index, (index,)))
+        return expanded
 
     @staticmethod
     def _recent_refs(messages: Sequence[Message]) -> tuple[str, ...]:
