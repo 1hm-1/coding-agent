@@ -266,7 +266,9 @@ smoke 因没有凭据显式 skip，详细记录见 [`m5-eval-expansion.md`](./m5
   compile、calculator/todo scripted smoke 和 offline eval（native capability 可用时）；能力
   受限 runner 的 native-only case 显式 skip，且跳过 sandbox-dependent eval，不视为 native
   security suite 通过；
-- 新增显式、凭据门控的 `tests/live_provider_smoke.py` 与手动 workflow；本环境无凭据，未执行真实网络调用；
+- 新增显式、凭据门控的 `tests/live_provider_smoke.py` 与手动 workflow；DeepSeek 首次 live
+  请求因过小的 smoke 输出预算得到空 `content`，现已增加预算并支持 `thinking: disabled`，
+  待重新运行确认；
 - 固定 eval 扩展为 13 case/6 fixture，覆盖跨文件、多文件恢复、范围约束和长历史 compression；仍明确标注为小型 scripted/offline 数据集，不能外推真实 Coding 任务或证明不需要 search/Git；
 - 记录 `runtime.py`、`persistence.py`、`evaluation.py` 的集中度风险，暂不进行无验收收益的拆分。
 

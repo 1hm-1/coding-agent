@@ -61,6 +61,7 @@ _BACKEND_FIELDS = {
     "base_url",
     "api_key_env",
     "timeout",
+    "thinking",
     "compression_fixture",
     "compression_responses",
     "fault_stage",
@@ -676,6 +677,7 @@ class EvaluationRunner:
                 base_url=str(spec.get("base_url", "https://api.openai.com/v1")),
                 api_key_env=str(spec.get("api_key_env", "OPENAI_API_KEY")),
                 timeout=timeout,
+                thinking=(str(spec["thinking"]) if "thinking" in spec else None),
             )
         if kind == "anthropic":
             return AnthropicBackend(

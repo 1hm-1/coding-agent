@@ -189,16 +189,23 @@ long-history-compression 成功产生压缩输入/输出 Token 记录，且没�
 
 结果：
 
-    Ran 1 test
-    OK (skipped=1)
+    首次配置 DeepSeek 后，测试实际发起了 Provider 请求，但断言失败：response.text 为空。
+    这不是凭据门控 skip。
 
-原因是当前环境没有同时配置：
+初始 smoke 使用 `max_output_tokens=16`。DeepSeek 当前 thinking 模式默认开启，思考内容和
+最终 `content` 分开返回；在很小的输出预算下，可能只得到 `reasoning_content`，而最终
+`content` 为空。官方协议说明了该字段分离和 `thinking: disabled` 开关。
 
-- CODING_AGENT_LIVE_PROVIDER；
-- CODING_AGENT_LIVE_MODEL；
-- 对应的 OPENAI_API_KEY 或 ANTHROPIC_API_KEY。
+因此本次修复做了三件事：
 
-因此本轮没有发起真实网络请求，也没有把 ScriptedBackend 的结果当作真实模型能力。真实 baseline 仍是待执行证据，不是已完成事实。
+- smoke 的输出预算提高到 256；
+- OpenAI-compatible adapter 支持显式 `thinking: disabled`；
+- CLI、Eval backend 和 DeepSeek smoke 都可以传递该设置，且 DeepSeek smoke 对官方 base URL
+  默认关闭 thinking。
+
+当前仍未把 `reasoning_content` 写入消息、SQLite 或 trace，也没有声称支持 DeepSeek thinking
+模式下的多轮工具回传。重新执行成功的 DeepSeek smoke 后，才算完成单次 live adapter
+验证；在此之前没有把本次失败当作工具缺口证据。
 
 有凭据后，应先单独运行 adapter smoke，再在固定 suite 上做至少多次重复，并记录：
 

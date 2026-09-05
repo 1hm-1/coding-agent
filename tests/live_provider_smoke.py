@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import unittest
+from urllib.parse import urlsplit
 
 from coding_agent.domain import Message, ModelRequest
 from coding_agent.models.anthropic import AnthropicBackend
@@ -24,11 +25,15 @@ def _backend() -> ModelBackend:
     base_url = os.environ.get("CODING_AGENT_LIVE_BASE_URL")
     timeout = float(os.environ.get("CODING_AGENT_LIVE_TIMEOUT", "30"))
     if provider == "openai-compatible":
+        thinking = os.environ.get("CODING_AGENT_LIVE_THINKING")
+        if thinking is None and urlsplit(base_url or "").hostname == "api.deepseek.com":
+            thinking = "disabled"
         return OpenAICompatibleBackend(
             model=model,
             base_url=base_url or "https://api.openai.com/v1",
             api_key_env="OPENAI_API_KEY",
             timeout=timeout,
+            thinking=thinking,
         )
     return AnthropicBackend(
         model=model,
@@ -51,7 +56,7 @@ class LiveProviderSmokeTest(unittest.TestCase):
                 request_id="live-provider-smoke",
                 messages=(Message(role="user", content="Reply with the single word OK."),),
                 tools=(),
-                max_output_tokens=16,
+                max_output_tokens=256,
                 metadata={},
             )
         )

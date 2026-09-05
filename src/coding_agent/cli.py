@@ -38,6 +38,11 @@ def build_parser() -> argparse.ArgumentParser:
     provider_parser.add_argument("--task", required=True)
     provider_parser.add_argument("--base-url")
     provider_parser.add_argument("--api-key-env")
+    provider_parser.add_argument(
+        "--thinking",
+        choices=("disabled",),
+        help="Disable provider thinking mode (required for DeepSeek tool loops currently).",
+    )
     provider_parser.add_argument("--timeout", type=float, default=60.0)
 
     replay_parser = subparsers.add_parser("replay", help="Replay a saved trajectory.")
@@ -58,6 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
     resume_parser.add_argument("--model")
     resume_parser.add_argument("--base-url")
     resume_parser.add_argument("--api-key-env")
+    resume_parser.add_argument(
+        "--thinking",
+        choices=("disabled",),
+        help="Disable provider thinking mode (required for DeepSeek tool loops currently).",
+    )
     resume_parser.add_argument("--timeout", type=float, default=60.0)
 
     interrupt_parser = subparsers.add_parser(
@@ -155,6 +165,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             arguments.base_url,
             arguments.api_key_env,
             arguments.timeout,
+            arguments.thinking,
         )
         result = application.run_task(
             source=arguments.source,
@@ -176,6 +187,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 arguments.base_url,
                 arguments.api_key_env,
                 arguments.timeout,
+                arguments.thinking,
             )
         else:
             raise ValueError("resume requires --script or --provider with --model")
@@ -271,6 +283,7 @@ def _provider_backend(
     base_url: str | None,
     api_key_env: str | None,
     timeout: float,
+    thinking: str | None,
 ) -> ModelBackend:
     if provider == "openai-compatible":
         return OpenAICompatibleBackend(
@@ -278,7 +291,10 @@ def _provider_backend(
             base_url=base_url or "https://api.openai.com/v1",
             api_key_env=api_key_env or "OPENAI_API_KEY",
             timeout=timeout,
+            thinking=thinking,
         )
+    if thinking is not None:
+        raise ValueError("--thinking is only supported for the openai-compatible provider")
     return AnthropicBackend(
         model=model,
         base_url=base_url or "https://api.anthropic.com/v1",

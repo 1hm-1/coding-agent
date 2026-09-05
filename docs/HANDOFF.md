@@ -61,9 +61,11 @@ M2.1 已完成 SQLite persistence foundation，M2.2/M2.3 也已严格完成：
   recovery event；默认 75 个测试、70% statement coverage、release-surface mypy、GitHub
   Actions 离线 CI 和手动凭据门控 Provider smoke 已建立。
 - 当前固定 eval 有 13 个 case、覆盖 6 个 fixture，valid 13、基础设施失败为 0；新增跨文件定位、多文件恢复、范围约束和长历史 compression，但失败仍是预设 scripted/oracle 场景，因此它只能作为小型 scripted/offline 证据，不能证明真实 Coding 任务不需要 search 或 Git。详细证据见 `docs/m5-eval-expansion.md`。
+- OpenAI-compatible adapter 现支持显式 `thinking: disabled`；DeepSeek smoke 首次请求曾因 16
+  token 输出上限得到空 `content`，已增加预算并关闭 DeepSeek thinking，需用户重新运行确认。
 
 下一窗口先使用 `docs/m5-eval-expansion.md` 的 13-case/6-fixture 证据和真实 Provider
-baseline 门禁；只有出现新的、可重复的真实模型 failure coverage 后才进入 M5 的
+baseline 门禁；先完成 DeepSeek adapter smoke，再进行多次 live baseline；只有出现新的、可重复的真实模型 failure coverage 后才进入 M5 的
 eval-driven capability expansion 设计，当前不新增工具。保持 M4.1/M4.2 的 OS isolation
 foundation；不要加入 shell 字符串、默认网络或多 Agent。
 

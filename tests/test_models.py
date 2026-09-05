@@ -90,6 +90,7 @@ class ModelAdapterTest(unittest.TestCase):
                 base_url="https://provider.test/v1",
                 api_key_env="TEST_OPENAI_KEY",
                 transport=transport,
+                thinking="disabled",
             )
             response = backend.complete(request())
         self.assertEqual(response.text, "读取完成")
@@ -99,6 +100,7 @@ class ModelAdapterTest(unittest.TestCase):
         payload = transport.calls[0][1]["json"]
         self.assertEqual(payload["model"], "test-model")
         self.assertEqual(payload["max_tokens"], 123)
+        self.assertEqual(payload["thinking"], {"type": "disabled"})
         self.assertEqual(payload["messages"][0]["role"], "system")
         self.assertNotIn("sk-secret", str(response.provider_metadata))
 

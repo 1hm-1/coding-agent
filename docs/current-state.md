@@ -23,6 +23,8 @@
 - 非法响应、HTTP 错误、timeout、rate limit 和脚本耗尽映射为分类 `BackendError`；retry/fallback 由 Runtime 按持久 policy 驱动。
 - 每次接收到的 `ModelRequest` 会保存在 backend 实例中，供测试验证 observation 回填。
 - provider API key 只从对应环境变量读取，不写入 request journal、event、JSONL 或错误文本。
+- OpenAI-compatible adapter 支持显式发送 `thinking: disabled`；当前 Runtime 不持久化或回传
+  Provider 的 `reasoning_content`，因此 DeepSeek 的工具循环必须关闭 thinking。
 
 ### Tools
 
@@ -208,7 +210,9 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
     初始化的 Git baseline 执行 changed-path diff。
 11. 当前 coverage 是 statement coverage，发布门槛为 70%；coverage 不等同于安全或任务成功率证明。
 12. mypy 当前只对 `command_profiles.py`、`evaluation.py` 和 `sandbox/` release surface 运行；全仓历史代码尚未达到 strict 类型检查标准。
-13. live provider smoke 已提供手动 workflow，但本环境无 Provider 凭据，因此未执行真实网络调用。
+13. live provider smoke 已提供手动 workflow；本地首次 DeepSeek 尝试已到达 Provider，但因
+   smoke 原先只有 16 个输出 token，最终 `content` 为空而失败。现已增加输出预算，并支持
+   DeepSeek `thinking: disabled` 配置；仍需凭据环境重新运行成功后，才能记录 live baseline。
    GitHub-hosted runner 的 native capability 也可能不足；native-only case 会显式 skip，相关
    sandbox-dependent eval 也会跳过，不能以此替代具备能力环境的 M4.1/M4.2 安全证据。
 14. `runtime.py`、`persistence.py`、`evaluation.py` 仍是高集中度大模块；本轮只记录维护风险，不做无验收收益的拆分重构。

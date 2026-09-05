@@ -19,16 +19,23 @@ class OpenAICompatibleBackend:
         api_key_env: str = "OPENAI_API_KEY",
         timeout: float = 60.0,
         transport: Any | None = None,
+        thinking: str | None = None,
     ):
         if not model.strip():
             raise ValueError("model cannot be empty")
         if timeout <= 0:
             raise ValueError("timeout must be positive")
+        if thinking not in {None, "disabled"}:
+            raise ValueError(
+                "only thinking='disabled' is supported; "
+                "reasoning_content pass-through is not implemented"
+            )
         self.model = model
         self.base_url = base_url.rstrip("/")
         self.api_key_env = api_key_env
         self.timeout = timeout
         self.transport = transport
+        self.thinking = thinking
 
     @property
     def name(self) -> str:
@@ -55,6 +62,8 @@ class OpenAICompatibleBackend:
             "messages": [_message_to_openai(message) for message in request.messages],
             "max_tokens": request.max_output_tokens,
         }
+        if self.thinking is not None:
+            payload["thinking"] = {"type": self.thinking}
         if request.tools:
             payload["tools"] = [_tool_to_openai(tool) for tool in request.tools]
         # The model is supplied by the adapter, but keeping request metadata out of the

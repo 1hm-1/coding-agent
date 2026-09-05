@@ -161,8 +161,18 @@ PYTHONPATH=src .venv/bin/coverage run -m unittest discover -q
 `CODING_AGENT_LIVE_MODEL` 和对应 API key 后才手动运行：
 
 ```bash
+export CODING_AGENT_LIVE_PROVIDER=openai-compatible
+export CODING_AGENT_LIVE_MODEL=deepseek-v4-flash
+export CODING_AGENT_LIVE_BASE_URL=https://api.deepseek.com
+export CODING_AGENT_LIVE_THINKING=disabled
+# DeepSeek key 使用这个变量名，因为它走 OpenAI-compatible adapter
+export OPENAI_API_KEY='<your-deepseek-api-key>'
 PYTHONPATH=src .venv/bin/python -m unittest tests.live_provider_smoke -v
 ```
+
+DeepSeek 当前默认开启 thinking；本项目暂不持久化或回传 `reasoning_content`，所以实时
+coding/tool loop 应显式关闭 thinking。CLI 的真实运行对应使用 `--thinking disabled`；Eval
+provider backend 可设置 `"thinking": "disabled"`。不要把 API key 写入仓库或提交到 GitHub。
 
 M3 离线评测：
 

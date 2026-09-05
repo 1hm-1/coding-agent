@@ -97,8 +97,13 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 PYTHONPATH=src python3 -m coding_agent.cli \
   --agent-home /tmp/coding-agent-provider-demo \
   run --provider openai-compatible --model <model> \
+  --base-url https://api.deepseek.com --thinking disabled \
   --source examples/fixture --task "修复 add 函数并运行测试"
 ```
+
+DeepSeek 使用 OpenAI-compatible 接口时，将 key 放在 `OPENAI_API_KEY` 环境变量中；当前
+Runtime 不回传 thinking 模式的 `reasoning_content`，因此使用 DeepSeek 工具循环时必须传入
+`--thinking disabled`。真实 smoke 会对 `https://api.deepseek.com` 自动采用该设置。
 
 命令返回 `session_id`、隔离 workspace 和 trace 路径。使用返回的 session id 回放：
 
