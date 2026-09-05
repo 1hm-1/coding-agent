@@ -215,8 +215,10 @@ M4.2 checklist：
 
 验收证据：`tests/test_m4_execution.py` 的 6 个测试覆盖 schema/allowlist/cwd、profile
 控制、approval fail-closed、非零退出 observation、native direct argv 和 non-idempotent
-crash recovery；M4.1 的 7 个 sandbox tests 继续通过。固定 eval suite 新增
-`calculator-structured-command`，固定 eval suite 的 7 个 case 全部运行且 infrastructure failure 为 0；当前 suite 覆盖 calculator 与 todo-cli 两个 fixture，但仍是小型 scripted/offline 证据。
+crash recovery；M4.1 的 7 个 sandbox tests 继续通过。M4.2 完成时固定 eval suite 新增
+`calculator-structured-command`，7 个 case 全部运行且 infrastructure failure 为 0；随后
+M5 条件评估将 suite 扩展为 13 个 case、6 个 fixture，当前证据见
+`docs/m5-eval-expansion.md`。
 
 若需求只是搜索或 Git 检查，优先提供只读 `search_files`、`git_status`、`git_diff` 专用工具。是否增加由 eval failure coverage 决定，放入 M5 capability decision，不因“Coding Agent 应该有 Shell”自动加入。
 

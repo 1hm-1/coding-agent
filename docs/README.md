@@ -55,6 +55,7 @@
 | `m2-implementation-plan.md` | M2 如何按子阶段实施与验收？ |
 | `m3-implementation-plan.md` | 如何实现可评测的上下文预算、压缩和 Eval Harness？ |
 | `m4-implementation-plan.md` | 如何用 OS 强边界隔离执行并验证 threat model？ |
+| `m5-eval-expansion.md` | 新工具能力是否已经被评测证据证明需要？ |
 | `HANDOFF.md` | 当前工作区如何安全交接？ |
 
 ## 4. 文档更新规则

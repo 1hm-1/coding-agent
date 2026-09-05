@@ -36,11 +36,31 @@ PYTHONPATH=src python3 -m unittest discover -v
 uv venv .venv
 uv pip install --python .venv/bin/python -e ".[dev]"
 PYTHONPATH=src .venv/bin/python -m unittest discover -v
-.venv/bin/ruff check src tests examples/todo_cli
+.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos
 .venv/bin/mypy
 PYTHONPATH=src .venv/bin/coverage run -m unittest discover -q
 .venv/bin/coverage report
 ```
+
+当前 M5 条件评估 suite 位于 `examples/eval_suite.json`，包含 13 个 case 和 6 个 fixture；
+它仍是 scripted/offline 证据，不能代替真实 Provider 基线，也不能直接证明需要新增 search
+或 Git 工具。要运行预算化评测、压缩评测或单变量 A/B：
+
+```bash
+PYTHONPATH=src python3 -m coding_agent.cli \
+  --agent-home /tmp/coding-agent-m5 \
+  evaluate --suite examples/eval_suite.json --variant budgeted --repetitions 1
+
+PYTHONPATH=src python3 -m coding_agent.cli \
+  --agent-home /tmp/coding-agent-m5-compressed \
+  evaluate --suite examples/eval_suite.json --variant compressed --repetitions 1
+
+PYTHONPATH=src python3 -m coding_agent.cli \
+  --agent-home /tmp/coding-agent-m5-ab \
+  evaluate --suite examples/eval_suite.json --ab --repetitions 1
+```
+
+评测的 fixture、程序化 oracle、结果和 M5 工具门禁解释见 [`m5-eval-expansion.md`](./m5-eval-expansion.md)。
 
 native sandbox backend 使用 `/usr/bin/python3` 作为固定 runtime；因此无论 Ruff/项目工具
 是否由 `.venv` 提供，M4.1 的实际 namespace security test 都应使用上面的 system

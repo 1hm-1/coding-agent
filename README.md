@@ -8,6 +8,7 @@ Evaluation）；用最小能力证明完整 runtime
 当前已完成 **M4.2 Structured Execution Extension**，并完成 Release/Evidence Hardening。项目已支持离线测试的真实模型 adapter、
 预算化 context、带 lineage 的摘要、评估报告和 Linux restricted-test OS isolation。新接手开发请从
 [文档索引](docs/README.md)和[新窗口交接](docs/HANDOFF.md)开始，不要仅根据目标架构直接写代码。
+本轮 M5 评测扩展和工具门禁记录见 [M5 评测证据](docs/m5-eval-expansion.md)。
 
 ## M1 已实现
 
@@ -47,7 +48,7 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 - hard-retention、section budget、high-watermark 和 deterministic `context_built` manifest；`PassthroughContextBuilder` 保留为 A/B baseline；
 - `SummaryRecord` 以 event range/hash、workspace revision、file/test/error facts 和 `superseded_by` 持久化到 SQLite；压缩失败或 stale 时保留原始历史；
 - `evaluate` CLI 支持严格版本化 JSON suite、隔离 repetition、可信 test/file/diff/result oracle、task/runtime 分离指标和 paired A/B report；
-- `examples/eval_suite.json` 提供 7 个 case，覆盖 calculator 与 todo-cli 两个 fixture；包含 success、structured-command、task-fail、runtime-fail、recovery 等离线评测样例，但仍是小型 scripted 数据集，不能代表真实 Coding 任务覆盖率。
+- `examples/eval_suite.json` 提供 13 个 case、覆盖 6 个 fixture；新增跨文件定位、多文件失败恢复、指定文件范围和长历史 compression 样例，但仍是小型 scripted 数据集，不能代表真实 Coding 任务覆盖率。
 
 ## M4.1 已实现
 
@@ -73,9 +74,9 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 
 ## Release/Evidence Hardening 已实现
 
-- Git 工作区已初始化并推送到 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、release-surface mypy、75 个默认测试、native capability report、70% statement coverage、compile 检查和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
+- Git 工作区已初始化并推送到 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、release-surface mypy、75 个默认测试、native capability report、70% statement coverage、compile 检查、calculator/todo scripted smoke 和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
 - `tests/live_provider_smoke.py` 和手动 workflow 提供显式凭据门控的真实 Provider smoke；无凭据时不发起网络请求。
-- recovery 指标将 `RESUME_STARTED` 计为 recovery event；当前 todo/calculator 双 fixture eval 的基础设施失败为 0，但该样本仍不足以证明不需要 search 或 Git 能力。
+- recovery 指标将 `RESUME_STARTED` 计为 recovery event；扩展后的 13-case/6-fixture eval 基础设施失败为 0，但 scripted 结果仍不足以证明真实模型不需要 search 或 Git 能力；详见 [M5 评测证据](docs/m5-eval-expansion.md)。
 
 ## 快速运行
 

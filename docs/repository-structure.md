@@ -30,13 +30,16 @@ coding-agent/
 │   ├── m1.5-engineering-hardening.md # M1.5 已完成实施记录
 │   ├── m2-implementation-plan.md      # M2.1—M2.3 实施与验收记录
 │   ├── m3-implementation-plan.md      # M3.1—M3.3 实施与验收记录
-│   └── m4-implementation-plan.md      # M4.1/M4.2 验收与 M5 门禁
+│   ├── m4-implementation-plan.md      # M4.1/M4.2 验收与 M5 门禁
+│   └── m5-eval-expansion.md           # M5 评测扩展和能力门禁证据
 ├── examples/
 │   ├── fixture/                      # calculator 最小源仓库
 │   ├── scripted_run.json             # calculator 确定性模型脚本
 │   ├── eval_suite.json               # M3 固定离线评测 suite
 │   ├── todo_cli/                     # 真实小仓库 fixture
-│   └── todo_cli_scripted_run.json    # 失败后修复的确定性脚本
+│   ├── todo_cli_scripted_run.json    # 失败后修复的确定性脚本
+│   ├── mini_repos/                    # M5 多仓库评测 fixture
+│   └── eval_scripts/                  # M5 scripted backend/compression 输入
 ├── src/coding_agent/
 │   ├── __init__.py
 │   ├── application.py                # composition root / start use case

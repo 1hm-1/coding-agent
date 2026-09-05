@@ -239,13 +239,19 @@ recovery case task success，infrastructure failure 为 0。
 
 ### 9.1 首次能力扩展门禁（2026-09-05）
 
-已使用当前固定 suite 运行 `budgeted` variant：7 个 case 全部为 valid run，
-`infrastructure_failure=0`，`source_invariant_rate=1.0`，`runtime_completion_rate=0.8571`，
-`task_success_rate=0.7143`。恢复 case 的 `recovery_events=1` 且
-`recovery_triggered=true`；结构化 command case 成功调用 `run_command`；另外两个失败分别
-是预先设计的 `invalid_script_response` 和 `oracle_failure`，没有出现因缺少 search、Git
-inspection 或更广执行能力导致的 failure coverage。这是小型 scripted/offline 证据，不代表
-真实 Coding 任务覆盖率，也不能证明不需要 search 或 Git。
+已扩展当前固定 suite 为 13 个 case、6 个 fixture，并运行 `budgeted` variant：13 个 run
+全部为 valid run，`infrastructure_failure=0`，`source_invariant_rate=1.0`，
+`runtime_completion_rate=0.9231`，`task_success_rate=0.6923`，`recovery_rate=1.0`。
+新增 case 覆盖跨文件定位探针、多文件 bug 后测试失败继续定位、指定文件范围和长历史
+compression；compressed variant 中 long-history case 成功记录压缩 Token。失败仍是预先
+设计的 `invalid_script_response`、`oracle_failure` 和错误路径 observation；budgeted variant
+另记录了 summarizer 未配置时的有界 compression fallback。没有真实模型 failure coverage。
+这是小型 scripted/offline 证据，不代表真实 Coding 任务覆盖率，也不能证明不需要 search
+或 Git。
+
+Passthrough/budgeted 单变量 A/B 各 13 个 paired runs，task success、Runtime completion、
+source invariant、工具调用和 Token 没有差异；单次 latency 波动不作结论。真实 Provider
+smoke 因没有凭据显式 skip，详细记录见 [`m5-eval-expansion.md`](./m5-eval-expansion.md)。
 
 决策：本轮不新增 M5 工具，M5 保持条件阶段。只有新增真实任务及程序化 oracle，明确证明
 现有 `read_file`/`edit_file`/`restricted_test`/`run_command` 无法覆盖目标任务时，才重新
@@ -257,10 +263,11 @@ inspection 或更广执行能力导致的 failure coverage。这是小型 script
 - `evaluation.py` 将 `RESUME_STARTED` 纳入 `recovery_events`，并由测试断言恢复指标一致；
 - 初始化 Git 仓库并保留工作副本现状，创建并推送初始提交；新增 GitHub Actions CI，覆盖
   Ruff、release-surface mypy、75 个默认测试、native capability report、70% coverage、
-  compile 和 offline eval（native capability 可用时）；能力受限 runner 的 native-only case
-  显式 skip，且跳过 sandbox-dependent eval，不视为 native security suite 通过；
+  compile、calculator/todo scripted smoke 和 offline eval（native capability 可用时）；能力
+  受限 runner 的 native-only case 显式 skip，且跳过 sandbox-dependent eval，不视为 native
+  security suite 通过；
 - 新增显式、凭据门控的 `tests/live_provider_smoke.py` 与手动 workflow；本环境无凭据，未执行真实网络调用；
-- 固定 eval 扩展为 7 case/2 fixture，但仍明确标注为小型 scripted/offline 数据集，不能外推真实 Coding 任务或证明不需要 search/Git；
+- 固定 eval 扩展为 13 case/6 fixture，覆盖跨文件、多文件恢复、范围约束和长历史 compression；仍明确标注为小型 scripted/offline 数据集，不能外推真实 Coding 任务或证明不需要 search/Git；
 - 记录 `runtime.py`、`persistence.py`、`evaluation.py` 的集中度风险，暂不进行无验收收益的拆分。
 
 ## 11. 持续风险登记

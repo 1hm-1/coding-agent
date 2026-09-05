@@ -6,7 +6,7 @@
 
 1. 将工作目录切换到 `/home/hmli/code/coding-agent`。
 2. 完整阅读 `AGENTS.md`、`docs/README.md`、`docs/current-state.md`。
-3. 阅读 `docs/m4-implementation-plan.md` 的 M4.2 范围；M2/M3/M4.1 的实施记录分别在 `docs/m2-implementation-plan.md`、`docs/m3-implementation-plan.md` 和该文档中。
+3. 阅读 `docs/m4-implementation-plan.md` 的 M4.2 范围和 `docs/m5-eval-expansion.md`；M2/M3/M4.1 的实施记录分别在 `docs/m2-implementation-plan.md`、`docs/m3-implementation-plan.md` 和该文档中。
 4. 运行：
 
 ```bash
@@ -60,11 +60,12 @@ M2.1 已完成 SQLite persistence foundation，M2.2/M2.3 也已严格完成：
 - Release/Evidence Hardening 已完成：recovery metrics 已将 `RESUME_STARTED` 纳入
   recovery event；默认 75 个测试、70% statement coverage、release-surface mypy、GitHub
   Actions 离线 CI 和手动凭据门控 Provider smoke 已建立。
-- 当前固定 eval 有 7 个 case、覆盖 calculator 与 todo-cli 两个 fixture，valid 7、基础设施失败为 0；失败仍只有预设的 `invalid_script_response`/`oracle_failure`，因此它只能作为小型 scripted/offline 证据，不能证明真实 Coding 任务不需要 search 或 Git。
+- 当前固定 eval 有 13 个 case、覆盖 6 个 fixture，valid 13、基础设施失败为 0；新增跨文件定位、多文件恢复、范围约束和长历史 compression，但失败仍是预设 scripted/oracle 场景，因此它只能作为小型 scripted/offline 证据，不能证明真实 Coding 任务不需要 search 或 Git。详细证据见 `docs/m5-eval-expansion.md`。
 
-下一窗口仍只能在出现新的 failure coverage 证据后进入 M5 的 eval-driven capability
-expansion 设计；当前不新增工具。保持 M4.1/M4.2 的 OS isolation foundation；不要加入
-shell 字符串、默认网络或多 Agent。
+下一窗口先使用 `docs/m5-eval-expansion.md` 的 13-case/6-fixture 证据和真实 Provider
+baseline 门禁；只有出现新的、可重复的真实模型 failure coverage 后才进入 M5 的
+eval-driven capability expansion 设计，当前不新增工具。保持 M4.1/M4.2 的 OS isolation
+foundation；不要加入 shell 字符串、默认网络或多 Agent。
 
 ## 5. 完成一次开发后的交接动作
 
@@ -82,8 +83,9 @@ shell 字符串、默认网络或多 Agent。
 ```text
 请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、
 docs/contracts.md、docs/requirements-traceability.md、docs/roadmap.md 和
-docs/m4-implementation-plan.md。运行 75 个默认测试的基线后，当前 M2.1—M2.3、
-M3.1—M3.3、M4.1/M4.2 已完成；只评估 M5 的新能力是否被固定 eval 证明需要，
+docs/m4-implementation-plan.md、docs/m5-eval-expansion.md。运行 75 个默认测试的基线后，
+当前 M2.1—M2.3、M3.1—M3.3、M4.1/M4.2 已完成，固定 eval 为 13-case/6-fixture；只评估
+M5 的新能力是否被真实 failure coverage 证明需要，
 保持现有 OS isolation、structured argv 和 ToolHarness 边界，不增加 shell 字符串、
 默认网络或多 Agent。若确有能力扩展，先写 decision record 和验收测试，再同步
 current-state、roadmap、repository-structure、HANDOFF 和测试证据。

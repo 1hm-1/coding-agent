@@ -1,0 +1,24 @@
+[
+  {
+    "tool_calls": [
+      {
+        "id": "checkout-missing-location-only",
+        "name": "read_file",
+        "arguments": {
+          "path": "discounts.py"
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 90,
+      "output_tokens": 18
+    }
+  },
+  {
+    "final": "I could not locate the pricing implementation.",
+    "usage": {
+      "input_tokens": 160,
+      "output_tokens": 24
+    }
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "final": "{\"schema_version\":1,\"goals\":[\"Inspect the long audit history and preserve required facts\"],\"constraints\":[\"The task is read-only\"],\"decisions\":[\"The repository contains a deterministic audit history\"],\"files_read\":[],\"edits\":[],\"tests\":[],\"errors\":[],\"unresolved\":[]}",
+    "usage": {
+      "input_tokens": 220,
+      "output_tokens": 70
+    }
+  }
+]

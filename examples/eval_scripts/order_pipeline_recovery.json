@@ -1,0 +1,118 @@
+[
+  {
+    "tool_calls": [
+      {
+        "id": "pipeline-entrypoint",
+        "name": "read_file",
+        "arguments": {
+          "path": "pipeline.py"
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 90,
+      "output_tokens": 18
+    }
+  },
+  {
+    "tool_calls": [
+      {
+        "id": "pipeline-normalization",
+        "name": "read_file",
+        "arguments": {
+          "path": "normalization.py"
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 90,
+      "output_tokens": 18
+    }
+  },
+  {
+    "tool_calls": [
+      {
+        "id": "pipeline-fix-normalization",
+        "name": "edit_file",
+        "arguments": {
+          "path": "normalization.py",
+          "old_text": "return value.lower()",
+          "new_text": "return value.strip().lower()"
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 120,
+      "output_tokens": 20
+    }
+  },
+  {
+    "tool_calls": [
+      {
+        "id": "pipeline-first-test",
+        "name": "restricted_test",
+        "arguments": {
+          "profile": "python_unittest"
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 140,
+      "output_tokens": 12
+    }
+  },
+  {
+    "tool_calls": [
+      {
+        "id": "pipeline-formatting-after-failure",
+        "name": "read_file",
+        "arguments": {
+          "path": "formatting.py"
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 90,
+      "output_tokens": 18
+    }
+  },
+  {
+    "tool_calls": [
+      {
+        "id": "pipeline-fix-formatting",
+        "name": "edit_file",
+        "arguments": {
+          "path": "formatting.py",
+          "old_text": "return f\"{label}:{amount:.2f}\"",
+          "new_text": "return f\"{label}=${amount:.2f}\""
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 120,
+      "output_tokens": 20
+    }
+  },
+  {
+    "tool_calls": [
+      {
+        "id": "pipeline-final-test",
+        "name": "restricted_test",
+        "arguments": {
+          "profile": "python_unittest"
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 140,
+      "output_tokens": 12
+    }
+  },
+  {
+    "final": "Observed the first test failure, located the second module, fixed both files, and verified the full test suite.",
+    "usage": {
+      "input_tokens": 160,
+      "output_tokens": 24
+    }
+  }
+]

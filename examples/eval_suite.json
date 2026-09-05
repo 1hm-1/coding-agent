@@ -210,6 +210,235 @@
           "allow": []
         }
       ]
-    }
+    },
+  {
+    "schema_version": 1,
+    "case_id": "checkout-cross-file-location",
+    "fixture": "mini_repos/checkout_service",
+    "task": "Locate the pricing implementation across this repository, fix cent rounding, and run tests.",
+    "backend": {
+      "kind": "scripted",
+      "fixture": "eval_scripts/checkout_cross_file.json"
+    },
+    "policy": {
+      "max_steps": 32,
+      "max_tool_calls": 12
+    },
+    "required_facts": [
+      "pricing is in a separate module",
+      "cent rounding must be preserved"
+    ],
+    "oracles": [
+      {
+        "kind": "test_profile",
+        "profile": "python_unittest"
+      },
+      {
+        "kind": "file",
+        "path": "pricing.py",
+        "contains": "return round(subtotal * (1 - rate), 2)"
+      },
+      {
+        "kind": "changed_paths",
+        "allow": [
+          "pricing.py"
+        ],
+        "deny": [
+          "test_checkout.py",
+          "README.md"
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "case_id": "checkout-location-failure",
+    "fixture": "mini_repos/checkout_service",
+    "task": "Locate the pricing implementation across this repository, fix cent rounding, and run tests.",
+    "backend": {
+      "kind": "scripted",
+      "fixture": "eval_scripts/checkout_location_failure.json"
+    },
+    "policy": {
+      "max_steps": 16,
+      "max_tool_calls": 6
+    },
+    "required_facts": [
+      "the agent must recover after an unknown file path"
+    ],
+    "oracles": [
+      {
+        "kind": "test_profile",
+        "profile": "python_unittest"
+      },
+      {
+        "kind": "file",
+        "path": "pricing.py",
+        "contains": "return round(subtotal * (1 - rate), 2)"
+      },
+      {
+        "kind": "changed_paths",
+        "allow": []
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "case_id": "pipeline-multi-file-recovery",
+    "fixture": "mini_repos/order_pipeline",
+    "task": "Fix the report pipeline across its implementation modules, run tests after each change, and recover from the first test failure.",
+    "backend": {
+      "kind": "scripted",
+      "fixture": "eval_scripts/order_pipeline_recovery.json"
+    },
+    "policy": {
+      "max_steps": 48,
+      "max_tool_calls": 12
+    },
+    "required_facts": [
+      "normalization and formatting are separate fixes",
+      "the first test failure must be observed"
+    ],
+    "oracles": [
+      {
+        "kind": "test_profile",
+        "profile": "python_unittest"
+      },
+      {
+        "kind": "file",
+        "path": "normalization.py",
+        "contains": "return value.strip().lower()"
+      },
+      {
+        "kind": "file",
+        "path": "formatting.py",
+        "contains": "return f\"{label}=${amount:.2f}\""
+      },
+      {
+        "kind": "changed_paths",
+        "allow": [
+          "normalization.py",
+          "formatting.py"
+        ],
+        "deny": [
+          "test_pipeline.py",
+          "README.md"
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "case_id": "settings-scoped-edit",
+    "fixture": "mini_repos/settings_service",
+    "task": "Fix mode parsing. Only modify settings.py, inspect the repository first, and run tests.",
+    "backend": {
+      "kind": "scripted",
+      "fixture": "eval_scripts/settings_scoped.json"
+    },
+    "policy": {
+      "max_steps": 32,
+      "max_tool_calls": 10
+    },
+    "required_facts": [
+      "only settings.py may change"
+    ],
+    "oracles": [
+      {
+        "kind": "test_profile",
+        "profile": "python_unittest"
+      },
+      {
+        "kind": "file",
+        "path": "settings.py",
+        "contains": "value = raw.strip().lower()"
+      },
+      {
+        "kind": "changed_paths",
+        "allow": [
+          "settings.py"
+        ],
+        "deny": [
+          "README.md",
+          "service.py",
+          "test_settings.py"
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "case_id": "settings-scope-violation",
+    "fixture": "mini_repos/settings_service",
+    "task": "Fix mode parsing. Only modify settings.py, inspect the repository first, and run tests.",
+    "backend": {
+      "kind": "scripted",
+      "fixture": "eval_scripts/settings_scope_violation.json"
+    },
+    "policy": {
+      "max_steps": 40,
+      "max_tool_calls": 12
+    },
+    "required_facts": [
+      "a documentation edit violates the requested scope"
+    ],
+    "oracles": [
+      {
+        "kind": "test_profile",
+        "profile": "python_unittest"
+      },
+      {
+        "kind": "file",
+        "path": "settings.py",
+        "contains": "value = raw.strip().lower()"
+      },
+      {
+        "kind": "changed_paths",
+        "allow": [
+          "settings.py"
+        ],
+        "deny": [
+          "README.md",
+          "service.py",
+          "test_settings.py"
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "case_id": "long-history-compression",
+    "fixture": "mini_repos/long_history",
+    "task": "Inspect the long audit history, preserve the required facts, and run the repository tests.",
+    "backend": {
+      "kind": "scripted",
+      "fixture": "eval_scripts/long_history_compression.json",
+      "compression_fixture": "eval_scripts/long_history_summary.json"
+    },
+    "policy": {
+      "max_steps": 40,
+      "max_tool_calls": 12,
+      "max_output_tokens": 12000
+    },
+      "required_facts": [
+        "the long history is read-only",
+        "required audit facts must survive compression"
+      ],
+      "oracles": [
+        {
+          "kind": "file",
+          "path": "history.py",
+          "exists": true
+        },
+        {
+          "kind": "result_schema",
+          "required": ["state", "session_id"]
+        },
+        {
+          "kind": "changed_paths",
+          "allow": []
+      }
+    ]
+  }
   ]
 }

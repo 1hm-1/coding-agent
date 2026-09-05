@@ -321,10 +321,41 @@ class EvaluationHarnessTest(unittest.TestCase):
         suite, manifest_root = load_eval_suite(PROJECT_ROOT / "examples" / "eval_suite.json")
 
         self.assertEqual(manifest_root, PROJECT_ROOT / "examples")
-        self.assertGreaterEqual(len(suite.cases), 7)
-        self.assertEqual({case.fixture for case in suite.cases}, {"fixture", "todo_cli"})
-        self.assertIn("todo-recovery", {case.case_id for case in suite.cases})
-        self.assertIn("todo-readonly-inspection", {case.case_id for case in suite.cases})
+        self.assertGreaterEqual(len(suite.cases), 13)
+        fixtures = {case.fixture for case in suite.cases}
+        self.assertEqual(
+            fixtures,
+            {
+                "fixture",
+                "todo_cli",
+                "mini_repos/checkout_service",
+                "mini_repos/order_pipeline",
+                "mini_repos/settings_service",
+                "mini_repos/long_history",
+            },
+        )
+        case_ids = {case.case_id for case in suite.cases}
+        self.assertIn("todo-recovery", case_ids)
+        self.assertIn("todo-readonly-inspection", case_ids)
+        self.assertIn("checkout-cross-file-location", case_ids)
+        self.assertIn("checkout-location-failure", case_ids)
+        self.assertIn("pipeline-multi-file-recovery", case_ids)
+        self.assertIn("settings-scoped-edit", case_ids)
+        self.assertIn("settings-scope-violation", case_ids)
+        self.assertIn("long-history-compression", case_ids)
+
+        for fixture in fixtures - {"fixture", "todo_cli"}:
+            fixture_path = (manifest_root / fixture).resolve()
+            files = [
+                path
+                for path in fixture_path.rglob("*")
+                if path.is_file() and "__pycache__" not in path.parts
+            ]
+            line_count = sum(
+                len(path.read_text(encoding="utf-8").splitlines()) for path in files
+            )
+            self.assertGreaterEqual(line_count, 20, fixture)
+            self.assertLessEqual(line_count, 200, fixture)
 
 
 if __name__ == "__main__":

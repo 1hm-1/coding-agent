@@ -1,0 +1,54 @@
+[
+  {
+    "tool_calls": [
+      {
+        "id": "history-part-one",
+        "name": "read_file",
+        "arguments": {
+          "path": "history.py"
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 90,
+      "output_tokens": 18
+    }
+  },
+  {
+    "tool_calls": [
+      {
+        "id": "history-part-two",
+        "name": "read_file",
+        "arguments": {
+          "path": "history.py"
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 90,
+      "output_tokens": 18
+    }
+  },
+  {
+    "tool_calls": [
+      {
+        "id": "history-part-three",
+        "name": "read_file",
+        "arguments": {
+          "path": "history.py"
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 90,
+      "output_tokens": 18
+    }
+  },
+  {
+    "final": "Inspected the long audit history and preserved the required facts.",
+    "usage": {
+      "input_tokens": 160,
+      "output_tokens": 24
+    }
+  }
+]

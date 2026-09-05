@@ -34,7 +34,7 @@ PYTHONPATH=src python3 -m unittest discover -v
 静态检查（安装 Ruff 开发依赖后）：
 
 ```bash
-ruff check src tests examples/todo_cli
+ruff check src tests examples/todo_cli examples/mini_repos
 .venv/bin/mypy
 PYTHONPATH=src .venv/bin/coverage run -m unittest discover -v
 .venv/bin/coverage report
@@ -148,8 +148,9 @@ Linux 环境必须完整运行 native security suite；能力受限的 hosted ru
 | Recovery | execution id、limits、identity、revision 进入 journal/result | 外部调用 crash 进入 `WAITING_APPROVAL`，不得自动重放 |
 
 M4.2 新增的 6 个测试与 M4.1 的 7 个 native sandbox 测试共同覆盖上述边界。固定
-`examples/eval_suite.json` 当前为 7 个 case、覆盖 calculator 与 todo-cli 两个 fixture；
-`infrastructure_failure=0`，预定义失败 case 仍保留在分母中。
+`examples/eval_suite.json` 当前为 13 个 case、覆盖 6 个 fixture；新增跨文件定位、多文件
+恢复、changed-path 范围约束和长历史 compression，`infrastructure_failure=0`，预定义失败
+case 仍保留在分母中。M5 评测与工具门禁的具体证据见 `docs/m5-eval-expansion.md`。
 
 ## 10. Smoke 验收
 
@@ -177,7 +178,8 @@ typed-release-surface
 unit-contract
   └─ capability report + coverage run unittest discover + coverage report (fail-under=70)
 golden-smoke
-  └─ compileall + offline eval suite (native capability available时)
+  ├─ compileall + calculator/todo scripted smoke (native capability available时)
+  └─ offline eval suite (native capability available时)
 ```
 
 GitHub-hosted runner 如果 capability report 显示 native namespace 不可用，7 个 native-only

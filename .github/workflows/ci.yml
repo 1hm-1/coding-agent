@@ -30,7 +30,7 @@ jobs:
           uv venv .venv
           uv pip install --python .venv/bin/python -e ".[dev]"
       - name: Ruff
-        run: .venv/bin/ruff check src tests examples/todo_cli
+        run: .venv/bin/ruff check src tests examples/todo_cli examples/mini_repos
       - name: Scoped mypy release-surface check
         run: .venv/bin/mypy
       - name: Report native sandbox capability
@@ -51,7 +51,26 @@ jobs:
           .venv/bin/coverage run -m unittest discover -v
           .venv/bin/coverage report
       - name: Compile check
-        run: .venv/bin/python -m compileall -q src tests examples/todo_cli
+        run: .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos
+      - name: Calculator and todo scripted smoke
+        env:
+          PYTHONPATH: src
+        run: |
+          if [ "${{ steps.sandbox.outputs.native_available }}" != "true" ]; then
+            echo "Native sandbox capability unavailable; skipping calculator/todo sandbox smoke."
+            exit 0
+          fi
+          smoke_root="${RUNNER_TEMP}/coding-agent-smoke-${{ matrix.python-version }}"
+          .venv/bin/python -m coding_agent.cli \
+            --agent-home "$smoke_root/calculator" run-scripted \
+            --source examples/fixture \
+            --task "Fix add and run tests" \
+            --script examples/scripted_run.json
+          .venv/bin/python -m coding_agent.cli \
+            --agent-home "$smoke_root/todo" run-scripted \
+            --source examples/todo_cli \
+            --task "Fix the empty input crash and run tests." \
+            --script examples/todo_cli_scripted_run.json
       - name: Offline evaluation suite
         env:
           PYTHONPATH: src
