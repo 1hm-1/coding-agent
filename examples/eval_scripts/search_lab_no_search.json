@@ -1,0 +1,44 @@
+[
+  {
+    "tool_calls": [
+      {"id": "search-lab-read-test", "name": "read_file", "arguments": {"path": "test_invoice.py"}}
+    ],
+    "usage": {"input_tokens": 120, "output_tokens": 20}
+  },
+  {
+    "tool_calls": [
+      {"id": "search-lab-read-registry", "name": "read_file", "arguments": {"path": "invoice/registry.py"}}
+    ],
+    "usage": {"input_tokens": 180, "output_tokens": 20}
+  },
+  {
+    "tool_calls": [
+      {"id": "search-lab-read-rule", "name": "read_file", "arguments": {"path": "invoice/rules/rule_11.py"}}
+    ],
+    "usage": {"input_tokens": 240, "output_tokens": 20}
+  },
+  {
+    "tool_calls": [
+      {
+        "id": "search-lab-edit-rule",
+        "name": "edit_file",
+        "arguments": {
+          "path": "invoice/rules/rule_11.py",
+          "old_text": "return amount * 1.02",
+          "new_text": "return amount * 1.12"
+        }
+      }
+    ],
+    "usage": {"input_tokens": 300, "output_tokens": 30}
+  },
+  {
+    "tool_calls": [
+      {"id": "search-lab-test", "name": "restricted_test", "arguments": {"profile": "python_unittest"}}
+    ],
+    "usage": {"input_tokens": 360, "output_tokens": 20}
+  },
+  {
+    "final": "Fixed the EAST premium rule and verified the repository tests.",
+    "usage": {"input_tokens": 420, "output_tokens": 20}
+  }
+]

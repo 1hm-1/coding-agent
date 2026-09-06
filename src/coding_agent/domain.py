@@ -629,6 +629,9 @@ class ContextBuildInput:
     latest_summary: "SummaryRecord | None"
     provider: str
     model: str
+    steps_used: int = 0
+    model_calls_used: int = 0
+    tool_calls_used: int = 0
     pending_tool_calls: Sequence[ToolCall] = ()
     active_call_id: str | None = None
     active_call_kind: str | None = None
@@ -646,6 +649,9 @@ class ContextBuildInput:
             ),
             "provider": self.provider,
             "model": self.model,
+            "steps_used": self.steps_used,
+            "model_calls_used": self.model_calls_used,
+            "tool_calls_used": self.tool_calls_used,
             "pending_tool_calls": [call.to_dict() for call in self.pending_tool_calls],
             "active_call_id": self.active_call_id,
             "active_call_kind": self.active_call_kind,
@@ -681,6 +687,9 @@ class ContextBuildInput:
             ),
             provider=str(raw["provider"]),
             model=str(raw["model"]),
+            steps_used=int(raw.get("steps_used", 0)),
+            model_calls_used=int(raw.get("model_calls_used", 0)),
+            tool_calls_used=int(raw.get("tool_calls_used", 0)),
             pending_tool_calls=tuple(ToolCall.from_dict(item) for item in pending),
             active_call_id=(
                 str(raw["active_call_id"])

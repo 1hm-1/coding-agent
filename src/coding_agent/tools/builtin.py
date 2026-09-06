@@ -41,6 +41,7 @@ def build_builtin_registry(
     registry = ToolRegistry()
     _register_read_file(registry)
     _register_edit_file(registry)
+    _register_search_files(registry)
     _register_restricted_test(
         registry,
         test_profiles,
@@ -65,16 +66,32 @@ def _object_schema(properties: dict[str, Any], required: list[str]) -> dict[str,
     }
 
 
+_WORKSPACE_RELATIVE_PATH_SCHEMA = {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 4096,
+    "description": (
+        "Workspace-relative path. Never start with '/' or use '..'. Prefer an exact "
+        "path from repository_snapshot.file_paths; for example, use 'formatting.py', "
+        "not '/formatting.py'."
+    ),
+}
+
+
 def _register_read_file(registry: ToolRegistry) -> None:
     definition = ToolDefinition(
         name="read_file",
-        description="Read a UTF-8 text file inside the isolated workspace with line numbers.",
+        description=(
+            "Read a UTF-8 text file inside the isolated workspace with line numbers. "
+            "The path must be workspace-relative; prefer an exact path from "
+            "repository_snapshot.file_paths."
+        ),
         permission=Permission.READ,
         timeout_seconds=10.0,
         recovery_mode=RecoveryMode.READ_ONLY,
         input_schema=_object_schema(
             {
-                "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                "path": dict(_WORKSPACE_RELATIVE_PATH_SCHEMA),
                 "start_line": {"type": "integer", "minimum": 1},
                 "end_line": {"type": "integer", "minimum": 1},
             },
@@ -122,16 +139,150 @@ def _register_read_file(registry: ToolRegistry) -> None:
     registry.register(definition, handler)
 
 
+def _register_search_files(registry: ToolRegistry) -> None:
+    definition = ToolDefinition(
+        name="search_files",
+        description=(
+            "Find a case-sensitive literal string in regular UTF-8 workspace files. "
+            "Use this to locate content before read_file; path must be workspace-relative. "
+            "This tool does not accept regex, globs, shell commands, or Git metadata."
+        ),
+        permission=Permission.READ,
+        timeout_seconds=10.0,
+        recovery_mode=RecoveryMode.READ_ONLY,
+        input_schema=_object_schema(
+            {
+                "query": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512,
+                    "description": "Case-sensitive literal text to find; not a regex.",
+                },
+                "path": {
+                    **_WORKSPACE_RELATIVE_PATH_SCHEMA,
+                    "description": (
+                        "Optional workspace-relative file or directory; defaults to '.'. "
+                        "Never start with '/' or use '..'. Prefer a directory from "
+                        "repository_snapshot.file_paths."
+                    ),
+                },
+                "max_results": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50,
+                },
+            },
+            ["query"],
+        ),
+    )
+
+    def handler(arguments: dict[str, Any], context: ToolContext) -> ToolOutcome:
+        context.check_deadline()
+        relative_root = str(arguments.get("path", "."))
+        lexical_root = context.workspace.root / relative_root
+        if lexical_root.is_symlink():
+            raise ToolExecutionFailure(
+                "search root must not be a symlink",
+                kind="invalid_search_root",
+            )
+        root = context.workspace.resolve(relative_root)
+        if not root.is_file() and not root.is_dir():
+            raise ToolExecutionFailure(
+                "search root must be a regular file or directory",
+                kind="invalid_search_root",
+            )
+
+        query = str(arguments["query"])
+        max_results = int(arguments.get("max_results", 20))
+        max_files = 1000
+        max_bytes = 8 * 1024 * 1024
+        candidates: list[Path] = []
+        discovery_truncated = False
+        if root.is_file():
+            candidates.append(root)
+        else:
+            for current, dir_names, file_names in os.walk(root, followlinks=False):
+                current_path = Path(current)
+                dir_names[:] = sorted(
+                    name
+                    for name in dir_names
+                    if name != ".git" and not (current_path / name).is_symlink()
+                )
+                for name in sorted(file_names):
+                    if len(candidates) >= max_files:
+                        discovery_truncated = True
+                        break
+                    candidate = current_path / name
+                    if candidate.is_symlink() or ".git" in candidate.parts:
+                        continue
+                    candidates.append(candidate)
+                if discovery_truncated:
+                    break
+
+        matches: list[dict[str, Any]] = []
+        files_scanned = 0
+        bytes_scanned = 0
+        truncated = discovery_truncated
+        for candidate in candidates:
+            context.check_deadline()
+            if files_scanned >= max_files or len(matches) >= max_results:
+                truncated = True
+                break
+            if not candidate.is_file() or candidate.is_symlink():
+                continue
+            size = candidate.stat().st_size
+            if size > 2 * 1024 * 1024 or bytes_scanned + size > max_bytes:
+                truncated = True
+                continue
+            try:
+                content = candidate.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            files_scanned += 1
+            bytes_scanned += size
+            for line_number, line in enumerate(content.splitlines(), start=1):
+                if query not in line:
+                    continue
+                matches.append(
+                    {
+                        "path": context.workspace.relative(candidate),
+                        "line": line_number,
+                        "text": line[:500],
+                    }
+                )
+                if len(matches) >= max_results:
+                    truncated = True
+                    break
+
+        return ToolOutcome(
+            data={
+                "query": query,
+                "path": relative_root,
+                "matches": matches,
+                "match_count": len(matches),
+                "files_scanned": files_scanned,
+                "bytes_scanned": bytes_scanned,
+            },
+            truncated=truncated,
+        )
+
+    registry.register(definition, handler)
+
+
 def _register_edit_file(registry: ToolRegistry) -> None:
     definition = ToolDefinition(
         name="edit_file",
-        description="Atomically replace one exact, unique text occurrence in a workspace file.",
+        description=(
+            "Atomically replace one exact, unique text occurrence in a workspace file. "
+            "The path must be workspace-relative; prefer an exact path from "
+            "repository_snapshot.file_paths."
+        ),
         permission=Permission.WRITE,
         timeout_seconds=10.0,
         recovery_mode=RecoveryMode.RECONCILABLE_WRITE,
         input_schema=_object_schema(
             {
-                "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                "path": dict(_WORKSPACE_RELATIVE_PATH_SCHEMA),
                 "old_text": {"type": "string", "minLength": 1},
                 "new_text": {"type": "string"},
             },

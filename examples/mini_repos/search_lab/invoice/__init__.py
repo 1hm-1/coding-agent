@@ -1,0 +1,1 @@
+"""Invoice search benchmark package."""

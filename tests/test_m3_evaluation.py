@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from coding_agent.evaluation import (
+    collect_run_metrics,
     EvalValidationError,
     EvaluationReport,
     EvaluationRunner,
@@ -14,6 +15,7 @@ from coding_agent.evaluation import (
     _suite_with_backend_override,
     load_eval_suite,
 )
+from coding_agent.domain import Event, EventType, RuntimeState
 from coding_agent.application import AgentApplication
 from coding_agent.context import (
     BudgetedContextBuilder,
@@ -46,6 +48,14 @@ class EvaluationHarnessTest(unittest.TestCase):
                         "required_facts": ["add must be fixed"],
                         "oracles": [
                             {"kind": "test_profile", "profile": "python_unittest"},
+                            {
+                                "kind": "file",
+                                "path": "calculator.py",
+                                "contains_any": [
+                                    "return left + right",
+                                    "return impossible",
+                                ],
+                            },
                             {"kind": "changed_paths", "allow": ["calculator.py"]},
                         ],
                     }
@@ -133,6 +143,40 @@ class EvaluationHarnessTest(unittest.TestCase):
                 }
             )
 
+        with self.assertRaises(EvalValidationError):
+            EvalCase.from_dict(
+                {
+                    "schema_version": 1,
+                    "case_id": "bad-file-alternatives",
+                    "fixture": "examples/fixture",
+                    "task": "task",
+                    "backend": {"kind": "scripted", "responses": [{"final": "x"}]},
+                    "oracles": [
+                        {
+                            "kind": "file",
+                            "path": "calculator.py",
+                            "contains_any": [""],
+                        }
+                    ],
+                }
+            )
+
+        with self.assertRaises(EvalValidationError):
+            EvalCase.from_dict(
+                {
+                    "schema_version": 1,
+                    "case_id": "bad-compression-budget",
+                    "fixture": "examples/fixture",
+                    "task": "task",
+                    "backend": {
+                        "kind": "scripted",
+                        "responses": [{"final": "x"}],
+                        "max_compression_calls": -1,
+                    },
+                    "oracles": [{"kind": "result_schema", "required": []}],
+                }
+            )
+
         effective = _suite_with_backend_override(
             self.suite(),
             {
@@ -168,14 +212,20 @@ class EvaluationHarnessTest(unittest.TestCase):
             self.assertEqual(aggregate["requested_run_count"], 4)
             self.assertEqual(aggregate["valid_run_count"], 4)
             self.assertEqual(aggregate["task_success_rate"], 0.5)
+            self.assertEqual(aggregate["capability_run_count"], 2)
+            self.assertEqual(aggregate["oracle_success_rate"], 1.0)
+            self.assertEqual(aggregate["end_to_end_success_rate"], 1.0)
             self.assertEqual(aggregate["runtime_completion_rate"], 0.75)
             self.assertEqual(aggregate["recovery_rate"], 1.0)
             self.assertEqual(aggregate["task_runs"]["valid_run_count"], 2)
             self.assertEqual(aggregate["task_runs"]["task_success_rate"], 1.0)
+            self.assertEqual(aggregate["task_runs"]["oracle_success_rate"], 1.0)
+            self.assertEqual(aggregate["task_runs"]["end_to_end_success_rate"], 1.0)
             self.assertEqual(
                 aggregate["negative_control_runs"],
                 {
                     "valid_run_count": 2,
+                    "excluded_from_capability_metrics": True,
                     "observed_failure_rate": 1.0,
                     "runtime_completion_rate": 0.5,
                 },
@@ -192,12 +242,76 @@ class EvaluationHarnessTest(unittest.TestCase):
             self.assertIn("test_latency_ms", report_json["metrics"])
             by_case = {(run.case_id, run.repetition): run for run in report.runs}
             self.assertTrue(by_case[("success", 1)].task_success)
+            self.assertTrue(by_case[("success", 1)].oracle_success)
+            self.assertTrue(by_case[("success", 1)].end_to_end_success)
             self.assertTrue(by_case[("success", 1)].runtime_completed)
             self.assertFalse(by_case[("task-fail", 1)].task_success)
             self.assertTrue(by_case[("task-fail", 1)].runtime_completed)
             self.assertFalse(by_case[("runtime-fail", 1)].runtime_completed)
             self.assertTrue(by_case[("recovery", 1)].metrics["recovery_triggered"])
             self.assertEqual(by_case[("recovery", 1)].metrics["recovery_events"], 1)
+            self.assertEqual(by_case[("success", 1)].metrics["tool_attempts"], 3)
+            self.assertEqual(by_case[("success", 1)].metrics["tool_executions"], 3)
+            self.assertEqual(by_case[("success", 1)].metrics["invalid_tool_calls"], 0)
+
+    def test_tool_metrics_separate_attempts_executions_and_repeated_failures(self) -> None:
+        def event(sequence: int, event_type: EventType, payload: dict) -> Event:
+            return Event(
+                schema_version=1,
+                event_id=f"event-{sequence}",
+                session_id="metrics-session",
+                sequence=sequence,
+                event_type=event_type,
+                timestamp=f"2026-09-05T00:00:{sequence:02d}+00:00",
+                state=RuntimeState.DISPATCHING_TOOL,
+                payload=payload,
+            )
+
+        invalid_result = {
+            "result": {
+                "call_id": "invalid",
+                "tool_name": "read_file",
+                "status": "invalid_arguments",
+                "data": {},
+                "error": {"kind": "workspace_path", "message": "relative paths only"},
+                "duration_ms": 0.0,
+                "truncated": False,
+            }
+        }
+        events = [
+            event(1, EventType.MODEL_CALL_STARTED, {"request_id": "model-1"}),
+            event(2, EventType.TOOL_CALL_PREPARED, {}),
+            event(3, EventType.TOOL_CALL_FINISHED, invalid_result),
+            event(4, EventType.MODEL_CALL_STARTED, {"request_id": "model-2"}),
+            event(5, EventType.TOOL_CALL_PREPARED, {}),
+            event(6, EventType.TOOL_CALL_FINISHED, invalid_result),
+            event(7, EventType.MODEL_CALL_STARTED, {"request_id": "model-3"}),
+            event(8, EventType.TOOL_CALL_PREPARED, {}),
+            event(9, EventType.TOOL_CALL_RUNNING, {}),
+            event(
+                10,
+                EventType.TOOL_CALL_FINISHED,
+                {
+                    "result": {
+                        "call_id": "valid",
+                        "tool_name": "read_file",
+                        "status": "success",
+                        "data": {},
+                        "error": None,
+                        "duration_ms": 1.0,
+                        "truncated": False,
+                    }
+                },
+            ),
+        ]
+
+        metrics = collect_run_metrics(events)
+        self.assertEqual(metrics["tool_calls"], 3)
+        self.assertEqual(metrics["tool_attempts"], 3)
+        self.assertEqual(metrics["tool_executions"], 1)
+        self.assertEqual(metrics["invalid_tool_calls"], 2)
+        self.assertEqual(metrics["invalid_tool_calls_by_kind"], {"workspace_path": 2})
+        self.assertEqual(metrics["repeated_failure_batches"], 1)
 
     def test_paired_ab_compressed_variant_preserves_case_repetition_keys(self) -> None:
         suite = EvalSuite(
@@ -352,7 +466,7 @@ class EvaluationHarnessTest(unittest.TestCase):
         suite, manifest_root = load_eval_suite(PROJECT_ROOT / "examples" / "eval_suite.json")
 
         self.assertEqual(manifest_root, PROJECT_ROOT / "examples")
-        self.assertGreaterEqual(len(suite.cases), 13)
+        self.assertGreaterEqual(len(suite.cases), 14)
         fixtures = {case.fixture for case in suite.cases}
         self.assertEqual(
             fixtures,
@@ -363,6 +477,7 @@ class EvaluationHarnessTest(unittest.TestCase):
                 "mini_repos/order_pipeline",
                 "mini_repos/settings_service",
                 "mini_repos/long_history",
+                "mini_repos/search_lab",
             },
         )
         case_ids = {case.case_id for case in suite.cases}
@@ -386,6 +501,29 @@ class EvaluationHarnessTest(unittest.TestCase):
         self.assertIn("settings-scoped-edit", case_ids)
         self.assertIn("settings-scope-violation", case_ids)
         self.assertIn("long-history-compression", case_ids)
+        self.assertIn("search-lab-content-location", case_ids)
+        long_history = next(
+            case for case in suite.cases if case.case_id == "long-history-compression"
+        )
+        self.assertEqual(long_history.policy["max_output_tokens"], 11500)
+        self.assertEqual(long_history.backend["compression_backend"], "primary")
+        self.assertEqual(long_history.backend["max_compression_calls"], 2)
+
+        holdout, holdout_root = load_eval_suite(
+            PROJECT_ROOT / "examples" / "capability_holdout_suite.json"
+        )
+        self.assertEqual(holdout_root, PROJECT_ROOT / "examples")
+        self.assertEqual(len(holdout.cases), 4)
+        self.assertEqual(
+            {case.case_id for case in holdout.cases},
+            {
+                "holdout-calculator-edit-test",
+                "holdout-todo-recovery",
+                "holdout-checkout-cross-file",
+                "holdout-settings-scoped",
+            },
+        )
+        self.assertTrue(all(case.case_type == "task" for case in holdout.cases))
 
         for fixture in fixtures - {"fixture", "todo_cli"}:
             fixture_path = (manifest_root / fixture).resolve()
@@ -399,6 +537,25 @@ class EvaluationHarnessTest(unittest.TestCase):
             )
             self.assertGreaterEqual(line_count, 20, fixture)
             self.assertLessEqual(line_count, 200, fixture)
+
+    def test_search_benchmark_covers_three_repositories(self) -> None:
+        suite, manifest_root = load_eval_suite(
+            PROJECT_ROOT / "examples" / "search_eval_suite.json"
+        )
+
+        self.assertEqual(len(suite.cases), 3)
+        self.assertEqual(
+            {case.fixture for case in suite.cases},
+            {
+                "mini_repos/search_lab",
+                "mini_repos/search_router",
+                "mini_repos/search_transform",
+            },
+        )
+        for case in suite.cases:
+            self.assertEqual(case.policy["max_tool_calls"], 8)
+            self.assertEqual(case.case_type, "task")
+            self.assertTrue((manifest_root / case.fixture).is_dir())
 
 
 if __name__ == "__main__":

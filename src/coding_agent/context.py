@@ -297,9 +297,11 @@ class PassthroughContextBuilder:
     """Complete-history baseline retained for M1 regression and M3 A/B."""
 
     SYSTEM_POLICY = (
-        "You are a coding agent operating only in an isolated workspace. "
-        "Use only the supplied tools. Read before editing, make the smallest exact edit, "
-        "run the restricted test profile, and report the verified result."
+        "Use supplied tools only. Paths: workspace-relative; no '/' or '..'; prefer "
+        "repository_snapshot.file_paths (formatting.py, not /formatting.py). Unknown location "
+        "with distinctive symbol/literal/key/error: use search_files before sequential reads; "
+        "on a relevant match, stop unrelated reads. Read before the smallest exact edit; "
+        "reserve one call for restricted tests; report."
     )
 
     def __init__(
@@ -498,9 +500,15 @@ class BudgetedContextBuilder:
             "task": request.task,
             "runtime_state": request.runtime_state.value,
             "remaining_budgets": {
-                "steps": request.policy.max_steps,
-                "model_calls": request.policy.max_model_calls,
-                "tool_calls": request.policy.max_tool_calls,
+                "steps": max(0, request.policy.max_steps - request.steps_used),
+                "model_calls": max(
+                    0,
+                    request.policy.max_model_calls - request.model_calls_used,
+                ),
+                "tool_calls": max(
+                    0,
+                    request.policy.max_tool_calls - request.tool_calls_used,
+                ),
                 "output_tokens": request.policy.max_output_tokens,
             },
             "pending_tool_calls": [

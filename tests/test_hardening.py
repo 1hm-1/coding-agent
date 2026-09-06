@@ -237,7 +237,13 @@ class EngineeringHardeningTest(unittest.TestCase):
             )
             self.assertEqual(
                 build_builtin_registry(default_test_profiles()).names,
-                ("read_file", "edit_file", "restricted_test", "run_command"),
+                (
+                    "read_file",
+                    "edit_file",
+                    "search_files",
+                    "restricted_test",
+                    "run_command",
+                ),
             )
 
 

@@ -65,12 +65,22 @@ _BACKEND_FIELDS = {
     "thinking",
     "compression_fixture",
     "compression_responses",
+    "compression_backend",
+    "max_compression_calls",
     "fault_stage",
     "resume",
 }
 _ORACLE_FIELDS = {
     "test_profile": {"kind", "profile"},
-    "file": {"kind", "path", "exists", "sha256", "contains", "not_contains"},
+    "file": {
+        "kind",
+        "path",
+        "exists",
+        "sha256",
+        "contains",
+        "contains_any",
+        "not_contains",
+    },
     "changed_paths": {"kind", "allow", "deny"},
     "result_schema": {"kind", "required"},
 }
@@ -126,6 +136,16 @@ class EvalCase:
         backend_dict = dict(backend)
         if not backend_dict.get("kind"):
             raise EvalValidationError("eval backend kind is required")
+        if "max_compression_calls" in backend_dict:
+            value = backend_dict["max_compression_calls"]
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise EvalValidationError(
+                    "eval backend max_compression_calls must be a non-negative integer"
+                )
+        if backend_dict.get("compression_backend") not in {None, "primary"}:
+            raise EvalValidationError(
+                "eval backend compression_backend must be primary when specified"
+            )
         if not isinstance(policy, Mapping):
             raise EvalValidationError("eval policy must be an object")
         allowed_policy = set(RunPolicy().to_dict())
@@ -148,6 +168,19 @@ class EvalCase:
             if kind not in _ORACLE_FIELDS:
                 raise EvalValidationError(f"unknown eval oracle kind: {kind}")
             _strict_fields(oracle, _ORACLE_FIELDS[kind], f"{kind} oracle")
+            if kind == "file" and "contains_any" in oracle:
+                alternatives = oracle["contains_any"]
+                if (
+                    not isinstance(alternatives, list)
+                    or not alternatives
+                    or any(
+                        not isinstance(item, str) or not item
+                        for item in alternatives
+                    )
+                ):
+                    raise EvalValidationError(
+                        "file oracle contains_any must be a non-empty array of strings"
+                    )
             normalized_oracles.append(dict(oracle))
         return cls(
             schema_version=version,
@@ -300,11 +333,15 @@ def _distribution(values: Sequence[float]) -> dict[str, float | int | None]:
 
 def collect_run_metrics(events: Sequence[Event], *, recovery_triggered: bool = False) -> dict[str, Any]:
     model_calls = sum(event.event_type is EventType.MODEL_CALL_STARTED for event in events)
-    tool_calls = sum(
+    tool_attempts = sum(
         event.event_type is EventType.TOOL_CALL_PREPARED for event in events
     )
-    if not tool_calls:
-        tool_calls = sum(event.event_type is EventType.TOOL_CALL_STARTED for event in events)
+    legacy_tool_starts = sum(
+        event.event_type is EventType.TOOL_CALL_STARTED for event in events
+    )
+    if not tool_attempts:
+        tool_attempts = legacy_tool_starts
+    tool_executions = 0
     input_tokens = 0
     output_tokens = 0
     compression_input_tokens = 0
@@ -318,11 +355,28 @@ def collect_run_metrics(events: Sequence[Event], *, recovery_triggered: bool = F
     permission_violations = 0
     permission_violations_by_tool: Counter[str] = Counter()
     tool_calls_by_name: Counter[str] = Counter()
+    invalid_tool_calls_by_kind: Counter[str] = Counter()
     compression_rejections: Counter[str] = Counter()
     failure_reasons: Counter[str] = Counter()
     recovery_events = 0
+    repeated_failure_batches = 0
+    current_failure_batch: Counter[str] = Counter()
+    previous_failure_batch: tuple[tuple[str, int], ...] | None = None
+
+    def finish_failure_batch() -> None:
+        nonlocal previous_failure_batch, repeated_failure_batches
+        signature = tuple(sorted(current_failure_batch.items()))
+        if not signature:
+            previous_failure_batch = None
+        else:
+            if signature == previous_failure_batch:
+                repeated_failure_batches += 1
+            previous_failure_batch = signature
+        current_failure_batch.clear()
+
     for event in events:
         if event.event_type is EventType.MODEL_CALL_STARTED:
+            finish_failure_batch()
             request_id = str(event.payload.get("request_id", ""))
             timestamp = _parse_timestamp(event.timestamp)
             if timestamp is not None:
@@ -344,17 +398,30 @@ def collect_run_metrics(events: Sequence[Event], *, recovery_triggered: bool = F
             if isinstance(result, Mapping):
                 tool_name = str(result.get("tool_name", "unknown"))
                 tool_calls_by_name[tool_name] += 1
+                result_status = str(result.get("status"))
+                if result_status not in {
+                    ToolStatus.INVALID_ARGUMENTS.value,
+                    ToolStatus.PERMISSION_DENIED.value,
+                    ToolStatus.NOT_FOUND.value,
+                }:
+                    tool_executions += 1
                 duration_ms = float(result.get("duration_ms", 0.0))
                 tool_latency_ms += duration_ms
                 if tool_name == "restricted_test":
                     test_latency_ms += duration_ms
-                if str(result.get("status")) == ToolStatus.PERMISSION_DENIED.value:
+                if result_status == ToolStatus.PERMISSION_DENIED.value:
                     permission_violations += 1
                     permission_violations_by_tool[tool_name] += 1
-                if str(result.get("status")) != ToolStatus.SUCCESS.value:
+                if result_status != ToolStatus.SUCCESS.value:
                     error = result.get("error")
                     kind = error.get("kind") if isinstance(error, Mapping) else "tool_failure"
                     failure_reasons[str(kind)] += 1
+                    current_failure_batch[str(kind)] += 1
+                    if result_status in {
+                        ToolStatus.INVALID_ARGUMENTS.value,
+                        ToolStatus.NOT_FOUND.value,
+                    }:
+                        invalid_tool_calls_by_kind[str(kind)] += 1
         elif event.event_type is EventType.COMPRESSION_STARTED:
             key = f"{event.payload.get('source_event_start')}:{event.payload.get('source_event_end')}"
             timestamp = _parse_timestamp(event.timestamp)
@@ -382,6 +449,8 @@ def collect_run_metrics(events: Sequence[Event], *, recovery_triggered: bool = F
             compression_rejections[reason] += 1
             failure_reasons[f"compression:{reason}"] += 1
 
+    finish_failure_batch()
+
     run_latency_ms = 0.0
     if events:
         first = _parse_timestamp(events[0].timestamp)
@@ -390,7 +459,13 @@ def collect_run_metrics(events: Sequence[Event], *, recovery_triggered: bool = F
             run_latency_ms = max(0.0, (last - first) * 1000)
     return {
         "model_calls": model_calls,
-        "tool_calls": tool_calls,
+        # tool_calls is retained as a compatibility alias for logical attempts.
+        "tool_calls": tool_attempts,
+        "tool_attempts": tool_attempts,
+        "tool_executions": tool_executions,
+        "invalid_tool_calls": sum(invalid_tool_calls_by_kind.values()),
+        "invalid_tool_calls_by_kind": dict(sorted(invalid_tool_calls_by_kind.items())),
+        "repeated_failure_batches": repeated_failure_batches,
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
         "compression_input_tokens": compression_input_tokens,
@@ -427,12 +502,23 @@ class EvalRun:
     oracles: tuple[OracleResult, ...] = ()
     case_type: str = "task"
 
+    @property
+    def oracle_success(self) -> bool:
+        return self.task_success
+
+    @property
+    def end_to_end_success(self) -> bool:
+        return self.oracle_success and self.runtime_completed
+
     def to_dict(self, *, include_trace: bool = True) -> dict[str, Any]:
         result = {
             "case_id": self.case_id,
             "repetition": self.repetition,
             "session_id": self.session_id,
             "state": self.state,
+            "oracle_success": self.oracle_success,
+            "end_to_end_success": self.end_to_end_success,
+            # Compatibility alias for schema-v1 report consumers.
             "task_success": self.task_success,
             "runtime_completed": self.runtime_completed,
             "source_invariant": self.source_invariant,
@@ -594,11 +680,15 @@ class EvaluationRunner:
             compression_engine = self._compression_engine(case, suite_root, variant)
         except EvalInfrastructureFailure as exc:
             return self._infrastructure_run(case, repetition, str(exc))
-        application = self.application_factory(
-            run_home,
-            context_builder=context_builder,
-            compression_engine=compression_engine,
-        )
+        application_kwargs: dict[str, Any] = {
+            "context_builder": context_builder,
+            "compression_engine": compression_engine,
+        }
+        if "max_compression_calls" in case.backend:
+            application_kwargs["max_compression_calls"] = int(
+                case.backend["max_compression_calls"]
+            )
+        application = self.application_factory(run_home, **application_kwargs)
         backend_spec = case.backend
         try:
             backend = self._backend_from_spec(backend_spec, suite_root)
@@ -684,6 +774,11 @@ class EvaluationRunner:
     ) -> CompressionEngine | None:
         if variant != "compressed":
             return None
+        if (
+            case.backend.get("compression_backend") == "primary"
+            and case.backend.get("kind") != "scripted"
+        ):
+            return CompressionEngine(self._backend_from_spec(case.backend, suite_root))
         fixture = case.backend.get("compression_fixture")
         responses = case.backend.get("compression_responses")
         if fixture is None and responses is None:
@@ -783,6 +878,11 @@ class EvaluationRunner:
                         passed = passed and actual_hash == str(oracle["sha256"])
                     if oracle.get("contains") is not None:
                         passed = passed and str(oracle["contains"]) in content
+                    if oracle.get("contains_any") is not None:
+                        alternatives = [str(item) for item in oracle["contains_any"]]
+                        matched = [item for item in alternatives if item in content]
+                        details["contains_any_matched"] = matched
+                        passed = passed and bool(matched)
                     if oracle.get("not_contains") is not None:
                         passed = passed and str(oracle["not_contains"]) not in content
                 return OracleResult(kind, passed, details)
@@ -881,10 +981,10 @@ class EvaluationRunner:
         negative_controls = [
             run for run in valid if run.case_type == "negative_control"
         ]
-        success_count = sum(run.task_success for run in valid)
+        oracle_success_count = sum(run.oracle_success for run in valid)
         completed_count = sum(run.runtime_completed for run in valid)
         recovery_runs = [run for run in valid if run.metrics.get("recovery_triggered")]
-        recovery_success = sum(run.task_success for run in recovery_runs)
+        recovery_success = sum(run.end_to_end_success for run in recovery_runs)
         failure_reasons: Counter[str] = Counter(
             run.failure_reason for run in valid if run.failure_reason is not None
         )
@@ -903,6 +1003,10 @@ class EvaluationRunner:
 
         metrics = {
             "tool_calls": _distribution(values("tool_calls")),
+            "tool_attempts": _distribution(values("tool_attempts")),
+            "tool_executions": _distribution(values("tool_executions")),
+            "invalid_tool_calls": _distribution(values("invalid_tool_calls")),
+            "repeated_failure_batches": _distribution(values("repeated_failure_batches")),
             "model_calls": _distribution(values("model_calls")),
             "input_tokens": _distribution(values("input_tokens")),
             "output_tokens": _distribution(values("output_tokens")),
@@ -922,7 +1026,23 @@ class EvaluationRunner:
             "requested_run_count": len(runs),
             "valid_run_count": len(valid),
             "infrastructure_failure_count": len(runs) - len(valid),
-            "task_success_rate": (success_count / len(valid)) if valid else None,
+            # Canonical capability rates use normal task runs only. Scripted
+            # negative controls are always reported in their own denominator.
+            "capability_run_count": len(task_runs),
+            "oracle_success_rate": (
+                sum(run.oracle_success for run in task_runs) / len(task_runs)
+                if task_runs
+                else None
+            ),
+            "end_to_end_success_rate": (
+                sum(run.end_to_end_success for run in task_runs) / len(task_runs)
+                if task_runs
+                else None
+            ),
+            # Compatibility alias for schema-v1 report consumers.
+            "task_success_rate": (
+                oracle_success_count / len(valid) if valid else None
+            ),
             "runtime_completion_rate": (completed_count / len(valid)) if valid else None,
             "source_invariant_rate": (
                 sum(run.source_invariant is True for run in valid) / len(valid)
@@ -937,8 +1057,18 @@ class EvaluationRunner:
             ),
             "task_runs": {
                 "valid_run_count": len(task_runs),
+                "oracle_success_rate": (
+                    sum(run.oracle_success for run in task_runs) / len(task_runs)
+                    if task_runs
+                    else None
+                ),
+                "end_to_end_success_rate": (
+                    sum(run.end_to_end_success for run in task_runs) / len(task_runs)
+                    if task_runs
+                    else None
+                ),
                 "task_success_rate": (
-                    sum(run.task_success for run in task_runs) / len(task_runs)
+                    sum(run.oracle_success for run in task_runs) / len(task_runs)
                     if task_runs
                     else None
                 ),
@@ -950,8 +1080,9 @@ class EvaluationRunner:
             },
             "negative_control_runs": {
                 "valid_run_count": len(negative_controls),
+                "excluded_from_capability_metrics": True,
                 "observed_failure_rate": (
-                    sum(not run.task_success for run in negative_controls)
+                    sum(not run.end_to_end_success for run in negative_controls)
                     / len(negative_controls)
                     if negative_controls
                     else None
@@ -1051,6 +1182,10 @@ def paired_diff(first: Sequence[EvalRun], second: Sequence[EvalRun]) -> dict[str
             {
                 "case_id": key[0],
                 "repetition": key[1],
+                "oracle_success_delta": int(b.oracle_success) - int(a.oracle_success),
+                "end_to_end_success_delta": (
+                    int(b.end_to_end_success) - int(a.end_to_end_success)
+                ),
                 "task_success_delta": int(b.task_success) - int(a.task_success),
                 "runtime_completion_delta": int(b.runtime_completed) - int(a.runtime_completed),
                 "tool_calls_delta": b.metrics.get("tool_calls", 0) - a.metrics.get("tool_calls", 0),
@@ -1082,8 +1217,12 @@ def _report_markdown(report: Mapping[str, Any]) -> str:
         "",
         f"- Variant: `{report['variant']}`",
         f"- Valid runs: {report['valid_run_count']} / {report['requested_run_count']}",
-        f"- Task success rate: {report['task_success_rate']}",
-        f"- Normal task success rate: {report['task_runs']['task_success_rate']}",
+        f"- Capability runs: {report['capability_run_count']}",
+        f"- Oracle success rate (normal tasks): {report['oracle_success_rate']}",
+        f"- End-to-end success rate (normal tasks): {report['end_to_end_success_rate']}",
+        f"- Normal-task oracle success rate: {report['task_runs']['oracle_success_rate']}",
+        f"- Normal-task end-to-end success rate: "
+        f"{report['task_runs']['end_to_end_success_rate']}",
         f"- Negative-control observed failure rate: "
         f"{report['negative_control_runs']['observed_failure_rate']}",
         f"- Runtime completion rate: {report['runtime_completion_rate']}",
@@ -1092,15 +1231,22 @@ def _report_markdown(report: Mapping[str, Any]) -> str:
         "",
         "## Runs",
         "",
-        "| Case | Type | Repetition | Runtime | Task | Failure | Trace reference |",
-        "| --- | --- | ---: | --- | --- | --- | --- |",
+        "| Case | Type | Repetition | Runtime | Oracle | End-to-end | Failure | Trace reference |",
+        "| --- | --- | ---: | --- | --- | --- | --- | --- |",
     ]
     for run in report["runs"]:
         trace = f"runs/{run['case_id']}/{run['repetition']}"
         lines.append(
             f"| {run['case_id']} | {run['case_type']} | {run['repetition']} | "
             f"{run['state']} | "
-            f"{run['task_success']} | {run['failure_reason'] or ''} | {trace} |"
+            f"{run['oracle_success']} | {run['end_to_end_success']} | "
+            f"{run['failure_reason'] or ''} | {trace} |"
         )
-    lines.extend(("", "Infrastructure failures are excluded from valid-run denominators."))
+    lines.extend(
+        (
+            "",
+            "Infrastructure failures are excluded from valid-run denominators. Negative controls "
+            "are reported separately and excluded from normal-task capability metrics.",
+        )
+    )
     return "\n".join(lines) + "\n"

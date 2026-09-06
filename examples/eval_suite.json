@@ -310,7 +310,10 @@
       {
         "kind": "file",
         "path": "normalization.py",
-        "contains": "return value.strip().lower()"
+        "contains_any": [
+          "return value.strip().lower()",
+          "return value.lower().strip()"
+        ]
       },
       {
         "kind": "file",
@@ -417,12 +420,14 @@
     "backend": {
       "kind": "scripted",
       "fixture": "eval_scripts/long_history_compression.json",
-      "compression_fixture": "eval_scripts/long_history_summary.json"
+      "compression_fixture": "eval_scripts/long_history_summary.json",
+      "compression_backend": "primary",
+      "max_compression_calls": 2
     },
     "policy": {
       "max_steps": 40,
       "max_tool_calls": 12,
-      "max_output_tokens": 12000
+      "max_output_tokens": 11500
     },
       "required_facts": [
         "the long history is read-only",
@@ -441,6 +446,37 @@
         {
           "kind": "changed_paths",
           "allow": []
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "case_id": "search-lab-content-location",
+    "fixture": "mini_repos/search_lab",
+    "task": "Fix the EAST premium invoice total: an amount of 100 currently returns 102 but must return 112. The implementation location is not provided. Inspect the repository, make the smallest implementation-only change, and run tests.",
+    "backend": {
+      "kind": "scripted",
+      "fixture": "eval_scripts/search_lab_no_search.json"
+    },
+    "policy": {
+      "max_steps": 32,
+      "max_tool_calls": 8
+    },
+    "required_facts": [
+      "the EAST implementation must be located by repository content",
+      "only the responsible implementation file may change"
+    ],
+    "oracles": [
+      {"kind": "test_profile", "profile": "python_unittest"},
+      {
+        "kind": "file",
+        "path": "invoice/rules/rule_11.py",
+        "contains": "return amount * 1.12"
+      },
+      {
+        "kind": "changed_paths",
+        "allow": ["invoice/rules/rule_11.py"],
+        "deny": ["test_invoice.py", "README.md"]
       }
     ]
   }

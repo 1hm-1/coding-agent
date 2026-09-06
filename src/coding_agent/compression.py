@@ -312,8 +312,16 @@ class CompressionEngine:
     """Bounded summary-model invocation and schema/fact validation."""
 
     SUMMARY_SYSTEM_PROMPT = (
-        "Return only a JSON object with schema_version, goals, constraints, decisions, "
-        "files_read, edits, tests, errors, and unresolved. Do not invent facts."
+        "Return only one JSON object, without Markdown fences or commentary. Use exactly "
+        "these fields: schema_version (integer 1); goals, constraints, decisions, and "
+        "unresolved (arrays of strings); files_read (array of objects with path and "
+        "content_hash, optionally revision, source_event_sequence, stale); edits (array "
+        "of objects with path, optionally pre_revision, post_revision, content_hash, "
+        "source_event_sequence, stale); tests (array of objects with profile and passed "
+        "boolean or null, optionally summary, stderr_summary, source_event_sequence); "
+        "errors (array of objects with kind and message, optionally "
+        "source_event_sequence and active). Use [] when a category has no facts. Copy "
+        "hashes and paths exactly from the input and do not invent facts."
     )
 
     def __init__(

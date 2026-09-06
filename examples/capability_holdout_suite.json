@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "schema_version": 1,
+      "case_id": "holdout-calculator-edit-test",
+      "fixture": "fixture",
+      "task": "Fix add and run tests",
+      "backend": {
+        "kind": "scripted",
+        "fixture": "scripted_run.json"
+      },
+      "policy": {
+        "max_steps": 32
+      },
+      "required_facts": [
+        "add must be fixed"
+      ],
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "kind": "changed_paths",
+          "allow": [
+            "calculator.py"
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "holdout-todo-recovery",
+      "fixture": "todo_cli",
+      "task": "Fix the empty input crash and run tests.",
+      "backend": {
+        "kind": "scripted",
+        "fixture": "todo_cli_scripted_run.json"
+      },
+      "policy": {
+        "max_steps": 64
+      },
+      "required_facts": [
+        "blank input is ignored"
+      ],
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "kind": "file",
+          "path": "todo_parser.py",
+          "contains": "return None"
+        },
+        {
+          "kind": "changed_paths",
+          "allow": [
+            "todo_parser.py"
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "holdout-checkout-cross-file",
+      "fixture": "mini_repos/checkout_service",
+      "task": "Locate the pricing implementation across this repository, fix cent rounding, and run tests.",
+      "backend": {
+        "kind": "scripted",
+        "fixture": "eval_scripts/checkout_cross_file.json"
+      },
+      "policy": {
+        "max_steps": 32,
+        "max_tool_calls": 12
+      },
+      "required_facts": [
+        "pricing is in a separate module",
+        "cent rounding must be preserved"
+      ],
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "kind": "file",
+          "path": "pricing.py",
+          "contains": "return round(subtotal * (1 - rate), 2)"
+        },
+        {
+          "kind": "changed_paths",
+          "allow": [
+            "pricing.py"
+          ],
+          "deny": [
+            "test_checkout.py",
+            "README.md"
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "holdout-settings-scoped",
+      "fixture": "mini_repos/settings_service",
+      "task": "Fix mode parsing. Only modify settings.py, inspect the repository first, and run tests.",
+      "backend": {
+        "kind": "scripted",
+        "fixture": "eval_scripts/settings_scoped.json"
+      },
+      "policy": {
+        "max_steps": 32,
+        "max_tool_calls": 10
+      },
+      "required_facts": [
+        "only settings.py may change"
+      ],
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "kind": "file",
+          "path": "settings.py",
+          "contains": "value = raw.strip().lower()"
+        },
+        {
+          "kind": "changed_paths",
+          "allow": [
+            "settings.py"
+          ],
+          "deny": [
+            "README.md",
+            "service.py",
+            "test_settings.py"
+          ]
+        }
+      ]
+    }
+  ]
+}

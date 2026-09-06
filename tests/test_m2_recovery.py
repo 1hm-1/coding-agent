@@ -204,6 +204,46 @@ class RecoveryTest(unittest.TestCase):
                     1,
                 )
 
+    def test_search_read_only_result_is_reused_after_crash(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self._source(root, 'RULE_CODE = "EAST"\n')
+            application = AgentApplication(root / "agent-home")
+            script = [
+                {
+                    "tool_calls": [
+                        {
+                            "id": "search-1",
+                            "name": "search_files",
+                            "arguments": {"query": "EAST"},
+                        }
+                    ]
+                },
+                {"final": "located"},
+            ]
+
+            def crash(stage: str) -> None:
+                if stage == "after_tool_result":
+                    raise ProcessCrash(stage)
+
+            with self.assertRaises(ProcessCrash):
+                application.run_task(
+                    source=source,
+                    task="Locate EAST.",
+                    backend=ScriptedBackend(script),
+                    fault_injector=crash,
+                )
+            session_id = str(application.list_sessions()[0]["id"])
+            resumed = application.resume_session(
+                session_id,
+                backend=ScriptedBackend(script),
+            )
+            self.assertIs(resumed.state, RuntimeState.COMPLETED)
+            calls = application.journal.list_tool_calls(session_id)
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0]["tool_name"], "search_files")
+            self.assertEqual(calls[0]["attempt"], 1)
+
     def test_model_running_crash_is_marked_uncertain_before_retry(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

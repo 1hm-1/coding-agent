@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "schema_version": 1,
+      "case_id": "search-lab-content-location",
+      "fixture": "mini_repos/search_lab",
+      "task": "Fix the EAST premium invoice total: an amount of 100 currently returns 102 but must return 112. The implementation location is not provided. Inspect the repository, make the smallest implementation-only change, and run tests.",
+      "backend": {"kind": "scripted", "fixture": "eval_scripts/search_lab_with_search.json"},
+      "policy": {"max_steps": 32, "max_tool_calls": 8},
+      "required_facts": ["the implementation location is unknown", "only the responsible implementation file may change"],
+      "oracles": [
+        {"kind": "test_profile", "profile": "python_unittest"},
+        {"kind": "file", "path": "invoice/rules/rule_11.py", "contains": "return amount * 1.12"},
+        {"kind": "changed_paths", "allow": ["invoice/rules/rule_11.py"], "deny": ["test_invoice.py", "README.md"]}
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "search-router-error-code",
+      "fixture": "mini_repos/search_router",
+      "task": "Fix ARCHIVE_LIMIT_REACHED so the public error router returns HTTP 429 instead of 400. The responsible plugin is not identified. Make the smallest implementation-only change and run tests.",
+      "backend": {"kind": "scripted", "fixture": "eval_scripts/search_router_with_search.json"},
+      "policy": {"max_steps": 32, "max_tool_calls": 8},
+      "required_facts": ["ARCHIVE_LIMIT_REACHED must map to 429", "only the responsible plugin may change"],
+      "oracles": [
+        {"kind": "test_profile", "profile": "python_unittest"},
+        {"kind": "file", "path": "error_router/plugins/plugin_12.py", "contains": "STATUS = 429"},
+        {"kind": "changed_paths", "allow": ["error_router/plugins/plugin_12.py"], "deny": ["test_error_router.py", "README.md"]}
+      ]
+    },
+    {
+      "schema_version": 1,
+      "case_id": "search-transform-legacy-key",
+      "fixture": "mini_repos/search_transform",
+      "task": "Fix payload normalization for legacy_customer_id: it must produce customer_id, not account_id. The responsible compatibility transform is not identified. Make the smallest implementation-only change and run tests.",
+      "backend": {"kind": "scripted", "fixture": "eval_scripts/search_transform_with_search.json"},
+      "policy": {"max_steps": 32, "max_tool_calls": 8},
+      "required_facts": ["legacy_customer_id must become customer_id", "only the responsible transform may change"],
+      "oracles": [
+        {"kind": "test_profile", "profile": "python_unittest"},
+        {"kind": "file", "path": "payload_transform/transforms/transform_12.py", "contains": "updated[\"customer_id\"] = updated.pop(\"legacy_customer_id\")"},
+        {"kind": "changed_paths", "allow": ["payload_transform/transforms/transform_12.py"], "deny": ["test_payload_transform.py", "README.md"]}
+      ]
+    }
+  ]
+}

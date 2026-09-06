@@ -10,7 +10,7 @@ from coding_agent.test_profiles import TestProfile, TestProfileRegistry, default
 from coding_agent.tools.base import ToolContext, ToolDefinition, ToolOutcome, ToolRegistry
 from coding_agent.tools.builtin import build_builtin_registry
 from coding_agent.tools.harness import ToolHarness
-from coding_agent.workspace import WorkspaceManager
+from coding_agent.workspace import WorkspaceManager, tree_fingerprint
 from tests.native_support import require_native_sandbox
 
 
@@ -45,8 +45,26 @@ class ToolHarnessTest(unittest.TestCase):
     def test_registry_contains_m1_and_structured_m4_tools(self) -> None:
         self.assertEqual(
             self.registry.names,
-            ("read_file", "edit_file", "restricted_test", "run_command"),
+            (
+                "read_file",
+                "edit_file",
+                "search_files",
+                "restricted_test",
+                "run_command",
+            ),
         )
+
+    def test_file_tool_schemas_explain_workspace_relative_paths(self) -> None:
+        for tool_name in ("read_file", "edit_file"):
+            registered = self.registry.get(tool_name)
+            self.assertIsNotNone(registered)
+            definition = registered[0]  # type: ignore[index]
+            path_schema = definition.input_schema["properties"]["path"]
+            guidance = f"{definition.description} {path_schema['description']}"
+            self.assertIn("workspace-relative", guidance)
+            self.assertIn("repository_snapshot.file_paths", guidance)
+            self.assertIn("formatting.py", guidance)
+            self.assertIn("/formatting.py", guidance)
 
     def test_registry_rejects_duplicate_and_open_schema(self) -> None:
         registry = ToolRegistry()
@@ -108,6 +126,120 @@ class ToolHarnessTest(unittest.TestCase):
         )
         self.assertIs(result.status, ToolStatus.INVALID_ARGUMENTS)
         self.assertEqual(result.error["kind"], "workspace_path")
+
+    def test_file_tools_reject_absolute_paths(self) -> None:
+        read_result = self.harness.execute(
+            ToolCall(
+                id="read-absolute",
+                name="read_file",
+                arguments={"path": "/sample.txt"},
+            ),
+            self.context(Permission.READ),
+        )
+        edit_result = self.harness.execute(
+            ToolCall(
+                id="edit-absolute",
+                name="edit_file",
+                arguments={
+                    "path": "/sample.txt",
+                    "old_text": "alpha",
+                    "new_text": "gamma",
+                },
+            ),
+            self.context(Permission.WRITE),
+        )
+        self.assertIs(read_result.status, ToolStatus.INVALID_ARGUMENTS)
+        self.assertEqual(read_result.error["kind"], "workspace_path")
+        self.assertIs(edit_result.status, ToolStatus.INVALID_ARGUMENTS)
+        self.assertEqual(edit_result.error["kind"], "workspace_path")
+
+    def test_search_files_locates_nested_literal_without_writing(self) -> None:
+        nested = self.guard.root / "nested"
+        nested.mkdir()
+        (nested / "rule.py").write_text(
+            'RULE_CODE = "EAST"\nvalue = 1\n', encoding="utf-8"
+        )
+        before = tree_fingerprint(self.guard.root)
+
+        result = self.harness.execute(
+            ToolCall(
+                id="search-1",
+                name="search_files",
+                arguments={"query": 'RULE_CODE = "EAST"'},
+            ),
+            self.context(Permission.READ),
+        )
+
+        self.assertIs(result.status, ToolStatus.SUCCESS)
+        self.assertEqual(result.data["matches"][0]["path"], "nested/rule.py")
+        self.assertEqual(result.data["matches"][0]["line"], 1)
+        self.assertEqual(tree_fingerprint(self.guard.root), before)
+        definition = self.registry.get("search_files")[0]  # type: ignore[index]
+        self.assertEqual(definition.recovery_mode.value, "read_only")
+
+    def test_search_files_rejects_escape_and_invalid_limit(self) -> None:
+        for call in (
+            ToolCall(
+                id="search-absolute",
+                name="search_files",
+                arguments={"query": "alpha", "path": "/tmp"},
+            ),
+            ToolCall(
+                id="search-parent",
+                name="search_files",
+                arguments={"query": "alpha", "path": "../source"},
+            ),
+            ToolCall(
+                id="search-limit",
+                name="search_files",
+                arguments={"query": "alpha", "max_results": 0},
+            ),
+        ):
+            result = self.harness.execute(call, self.context(Permission.READ))
+            self.assertIs(result.status, ToolStatus.INVALID_ARGUMENTS)
+
+    def test_search_files_enforces_permission_and_result_bound(self) -> None:
+        (self.guard.root / "one.txt").write_text("needle one\n", encoding="utf-8")
+        (self.guard.root / "two.txt").write_text("needle two\n", encoding="utf-8")
+        denied = self.harness.execute(
+            ToolCall(
+                id="search-denied",
+                name="search_files",
+                arguments={"query": "needle"},
+            ),
+            self.context(),
+        )
+        bounded = self.harness.execute(
+            ToolCall(
+                id="search-bounded",
+                name="search_files",
+                arguments={"query": "needle", "max_results": 1},
+            ),
+            self.context(Permission.READ),
+        )
+        self.assertIs(denied.status, ToolStatus.PERMISSION_DENIED)
+        self.assertIs(bounded.status, ToolStatus.SUCCESS)
+        self.assertEqual(bounded.data["match_count"], 1)
+        self.assertTrue(bounded.truncated)
+
+    def test_search_files_bounds_candidate_discovery(self) -> None:
+        many = self.guard.root / "many"
+        many.mkdir()
+        for index in range(1001):
+            (many / f"file_{index:04d}.txt").write_text("haystack\n", encoding="utf-8")
+
+        result = self.harness.execute(
+            ToolCall(
+                id="search-discovery-bound",
+                name="search_files",
+                arguments={"query": "missing", "path": "many"},
+            ),
+            self.context(Permission.READ),
+        )
+
+        self.assertIs(result.status, ToolStatus.SUCCESS)
+        self.assertEqual(result.data["files_scanned"], 1000)
+        self.assertTrue(result.truncated)
 
     def test_permission_denies_edit(self) -> None:
         result = self.harness.execute(

@@ -123,6 +123,40 @@ class ContextEngineTest(unittest.TestCase):
         )
         passthrough = PassthroughContextBuilder(capability_registry=self._registry()).build(request)
         self.assertEqual(len(passthrough.messages), len(request.messages) + 1)
+        self.assertIn("workspace-relative", passthrough.messages[0].content)
+        self.assertIn("repository_snapshot.file_paths", passthrough.messages[0].content)
+        self.assertIn("use search_files before sequential reads", passthrough.messages[0].content)
+        self.assertIn("stop unrelated reads", passthrough.messages[0].content)
+        self.assertIn("reserve one call for restricted tests", passthrough.messages[0].content)
+
+    def test_runtime_section_reports_actual_remaining_budgets(self) -> None:
+        request = replace(
+            _request(
+                policy=RunPolicy(
+                    max_steps=20,
+                    max_model_calls=10,
+                    max_tool_calls=8,
+                    max_output_tokens=0,
+                )
+            ),
+            steps_used=7,
+            model_calls_used=3,
+            tool_calls_used=5,
+        )
+        round_trip = ContextBuildInput.from_dict(request.to_dict())
+        self.assertEqual(round_trip.steps_used, 7)
+        self.assertEqual(round_trip.model_calls_used, 3)
+        self.assertEqual(round_trip.tool_calls_used, 5)
+
+        built = BudgetedContextBuilder(capability_registry=self._registry()).build(request)
+        runtime_section = next(
+            section for section in built.sections if section.name == "task_runtime"
+        )
+        runtime_payload = json.loads(runtime_section.messages[1].content)
+        self.assertEqual(
+            runtime_payload["remaining_budgets"],
+            {"steps": 13, "model_calls": 7, "tool_calls": 3, "output_tokens": 0},
+        )
 
     def test_soft_recent_history_is_trimmed_but_latest_observation_is_retained(self) -> None:
         messages = tuple(
@@ -142,7 +176,7 @@ class ContextEngineTest(unittest.TestCase):
         )
         request = _request(messages=messages)
         builder = BudgetedContextBuilder(
-            capability_registry=self._registry(limit=700),
+            capability_registry=self._registry(limit=1000),
             config=ContextBudgetConfig(protocol_margin_tokens=0),
         )
         built = builder.build(request)
@@ -276,6 +310,13 @@ class SummaryAndPersistenceTest(unittest.TestCase):
             files_read=(FileFact("value.txt", "file-hash", "revision-1"),),
             tests=(TestFact("python_unittest", True),),
         )
+
+    def test_live_summary_prompt_declares_nested_schema(self) -> None:
+        prompt = CompressionEngine.SUMMARY_SYSTEM_PROMPT
+        self.assertIn("without Markdown fences", prompt)
+        self.assertIn("content_hash", prompt)
+        self.assertIn("passed boolean or null", prompt)
+        self.assertIn("Use []", prompt)
 
     def test_summary_round_trip_and_stale_invalidation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -86,7 +86,31 @@ class VerticalSliceTest(unittest.TestCase):
             )
             self.assertEqual(
                 {schema["name"] for schema in backend.requests[0].tools},
-                {"read_file", "edit_file", "restricted_test", "run_command"},
+                {
+                    "read_file",
+                    "edit_file",
+                    "search_files",
+                    "restricted_test",
+                    "run_command",
+                },
+            )
+            runtime_budgets = []
+            for request in backend.requests:
+                runtime_message = next(
+                    message
+                    for message in request.messages
+                    if message.metadata.get("context_kind") == "runtime_state"
+                )
+                runtime_budgets.append(
+                    json.loads(runtime_message.content)["remaining_budgets"]
+                )
+            self.assertEqual(
+                [budget["tool_calls"] for budget in runtime_budgets],
+                [12, 11, 10, 9],
+            )
+            self.assertEqual(
+                [budget["model_calls"] for budget in runtime_budgets],
+                [8, 7, 6, 5],
             )
             second_request_observations = [
                 message for message in backend.requests[1].messages if message.role == "tool"
