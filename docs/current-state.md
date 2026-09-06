@@ -4,6 +4,7 @@
 > 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2  
 > 当前阶段：M5.1 最小只读 `search_files` 已由 Eval 证据批准并实现
 > 当前附加门禁：Release/Evidence Hardening 已完成（文档、指标、Git/CI、coverage、类型检查、评测证据）。  
+> 固定发布基线：`v0.1.0`（复现命令与边界见 [`releases/v0.1.0.md`](./releases/v0.1.0.md)）。
 > 本文只描述已经存在并通过测试的行为。
 
 ## 1. 已实现能力
@@ -167,7 +168,7 @@
   消除该 context failure，并为 `search_files` 形成独立 A/B 证据。Git 工具仍无对应证据。
 - Release/Evidence Hardening 已加入 `RESUME_STARTED` recovery event、70% coverage 门槛（M5.1
   的 93 个默认测试启用 subprocess/multiprocessing 合并后实测 75.6%）、23/33 源码文件的 mypy
-  检查、`uv.lock`、GitHub Actions CI、calculator/todo
+  检查、`uv.lock`、GitHub Actions CI、wheel/sdist build、calculator/todo
   scripted smoke 和凭据门控的 live provider smoke；CI 会先报告 native capability，能力不足
   时 skip native-only case 和 sandbox-dependent eval，不把 fail-closed 结果当作 native security
   通过。

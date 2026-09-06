@@ -1,6 +1,7 @@
 # 新窗口开发交接
 
 > 交接基线：2026-09-06，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1 已完成。下一项仍须由 Eval failure coverage 决定，不是重写 M1/M1.5。
+> 固定版本：`v0.1.0`；安装、测试、离线 Eval、Demo 和支持边界见 `docs/releases/v0.1.0.md`。
 
 ## 1. 开始前必须做
 
@@ -93,9 +94,9 @@ M2.1 已完成 SQLite persistence foundation，M2.2/M2.3 也已严格完成：
   依赖能力缺口。证据见 `docs/evidence/deepseek-m5-capability-holdout-2026-09-06.summary.json`。
 
 当前不启动 M5.2，冻结五工具能力集合。实现提交 `0ccd434`、证据提交 `cf82f3c` 已推送；后者
-触发的 GitHub Actions run `34035706601` 在 Python 3.10/3.11 两个 quality job 上成功。下一
-窗口只在用户明确要求时准备 v0.1.0 tag/release；只有未来新的、可重复的 failure coverage
-才能批准 Git inspection、patch/edit 增强或依赖准备。
+触发的 GitHub Actions run `34035706601` 在 Python 3.10/3.11 两个 quality job 上成功。
+`v0.1.0` 已固定为发布基线；只有未来新的、可重复的 failure coverage 才能批准 Git
+inspection、patch/edit 增强或依赖准备。
 保持 M4.1/M4.2 的 OS isolation foundation；不要加入 shell 字符串、默认网络或多 Agent。
 
 ## 5. 完成一次开发后的交接动作

@@ -53,6 +53,8 @@ jobs:
           .venv/bin/coverage report
       - name: Compile check
         run: .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos
+      - name: Package build
+        run: uv build --out-dir "${RUNNER_TEMP}/dist-${{ matrix.python-version }}"
       - name: Calculator and todo scripted smoke
         env:
           PYTHONPATH: src

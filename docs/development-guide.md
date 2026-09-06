@@ -2,6 +2,9 @@
 
 本文给第一次接触项目的开发者提供可复制的操作路径。开始前先读 [`current-state.md`](./current-state.md)，避免把目标架构当成已实现代码。
 
+复现稳定版本时先 checkout `v0.1.0`，并使用
+[`v0.1.0 release notes`](./releases/v0.1.0.md) 中固定的安装、门禁、Eval 和 Demo 命令。
+
 ## 1. 环境要求
 
 - Python 3.10 或更高版本；当前验证版本为 Python 3.10.12。

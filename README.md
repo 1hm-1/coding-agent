@@ -1,5 +1,8 @@
 # Production-oriented Coding Agent
 
+> Stable engineering baseline: [`v0.1.0`](https://github.com/1hm-1/coding-agent/tree/v0.1.0) ·
+> [release notes](docs/releases/v0.1.0.md) · Python 3.10/3.11
+
 这是一个以 Agent Systems Engineering 为目标的 Coding Agent 项目。当前已完成 M1、M1.5、
 M2（SQLite persistence、恢复和模型边界）与 M3（Context Engineering、Compression、
 Evaluation）；用最小能力证明完整 runtime
@@ -9,6 +12,7 @@ Evaluation）；用最小能力证明完整 runtime
 预算化 context、带 lineage 的摘要、评估报告和 Linux restricted-test OS isolation。新接手开发请从
 [文档索引](docs/README.md)和[新窗口交接](docs/HANDOFF.md)开始，不要仅根据目标架构直接写代码。
 本轮 M5 评测扩展和工具门禁记录见 [M5 评测证据](docs/m5-eval-expansion.md)。
+需要在简历、评审或复现实验中引用固定版本时，请链接 `v0.1.0`，不要链接持续变化的 `main`。
 
 ## M1 已实现
 
@@ -75,7 +79,7 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 
 ## Release/Evidence Hardening 已实现
 
-- Git 工作区已初始化并配置 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、23/33 源码文件 mypy、93 个默认测试、native capability report、70% statement coverage、compile 检查、calculator/todo scripted smoke 和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
+- Git 工作区已初始化并配置 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、23/33 源码文件 mypy、93 个默认测试、native capability report、70% statement coverage、compile/package build 检查、calculator/todo scripted smoke 和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
 - 提交 `cf82f3c` 的首次完整托管 CI 已在 Python 3.10/3.11 两个 job 上成功；公开 run/job
   元数据已保存为脱敏证据，但不把 capability step 成功误述为 native-only case 必然执行。
 - `tests/live_provider_smoke.py` 和手动 workflow 提供显式凭据门控的真实 Provider smoke；无凭据时不发起网络请求。

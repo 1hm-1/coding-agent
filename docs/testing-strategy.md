@@ -190,7 +190,8 @@ typed-release-surface
 unit-contract
   └─ capability report + coverage run unittest discover + combine + report (fail-under=70)
 golden-smoke
-  ├─ compileall + calculator/todo scripted smoke (native capability available时)
+  ├─ compileall + wheel/sdist build
+  ├─ calculator/todo scripted smoke (native capability available时)
   └─ offline eval suite (native capability available时)
 ```
 

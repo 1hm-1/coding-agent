@@ -275,7 +275,7 @@ case 仍需用 `compressed` variant 验证。tool-call 组裁剪问题已修复�
 - `evaluation.py` 将 `RESUME_STARTED` 纳入 `recovery_events`，并由测试断言恢复指标一致；
 - 初始化 Git 仓库并保留工作副本现状，创建并推送初始提交；新增 GitHub Actions CI，覆盖
   Ruff、23/33 源码文件 mypy、93 个默认测试、native capability report、70% coverage、
-  compile、calculator/todo scripted smoke 和 offline eval（native capability 可用时）；能力
+  compile、wheel/sdist build、calculator/todo scripted smoke 和 offline eval（native capability 可用时）；能力
   受限 runner 的 native-only case 显式 skip，且跳过 sandbox-dependent eval，不视为 native
   security suite 通过；
 - M5.1 提交 `cf82f3c` 的 GitHub Actions run `34035706601` 已完成，Python 3.10/3.11
@@ -322,7 +322,7 @@ case 仍需用 `compressed` variant 验证。tool-call 组裁剪问题已修复�
 
 ## 13. 当前下一步
 
-M5.1 代码、文档与脱敏证据已推送，首次 Python 3.10/3.11 托管 CI 成功；四类非 search
-capability holdout 也没有形成 M5.2 failure coverage。因此冻结当前五工具集合。下一步只在
-用户明确要求时准备 v0.1.0 tag/release；只有未来新的独立失败覆盖才能重开能力扩展。保持
+M5.1 代码、文档与脱敏证据已推送，Python 3.10/3.11 托管 CI 成功，并已固定 `v0.1.0`
+发布基线；四类非 search capability holdout 没有形成 M5.2 failure coverage。因此冻结当前
+五工具集合，后续转向可选的项目展示优化。只有未来新的独立失败覆盖才能重开能力扩展。保持
 M4.1 namespace/policy/harness 边界，不加入 shell 字符串、默认网络、多 Agent。

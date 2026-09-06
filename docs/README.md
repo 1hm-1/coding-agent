@@ -15,6 +15,7 @@
 | M4.1 OS 级隔离基础 | 已完成 | [`m4-implementation-plan.md`](./m4-implementation-plan.md) |
 | M4.2 结构化执行扩展 | 已完成 | [`m4-implementation-plan.md`](./m4-implementation-plan.md) |
 | Release/Evidence Hardening | 已完成 | [`roadmap.md`](./roadmap.md)、[`current-state.md`](./current-state.md) |
+| v0.1.0 固定发布基线 | 已完成 | [`releases/v0.1.0.md`](./releases/v0.1.0.md) |
 | M5 有证据后的能力扩展 | M5.1 已完成，其余条件阶段 | [`roadmap.md`](./roadmap.md) |
 
 当前代码事实以 [`current-state.md`](./current-state.md) 为准。目标架构以 [`architecture.md`](./architecture.md) 为准。两者冲突时，不要假设目标已经实现。
@@ -56,6 +57,7 @@
 | `m3-implementation-plan.md` | 如何实现可评测的上下文预算、压缩和 Eval Harness？ |
 | `m4-implementation-plan.md` | 如何用 OS 强边界隔离执行并验证 threat model？ |
 | `m5-eval-expansion.md` | 新工具能力是否已经被评测证据证明需要？ |
+| `releases/v0.1.0.md` | 固定版本如何安装、验收、运行 Eval/Demo，支持边界是什么？ |
 | `HANDOFF.md` | 当前工作区如何安全交接？ |
 
 ## 4. 文档更新规则

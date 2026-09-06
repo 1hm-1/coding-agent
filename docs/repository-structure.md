@@ -23,6 +23,7 @@ coding-agent/
 │   ├── current-state.md              # 已实现、未实现、已知限制
 │   ├── decisions/                    # Eval-backed capability decision records
 │   ├── evidence/                     # 脱敏、可提交的评测证据摘要
+│   ├── releases/                     # 固定版本 release notes 与复现命令
 │   ├── development-guide.md          # 从零上手和变更流程
 │   ├── module-design.md              # 模块职责、依赖和扩展边界
 │   ├── requirements-traceability.md  # 原始需求和面试能力证据映射
