@@ -76,6 +76,8 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 ## Release/Evidence Hardening 已实现
 
 - Git 工作区已初始化并配置 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、23/33 源码文件 mypy、93 个默认测试、native capability report、70% statement coverage、compile 检查、calculator/todo scripted smoke 和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
+- 提交 `cf82f3c` 的首次完整托管 CI 已在 Python 3.10/3.11 两个 job 上成功；公开 run/job
+  元数据已保存为脱敏证据，但不把 capability step 成功误述为 native-only case 必然执行。
 - `tests/live_provider_smoke.py` 和手动 workflow 提供显式凭据门控的真实 Provider smoke；无凭据时不发起网络请求。
 - recovery 指标将 `RESUME_STARTED` 计为 recovery event；固定 suite 已扩展到 14-case/7-fixture；
   独立 search benchmark 的 DeepSeek 10+10 A/B 将端到端成功率从 0/10 提升至 6/10，因而批准

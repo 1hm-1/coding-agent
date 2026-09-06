@@ -278,6 +278,9 @@ case 仍需用 `compressed` variant 验证。tool-call 组裁剪问题已修复�
   compile、calculator/todo scripted smoke 和 offline eval（native capability 可用时）；能力
   受限 runner 的 native-only case 显式 skip，且跳过 sandbox-dependent eval，不视为 native
   security suite 通过；
+- M5.1 提交 `cf82f3c` 的 GitHub Actions run `34035706601` 已完成，Python 3.10/3.11
+  quality jobs 和公开 API 列出的全部质量步骤均为 success；匿名日志不可下载，因此不额外
+  推断 native-only case 的执行/skip 分支；
 - 新增显式、凭据门控的 `tests/live_provider_smoke.py` 与手动 workflow；DeepSeek 首次 live
   请求因过小的 smoke 输出预算得到空 `content`，现已增加预算并支持 `thinking: disabled`，
   用户已重新运行确认成功；另提供 provider override 运行真实 Eval baseline；上下文 tool-call
@@ -319,9 +322,7 @@ case 仍需用 `compressed` variant 验证。tool-call 组裁剪问题已修复�
 
 ## 13. 当前下一步
 
-M5.1 的 3-repository follow-up 已修复模型上下文中始终显示初始预算的问题，并增加停止无关
-读取、预留测试调用的紧凑行为指引；15 次 live 端到端/Runtime 为 14/15，固定 8-call 预算未
-提高。随后四类非 search capability holdout 的 12 次 live 全部端到端成功，没有形成 Git、
-patch/edit、依赖安装或其他 M5.2 failure coverage。因此冻结当前五工具集合，下一步转向版本
-整理和已托管 CI 证据；只有未来新的独立失败覆盖才能重开能力扩展。保持 M4.1
-namespace/policy/harness 边界，不加入 shell 字符串、默认网络、多 Agent。
+M5.1 代码、文档与脱敏证据已推送，首次 Python 3.10/3.11 托管 CI 成功；四类非 search
+capability holdout 也没有形成 M5.2 failure coverage。因此冻结当前五工具集合。下一步只在
+用户明确要求时准备 v0.1.0 tag/release；只有未来新的独立失败覆盖才能重开能力扩展。保持
+M4.1 namespace/policy/harness 边界，不加入 shell 字符串、默认网络、多 Agent。

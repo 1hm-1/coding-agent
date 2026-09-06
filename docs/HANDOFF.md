@@ -92,9 +92,10 @@ M2.1 已完成 SQLite persistence foundation，M2.2/M2.3 也已严格完成：
   live 运行没有基础设施失败、无效调用、权限违规、预算耗尽，也没有暴露 Git、patch/edit 或
   依赖能力缺口。证据见 `docs/evidence/deepseek-m5-capability-holdout-2026-09-06.summary.json`。
 
-当前不启动 M5.2，冻结五工具能力集合。下一窗口先整理版本、检查 Git diff/提交边界并取得已托管
-CI 证据；只有未来新的、可重复的 failure coverage 才能批准 Git inspection、patch/edit 增强
-或依赖准备。
+当前不启动 M5.2，冻结五工具能力集合。实现提交 `0ccd434`、证据提交 `cf82f3c` 已推送；后者
+触发的 GitHub Actions run `34035706601` 在 Python 3.10/3.11 两个 quality job 上成功。下一
+窗口只在用户明确要求时准备 v0.1.0 tag/release；只有未来新的、可重复的 failure coverage
+才能批准 Git inspection、patch/edit 增强或依赖准备。
 保持 M4.1/M4.2 的 OS isolation foundation；不要加入 shell 字符串、默认网络或多 Agent。
 
 ## 5. 完成一次开发后的交接动作

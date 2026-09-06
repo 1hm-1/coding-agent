@@ -171,6 +171,10 @@
   scripted smoke 和凭据门控的 live provider smoke；CI 会先报告 native capability，能力不足
   时 skip native-only case 和 sandbox-dependent eval，不把 fail-closed 结果当作 native security
   通过。
+- GitHub Actions run `34035706601` 已对提交 `cf82f3c` 完成首次完整托管 CI，Python 3.10 和
+  3.11 quality jobs 均为 success；安装、Ruff、mypy、capability report、coverage tests、
+  compile、两个 smoke 和 offline Eval steps 在公开 API 元数据中均为 success。匿名 job log
+  下载返回 403，因此该证据不额外声称 native-only case 一定执行而非按 workflow 规则 skip。
 
 ## 2. 当前调用链
 
@@ -260,9 +264,10 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 7. 自研 JSON Schema 只支持内置工具使用的子集，不是完整 Draft 实现。
 8. `COMPLETED` 表示 Runtime 正常收到 final answer，不代表任务成功；M3 Eval 已用 oracle 独立评分，但当前固定 suite 只提供离线描述性结果，不代表生产成功率。
 9. 当前只支持 Linux/POSIX 进程组终止逻辑；Windows/macOS 等价 sandbox 不属于现阶段验收范围。
-10. 项目已初始化 Git 仓库，初始提交 `69a16c6` 已推送到 `origin/main`，并加入 GitHub
-    Actions CI 配置；当前仍没有已托管 CI 运行记录，评估器只对每个 isolated fixture 内部
-    初始化的 Git baseline 执行 changed-path diff。
+10. 项目已初始化 Git 仓库，M5.1 提交 `cf82f3c` 已推送到 `origin/main`，GitHub Actions
+    run `34035706601` 在 Python 3.10/3.11 上成功；公开 API 只提供 run/job/step 状态，匿名
+    下载详细日志返回 403。评估器仍只对每个 isolated fixture 内部初始化的 Git baseline
+    执行 changed-path diff。
 11. 当前 coverage 是 statement coverage，发布门槛为 70%；coverage 不等同于安全或任务成功率证明。
     CLI 通过 subprocess smoke 纳入合并数据；namespace runner 为保持 sandbox 环境 allowlist 不注入
     宿主 coverage hook，当前仍显示 0%，其行为证据来自 native integration/security tests。
