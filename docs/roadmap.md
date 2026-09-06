@@ -324,5 +324,6 @@ case 仍需用 `compressed` variant 验证。tool-call 组裁剪问题已修复�
 
 M5.1 代码、文档与脱敏证据已推送，Python 3.10/3.11 托管 CI 成功，并已固定 `v0.1.0`
 发布基线；四类非 search capability holdout 没有形成 M5.2 failure coverage。因此冻结当前
-五工具集合，后续转向可选的项目展示优化。只有未来新的独立失败覆盖才能重开能力扩展。保持
-M4.1 namespace/policy/harness 边界，不加入 shell 字符串、默认网络、多 Agent。
+五工具集合。项目展示优化已完成 README 中英双语重构、首屏验证数据和 Mermaid 架构图；下一项
+可选工作是终端 Demo/GIF。只有未来新的独立失败覆盖才能重开能力扩展。保持 M4.1
+namespace/policy/harness 边界，不加入 shell 字符串、默认网络、多 Agent。

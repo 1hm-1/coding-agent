@@ -97,6 +97,8 @@ M2.1 已完成 SQLite persistence foundation，M2.2/M2.3 也已严格完成：
 触发的 GitHub Actions run `34035706601` 在 Python 3.10/3.11 两个 quality job 上成功。
 `v0.1.0` 已固定为发布基线；只有未来新的、可重复的 failure coverage 才能批准 Git
 inspection、patch/edit 增强或依赖准备。
+项目展示优化已完成 README 中英双语重构、首屏验证数据和 Mermaid 架构图；后续可选工作是
+录制 2—3 分钟终端 Demo/GIF，不因此改变 Runtime 能力边界。
 保持 M4.1/M4.2 的 OS isolation foundation；不要加入 shell 字符串、默认网络或多 Agent。
 
 ## 5. 完成一次开发后的交接动作

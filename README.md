@@ -1,214 +1,257 @@
-# Production-oriented Coding Agent
+# Production-oriented Coding Agent / 面向工程的 Coding Agent
 
-> Stable engineering baseline: [`v0.1.0`](https://github.com/1hm-1/coding-agent/tree/v0.1.0) ·
-> [release notes](docs/releases/v0.1.0.md) · Python 3.10/3.11
+[![CI](https://github.com/1hm-1/coding-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/1hm-1/coding-agent/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue)](https://www.python.org/)
+[![Release](https://img.shields.io/badge/release-v0.1.0-2ea44f)](https://github.com/1hm-1/coding-agent/tree/v0.1.0)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-这是一个以 Agent Systems Engineering 为目标的 Coding Agent 项目。当前已完成 M1、M1.5、
-M2（SQLite persistence、恢复和模型边界）与 M3（Context Engineering、Compression、
-Evaluation）；用最小能力证明完整 runtime
-闭环及其失败语义，而不是用工具数量包装一个聊天接口。
+> **固定工程基线 / Stable engineering baseline:**
+> [`v0.1.0`](https://github.com/1hm-1/coding-agent/tree/v0.1.0) ·
+> [中英双语发布说明 / Bilingual release notes](docs/releases/v0.1.0.md) ·
+> [托管 CI / Hosted CI](https://github.com/1hm-1/coding-agent/actions/runs/34039302700)
 
-当前已完成 **M5.1 Minimal Read-only Search**，并完成 Release/Evidence Hardening。项目已支持离线测试的真实模型 adapter、
-预算化 context、带 lineage 的摘要、评估报告和 Linux restricted-test OS isolation。新接手开发请从
-[文档索引](docs/README.md)和[新窗口交接](docs/HANDOFF.md)开始，不要仅根据目标架构直接写代码。
-本轮 M5 评测扩展和工具门禁记录见 [M5 评测证据](docs/m5-eval-expansion.md)。
-需要在简历、评审或复现实验中引用固定版本时，请链接 `v0.1.0`，不要链接持续变化的 `main`。
+一个强调**确定性、可恢复性、可审计性和隔离边界**的单 Agent 编码运行时。项目用真实执行证据
+证明完整的 `model → tool → observation → recovery` 闭环，而不是用工具数量包装聊天接口。
 
-## M1 已实现
+A single-agent coding runtime focused on **determinism, recovery, auditability, and isolation
+boundaries**. It demonstrates a complete `model → tool → observation → recovery` loop with
+executable evidence instead of presenting a large tool list around a chat interface.
 
-- 显式有限状态机：每个状态有独立 handler 和合法迁移表；
-- `ScriptedBackend`：可复现模型决策和工具调用；
-- 每个 session 独立复制 workspace，文件路径拒绝越界；
-- 统一 Tool Harness：schema、permission、可终止 timeout 边界、结构化错误、输出限制和审计边界；
-- M1 基线工具：`read_file`、`edit_file`、`restricted_test`；M4.2 增加结构化 `run_command`；
-  M5.1 增加有界、只读的字面量 `search_files`；
-- 测试工具只接受可信 profile 名称，模型不能提交 command/argv；
-- SQLite schema-versioned journal、原子 snapshot/event mutation；
-- 从 SQLite 生成的 schema-versioned JSONL trajectory 和无副作用 replay；
-- read → edit → test → final 的确定性端到端测试。
+当前基线完成 M1—M4、Release/Evidence Hardening 和由真实 Eval 失败覆盖批准的 M5.1
+只读搜索。后续能力继续由评测证据决定。
 
-## M1.5 已实现
+The current baseline completes M1—M4, Release/Evidence Hardening, and M5.1 read-only search,
+which was approved by live Eval failure coverage. Further capabilities remain evidence-gated.
 
-- 权限拒绝、测试失败恢复、handler 异常、测试超时和非法 backend response 注入；
-- Replay 汇总 Token、工具状态、测试结果序列、失败类型和 source invariant；
-- 四份不含随机字段的 semantic golden trajectory；
-- 一个 68 行的 `todo-cli` fixture：首次修复不正确、测试失败、二次修复后通过。
+## 验证结果 / Evidence at a glance
 
-通用 Shell 不属于 M1。测试命令由应用可信配置固定；M4.1 已将 `restricted_test` 放入
-Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，但这不是完整容器平台，
-也不包含通用 Shell 或其他平台等价实现。
+| 证据 / Evidence | v0.1.0 结果 / Result |
+|---|---:|
+| 默认测试 / Default tests | **93/93 passed** |
+| 语义 golden trajectories | **4/4 passed** |
+| Statement coverage | **75.6%** (70% gate) |
+| 静态与构建门禁 / Static and build gates | Ruff, mypy, compileall, wheel/sdist passed |
+| 固定离线 Eval / Fixed offline Eval | **10/10** normal tasks; **4/4** negative controls observed |
+| 三仓库 search live follow-up | **14/15** end-to-end |
+| 非 search DeepSeek holdout | **12/12** end-to-end |
+| 源仓库不变 / Source repository unchanged | **100%** in recorded Eval runs |
+| 托管 CI / Hosted CI | Python **3.10 + 3.11** passed |
 
-## M2 已实现
+这些结果来自版本化的小型 fixture、离线 oracle 和独立真实 Provider 请求，只是可复核的工程
+证据，不代表通用编码任务或生产成功率。脱敏报告位于 [`docs/evidence`](docs/evidence/)。
 
-- `<agent-home>/state.db` 使用 migration v3 保存 sessions、messages、events、checkpoints、调用 journal 和 summaries；
-- state、checkpoint、event 与可选 message 通过短事务原子提交，并校验 expected state/version；
-- JSONL 是可删除的导出投影，`export-trace` 可从 SQLite 重建；
-- `INTERRUPTED`、`WAITING_APPROVAL`、lease、model/tool recovery 和 edit reconciliation 已实现；
-- OpenAI-compatible、Anthropic adapter、retry/backoff 和显式 fallback 已实现；
-- M2 完成时的 47 个回归测试、四份 semantic golden、calculator/todo smoke 全部通过；加入 M3/M4/M5.1 和发布硬化后，默认 discovery 共 93 个测试。
+These results come from versioned small fixtures, offline oracles, and independent live Provider
+requests. They are auditable engineering evidence, not a general coding-task or production
+success-rate claim. Sanitized reports are stored in [`docs/evidence`](docs/evidence/).
 
-## M3 已实现
+## 架构 / Architecture
 
-- `BudgetedContextBuilder` 按 system/task-runtime/repository/summary/recent 分区构建上下文，使用 model capability registry 和 exact/命名 fallback token counter；
-- hard-retention、section budget、high-watermark 和 deterministic `context_built` manifest；`PassthroughContextBuilder` 保留为 A/B baseline；
-- `SummaryRecord` 以 event range/hash、workspace revision、file/test/error facts 和 `superseded_by` 持久化到 SQLite；压缩失败或 stale 时保留原始历史；
-- `evaluate` CLI 支持严格版本化 JSON suite、隔离 repetition、可信 test/file/diff/result oracle、task/runtime 分离指标和 paired A/B report；
-- `examples/eval_suite.json` 提供 14 个 case、覆盖 7 个 fixture；新增跨文件定位、多文件失败恢复、指定文件范围、长历史 compression 和 search-specific 样例，但仍是小型 scripted 数据集，不能代表真实 Coding 任务覆盖率。
+```mermaid
+flowchart LR
+    TASK["Task / 编码任务"] --> CLI["CLI"]
+    CLI --> APP["AgentApplication"]
+    EVAL["Eval Harness"] --> APP
 
-## M4.1 已实现
+    APP --> WM["WorkspaceManager"]
+    SRC[("Source repository<br/>只读源仓库")] -->|"copy once / 一次复制"| WM
+    WM --> WS[("Isolated workspace<br/>隔离工作区")]
 
-- `restricted_test` 只从可信 profile 生成固定 `argv`、环境、工作目录、网络模式和资源限制；模型不能提交任意命令；
-- Linux 默认使用 rootless user/mount/PID/network namespace、最小 chroot、只读系统 runtime、受控 tmpfs 和唯一可写任务 workspace；
-- capability probe 失败时 fail closed，绝不回退到宿主进程；默认无网络，secret 环境不进入执行；
-- wall/CPU/memory/PID/storage/stdout/stderr 限制、子进程组清理、symlink/proc/device 回归、并行 session 和 recovery 有自动测试；
-- trajectory 保存 execution id、profile、native runtime sample fingerprint、capability snapshot、limits、truncation 和 cleanup metadata；该 fingerprint 不是完整 rootfs digest。
+    APP --> RT["AgentRuntime<br/>FSM · budgets · recovery"]
+    RT <-->|"normalized messages"| MODEL["Scripted / OpenAI-compatible<br/>/ Anthropic adapters"]
+    RT --> HARNESS["ToolHarness<br/>schema · permission · timeout · audit"]
+    HARNESS --> FILES["read · search · edit"]
+    HARNESS --> EXEC["restricted_test · run_command"]
+    FILES --> WS
+    EXEC --> SANDBOX["Linux namespace sandbox<br/>no network · resource limits"]
+    SANDBOX --> WS
 
-## M4.2 已实现
-
-- `run_command` 只接受可信 command profile、结构化 `argv` 和受限相对 `cwd`；profile 固定
-  executable allowlist、环境、network、limits 和 rootfs identity；
-- 不接受 shell 字符串、shell interpreter 或 profile 外 executable；非零退出作为 observation，
-  timeout/resource/sandbox failure 使用统一结构化结果；
-- network 或超出默认 limits 的 profile 在没有一次性 approval 时 fail closed；默认 profile
-  不开放网络或额外资源；
-- `run_command` 使用与 `restricted_test` 相同的 ToolHarness、SQLite journal 和 M4.1 sandbox，
-  非幂等执行 crash 后不会自动重复。
-
-当前 native identity 是运行时内容哈希，不宣称 OCI image、Docker/Podman backend 或生产级
-漏洞扫描/多租户隔离已经实现。
-
-## Release/Evidence Hardening 已实现
-
-- Git 工作区已初始化并配置 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、23/33 源码文件 mypy、93 个默认测试、native capability report、70% statement coverage、compile/package build 检查、calculator/todo scripted smoke 和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
-- 提交 `cf82f3c` 的首次完整托管 CI 已在 Python 3.10/3.11 两个 job 上成功；公开 run/job
-  元数据已保存为脱敏证据，但不把 capability step 成功误述为 native-only case 必然执行。
-- `tests/live_provider_smoke.py` 和手动 workflow 提供显式凭据门控的真实 Provider smoke；无凭据时不发起网络请求。
-- recovery 指标将 `RESUME_STARTED` 计为 recovery event；固定 suite 已扩展到 14-case/7-fixture；
-  独立 search benchmark 的 DeepSeek 10+10 A/B 将端到端成功率从 0/10 提升至 6/10，因而批准
-  M5.1，但该小样本及 Token 成本上升不支持继续自动扩展 Git/Shell；详见
-  [M5 评测证据](docs/m5-eval-expansion.md)。
-- 后续将 search benchmark 扩展为 3 个仓库、每臂 15 次真实运行；有界 search-first 提示把
-  端到端成功从 12/15 提升到 13/15、输入 Token 降低 11.5%，且没有提高 8-call 预算。
-- 修复 `remaining_budgets` 始终显示初始上限的问题，并提示命中后停止无关读取、预留一次测试；
-  同一 benchmark 后续 15 次端到端与 Runtime 完成均为 14/15，Oracle 仍为 14/15，预算耗尽
-  从 2 次降为 1 次。输入 Token 较上一候选增加 9.0%，因此不宣称效率普遍提升。
-- 四类未参与 search 提示 A/B 的 capability holdout 共运行 12 次 DeepSeek，端到端 12/12，
-  没有无效调用、权限违规或预算耗尽；当前证据不支持启动 Git、增强 patch 或依赖安装能力。
-
-## 快速运行
-
-项目的唯一运行时依赖是 `httpx`；开发工具使用 `uv` 安装。在仓库目录执行：
-
-```bash
-PYTHONPATH=src python3 -m coding_agent.cli \
-  --agent-home /tmp/coding-agent-demo \
-  run-scripted \
-  --source examples/fixture \
-  --task "修复 add 函数并运行测试" \
-  --script examples/scripted_run.json
+    RT --> DB[("SQLite authority<br/>state · events · call journal")]
+    DB --> REPLAY["Replay / JSONL export"]
 ```
 
-真实模型 CLI（API key 从对应环境变量读取，不会写入 DB/trace）：
+关键约束 / Key invariants:
+
+- Runtime 的状态变化只发生在 FSM；Provider 格式只存在于 adapter。<br>
+  Runtime state changes stay inside the FSM; Provider-specific formats stay inside adapters.
+- 所有副作用都经过 ToolHarness，任务只修改隔离 workspace。<br>
+  Every side effect passes through ToolHarness, and tasks modify only the isolated workspace.
+- SQLite 是 session 恢复的唯一权威，JSONL 是可删除、可重建的导出。<br>
+  SQLite is the sole recovery authority; JSONL is a disposable, rebuildable export.
+- 不提供通用 Shell；执行能力只接受可信 profile 与结构化 argv。<br>
+  There is no general Shell; execution accepts only trusted profiles and structured argv.
+
+详细设计见 [架构文档 / architecture](docs/architecture.md)、
+[模块边界 / module design](docs/module-design.md) 和
+[运行契约 / contracts](docs/contracts.md)。
+
+## 快速开始 / Quick start
+
+### 1. 安装固定版本 / Install the pinned release
 
 ```bash
-PYTHONPATH=src python3 -m coding_agent.cli \
-  --agent-home /tmp/coding-agent-provider-demo \
-  run --provider openai-compatible --model <model> \
-  --base-url https://api.deepseek.com --thinking disabled \
-  --source examples/fixture --task "修复 add 函数并运行测试"
+git clone https://github.com/1hm-1/coding-agent.git
+cd coding-agent
+git checkout v0.1.0
+uv venv --python 3.11 .venv
+uv sync --locked --extra dev
 ```
 
-DeepSeek 使用 OpenAI-compatible 接口时，将 key 放在 `OPENAI_API_KEY` 环境变量中；当前
-Runtime 不回传 thinking 模式的 `reasoning_content`，因此使用 DeepSeek 工具循环时必须传入
-`--thinking disabled`。真实 smoke 会对 `https://api.deepseek.com` 自动采用该设置。
+Python 3.10 和 3.11 是发布验证版本。完整固定复现命令见
+[v0.1.0 发布说明 / release notes](docs/releases/v0.1.0.md)。
 
-命令返回 `session_id`、隔离 workspace 和 trace 路径。使用返回的 session id 回放：
+Python 3.10 and 3.11 are the validated release targets. See the
+[v0.1.0 release notes](docs/releases/v0.1.0.md) for the complete pinned reproduction commands.
 
-```bash
-PYTHONPATH=src python3 -m coding_agent.cli \
-  --agent-home /tmp/coding-agent-demo \
-  replay --session-id <session-id>
-```
+### 2. 运行确定性 Demo / Run the deterministic demo
 
-使用真实 Provider 覆盖固定 Eval 中每个 case 的 scripted backend（不会修改固定 manifest）：
+需要原生 Linux namespace 能力；能力不足时 sandbox 会 fail closed。
+
+Native Linux namespace support is required; the sandbox fails closed when unavailable.
 
 ```bash
+demo_home="$(mktemp -d /tmp/coding-agent-demo.XXXXXX)"
 PYTHONPATH=src .venv/bin/python -m coding_agent.cli \
-  --agent-home /tmp/coding-agent-deepseek-eval \
-  evaluate --suite examples/eval_suite.json \
-  --provider openai-compatible --model deepseek-v4-flash \
-  --base-url https://api.deepseek.com --thinking disabled \
-  --repetitions 3 --variant budgeted \
-  --output /tmp/coding-agent-deepseek-eval/report
-```
-
-该命令读取 `OPENAI_API_KEY`，并将实际 provider 配置写入输出目录的 manifest snapshot；
-密钥本身不会写入报告、SQLite 或 trace。
-
-若 JSONL 导出被删除，可从 SQLite 重建：
-
-```bash
-PYTHONPATH=src python3 -m coding_agent.cli \
-  --agent-home /tmp/coding-agent-demo \
-  export-trace --session-id <session-id>
-```
-
-运行测试：
-
-```bash
-PYTHONPATH=src python3 -m unittest discover -v
-```
-
-## M1.5 展示任务
-
-运行真实小仓库示例：
-
-```bash
-PYTHONPATH=src python3 -m coding_agent.cli \
-  --agent-home /tmp/coding-agent-todo-demo \
-  run-scripted \
+  --agent-home "$demo_home" run-scripted \
   --source examples/todo_cli \
   --task "Fix the empty input crash and run tests." \
   --script examples/todo_cli_scripted_run.json
 ```
 
-2026-09-05 验证结果：
+该 Demo 故意保留一次失败修复，并根据 observation 二次修正：
 
-| 项目 | 结果 |
-|---|---|
-| Task | Fix empty input crash |
-| Runtime | `COMPLETED` |
-| Model / tool calls | 6 / 5 |
+The demo intentionally preserves an incorrect first fix and then recovers from the observation:
+
+| 轨迹 / Trajectory | 结果 / Result |
+|---|---:|
+| Runtime state | `COMPLETED` |
+| Model / tool calls | `6 / 5` |
+| Tool order | `read → edit → test → edit → test` |
 | Test outcomes | `false → true` |
-| Original fixture | fingerprint unchanged |
+| Replay events | `72` continuous events |
+| Original fixture | unchanged |
 | Isolated workspace | `todo_parser.py` modified |
-| Final tests | passed |
-| Replay | 72 continuous events |
 
-## 明确延后的能力
+复制输出中的 `session_id` 进行回放，并验证源 fixture 未改变：
 
-- approved network 的显式 approval UI/授权通道、OCI/container backend；
-- 多 Agent、UI、消息平台、Skill 或 RAG。
+Copy the returned `session_id` to replay the run and verify that the source fixture is unchanged:
 
-这些能力的接口位置与演进顺序见
-[当前实现](docs/current-state.md)、[架构设计](docs/architecture.md)、
-[模块设计](docs/module-design.md)、[路线图](docs/roadmap.md)和
-[M2 实施计划](docs/m2-implementation-plan.md)、[M3 实施计划](docs/m3-implementation-plan.md)和[M4 实施计划](docs/m4-implementation-plan.md)。M1/M1.5 的完成记录分别见
-[M1 实施说明](docs/m1-vertical-slice.md)与
-[M1.5 Engineering Hardening](docs/m1.5-engineering-hardening.md)。
-原始工程目标与面试高频问题的“已实现/仅设计”边界见
-[需求与面试能力追踪](docs/requirements-traceability.md)。
+```bash
+PYTHONPATH=src .venv/bin/python -m coding_agent.cli \
+  --agent-home "$demo_home" replay --session-id <session-id>
 
-## 开发者入口
-
-```text
-docs/HANDOFF.md
-  → docs/current-state.md
-  → docs/development-guide.md
-  → docs/contracts.md
-  → docs/m2-implementation-plan.md
+git diff --exit-code -- examples/todo_cli
 ```
 
-提交任何里程碑状态变化时，同时更新 `current-state.md`、`roadmap.md`、对应
-checklist 和本 README。完整规则见 [开发指南](docs/development-guide.md)与
-[测试策略](docs/testing-strategy.md)。
+### 3. 运行发布门禁 / Run the release gates
+
+```bash
+PYTHONWARNINGS=error PYTHONPATH=src .venv/bin/python -X dev -m unittest discover -v
+.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos
+.venv/bin/mypy
+PYTHONPATH=src .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos
+```
+
+### 4. 运行固定离线 Eval / Run the fixed offline Eval
+
+```bash
+eval_root="$(mktemp -d /tmp/coding-agent-eval.XXXXXX)"
+PYTHONPATH=src .venv/bin/python -m coding_agent.cli \
+  --agent-home "$eval_root/agent-home" \
+  evaluate --suite examples/eval_suite.json \
+  --variant budgeted --repetitions 1 \
+  --output "$eval_root/report"
+```
+
+预期结果是 14/14 valid runs、10/10 正常任务端到端成功、4/4 负控制命中、0 基础设施失败，
+且 source invariant rate 为 1.0。
+
+Expected: 14/14 valid runs, 10/10 normal tasks end-to-end, 4/4 negative controls observed,
+zero infrastructure failures, and a source invariant rate of 1.0.
+
+## 核心能力 / Core capabilities
+
+| 模块 / Area | 已实现 / Implemented |
+|---|---|
+| Runtime | 显式 FSM；step/model/tool budgets；结构化失败；安全中断与恢复 / Explicit FSM, budgets, classified failures, safe interruption and recovery |
+| Tools | `read_file`, `search_files`, `edit_file`, `restricted_test`, `run_command` |
+| Persistence | SQLite schema v3；原子 state/event/checkpoint/call journal；lease 与 reconciliation / SQLite v3, atomic journal, leases, reconciliation |
+| Context | 分区预算、hard retention、原子 tool-call 组裁剪、带 lineage 的压缩 / Section budgets, hard retention, atomic tool-call groups, lineage-aware compression |
+| Sandbox | Rootless Linux namespaces、只读 rootfs、默认禁网、资源限制、进程清理 / Rootless namespaces, read-only rootfs, no network, limits, cleanup |
+| Evaluation | 版本化 suite、可信 oracle、正常任务/负控制分离、paired A/B、Provider override / Versioned suites, trusted oracles, separated controls, paired A/B, Provider override |
+| Models | Deterministic ScriptedBackend, OpenAI-compatible, Anthropic, retry/backoff, explicit fallback |
+| Audit | SQLite replay、可重建 JSONL、语义 golden、source invariant / SQLite replay, rebuildable JSONL, semantic goldens, source invariant |
+
+## 真实模型 / Live Providers
+
+默认测试完全离线。真实 Provider 只能显式启用，API key 从环境变量读取，不会写入 SQLite、
+trajectory 或错误文本。DeepSeek 通过 OpenAI-compatible adapter 使用，并必须关闭 thinking，
+因为当前 Runtime 不回传 `reasoning_content`。
+
+Default tests are fully offline. Live Providers are opt-in; API keys are read from environment
+variables and are not persisted to SQLite, trajectories, or error text. DeepSeek uses the
+OpenAI-compatible adapter with thinking disabled because the current Runtime does not round-trip
+`reasoning_content`.
+
+```bash
+export OPENAI_API_KEY='<provider-key>'
+
+PYTHONPATH=src .venv/bin/python -m coding_agent.cli \
+  --agent-home /tmp/coding-agent-provider-demo \
+  run --provider openai-compatible --model <model> \
+  --base-url https://api.deepseek.com --thinking disabled \
+  --source examples/fixture --task "Fix add and run tests"
+```
+
+真实 Provider 的脱敏 smoke 与 Eval 证据见
+[`docs/evidence`](docs/evidence/) 和
+[M5 Eval 记录](docs/m5-eval-expansion.md)。
+
+Sanitized live smoke and Eval evidence is available under
+[`docs/evidence`](docs/evidence/) and in the
+[M5 Eval record](docs/m5-eval-expansion.md).
+
+## 支持边界 / Supported boundaries
+
+支持 / Supported:
+
+- CPython 3.10/3.11 与 Linux/POSIX 进程语义。<br>
+  CPython 3.10/3.11 and Linux/POSIX process semantics.
+- 确定性和显式启用的真实模型后端、单 Agent session、恢复、回放与小型 Eval。<br>
+  Deterministic and opt-in live backends, single-agent sessions, recovery, replay, and small Eval suites.
+- 仅在 capability probe 成功时使用原生 Linux namespace sandbox。<br>
+  Native Linux namespace sandbox only when its capability probe succeeds.
+
+明确不支持 / Explicitly unsupported:
+
+- 生产级强多租户隔离、OCI image lifecycle、SBOM 或漏洞扫描。<br>
+  Production-grade strong multi-tenant isolation, OCI image lifecycle, SBOM, or vulnerability scanning.
+- 通用 Shell、任意 executable、默认网络或模型驱动依赖安装。<br>
+  General Shell, arbitrary executables, default network, or model-directed dependency installation.
+- Git inspection 工具、多 Agent、UI、RAG、Skills 或长期用户记忆。<br>
+  Git inspection tools, multi-agent orchestration, UI, RAG, Skills, or long-term user memory.
+- Windows/macOS 等价 sandbox 保证或通用生产成功率声明。<br>
+  Windows/macOS-equivalent sandbox guarantees or a general production success-rate claim.
+
+## 文档导航 / Documentation
+
+| 文档 / Document | 用途 / Purpose |
+|---|---|
+| [当前实现 / Current state](docs/current-state.md) | 已实现行为、限制与技术债 / Implemented behavior, limits, and debt |
+| [开发交接 / Handoff](docs/HANDOFF.md) | 新开发窗口的唯一入口 / Entry point for a new development session |
+| [架构 / Architecture](docs/architecture.md) | 目标架构与安全边界 / Target architecture and security boundaries |
+| [开发指南 / Development guide](docs/development-guide.md) | 安装、命令与变更流程 / Setup, commands, and change workflow |
+| [测试策略 / Testing strategy](docs/testing-strategy.md) | 测试层次、golden 与 CI / Test layers, goldens, and CI |
+| [路线图 / Roadmap](docs/roadmap.md) | 证据门控的里程碑 / Evidence-gated milestones |
+| [M5.1 决策 / M5.1 decision](docs/decisions/m5-1-search-files.md) | 为什么增加最小只读搜索 / Why minimal read-only search was added |
+| [v0.1.0 发布说明 / Release notes](docs/releases/v0.1.0.md) | 固定复现步骤与完整边界 / Pinned reproduction and full boundaries |
+
+新接手开发请先阅读 `AGENTS.md`、[HANDOFF](docs/HANDOFF.md) 和
+[current-state](docs/current-state.md)。不要根据目标架构假设能力已经实现。
+
+New contributors should begin with `AGENTS.md`, the [handoff](docs/HANDOFF.md), and the
+[current state](docs/current-state.md). Do not infer implemented capabilities from the target
+architecture alone.
+
+## License / 许可证
+
+[MIT](LICENSE)
