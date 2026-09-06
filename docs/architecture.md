@@ -1,8 +1,8 @@
 # Coding Agent 架构设计
 
 > 文档类型：目标架构与不变量  
-> 当前实现：M4.2，见 [`current-state.md`](./current-state.md)  
-> 下一实施阶段：M5 条件阶段，见 [`roadmap.md`](./roadmap.md)
+> 当前实现：M5.1，见 [`current-state.md`](./current-state.md)
+> 下一实施阶段：后续 M5 能力继续由 failure coverage 决定，见 [`roadmap.md`](./roadmap.md)
 
 ## 1. 状态标记
 
@@ -12,6 +12,7 @@
 - **[M2]**：M2 已完成的持久恢复与模型边界实现；
 - **[M3]**：Context/Eval 阶段实现；
 - **[M4]**：OS 级隔离阶段实现；M4.1 foundation 与 M4.2 structured execution 已完成；
+- **[M5]**：Eval 驱动的能力扩展；M5.1 最小只读字面量搜索已完成；
 - **[TARGET]**：长期不变量或最终形态。
 
 看到目标接口时不要假设代码已经存在。当前精确 API 以 [`contracts.md`](./contracts.md) 为准。
@@ -203,7 +204,8 @@ ToolCall
 ```
 
 当前权限：`READ`、`WRITE`、`EXECUTE_TEST`、`EXECUTE_COMMAND`。当前工具：`read_file`、
-`edit_file`、`restricted_test`、`run_command`。
+`search_files`、`edit_file`、`restricted_test`、`run_command`。`search_files` 复用 `READ`
+权限和 `READ_ONLY` 恢复语义，只提供有界的 UTF-8 字面量搜索。
 
 ### 9.2 M2 恢复管线
 

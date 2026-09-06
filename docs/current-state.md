@@ -1,8 +1,8 @@
 # 当前实现状态
 
-> 基线日期：2026-09-05  
+> 基线日期：2026-09-06
 > 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2  
-> 下一阶段：M5 Eval-driven Capability Expansion（条件阶段）  
+> 当前阶段：M5.1 最小只读 `search_files` 已由 Eval 证据批准并实现
 > 当前附加门禁：Release/Evidence Hardening 已完成（文档、指标、Git/CI、coverage、类型检查、评测证据）。  
 > 本文只描述已经存在并通过测试的行为。
 
@@ -30,14 +30,21 @@
 
 ### Tools
 
-- 有 `read_file`、`edit_file`、`restricted_test`、`run_command`。
+- 有 `read_file`、`edit_file`、`search_files`、`restricted_test`、`run_command`。
+- 三个文件工具的模型 schema/系统提示明确要求 workspace-relative path、禁止 `/` 开头和
+  `..`，并要求优先使用 `repository_snapshot.file_paths` 中的精确路径。
+- 系统提示在实现位置未知但任务提供特征 symbol/literal/key/error 时要求先用 `search_files`，
+  避免顺序盲读；该提示经紧预算 context/compression 回归和真实 Provider A/B 验证。
+- `search_files` 只做大小写敏感的 UTF-8 字面量搜索，复用 `READ` 权限和 `READ_ONLY`
+  恢复模式；不支持 regex/glob/Shell/Git/网络，并限制扫描文件数、字节数、结果数、单文件
+  大小和 wall time。
 - `ToolHarness` 统一执行注册查找、受限 JSON Schema 校验、权限检查、deadline、异常映射、输出限制和 audit callback。普通 handler 默认在可杀死的 Linux worker 进程组中运行；sandbox
   工具由 SandboxExecutor 强制 wall timeout，二者均不再只做事后超时判定。
 - 权限枚举的真实名称是 `READ`、`WRITE`、`EXECUTE_TEST`、`EXECUTE_COMMAND`。
 - `restricted_test` 只接收可信 profile 名称；当前默认 profile 是 `python_unittest`。
 - `run_command` 只接收可信 command profile、结构化 `argv` 和受限相对 `cwd`；不接受
   shell 字符串、shell interpreter 或 profile 外 executable。
-- 没有 `run_shell`、文件搜索或 Git inspection 工具。
+- 没有 `run_shell` 或 Git inspection 工具。
 
 ### Workspace
 
@@ -85,19 +92,23 @@
 - 超过 `0.85 * input_budget` 才尝试有界 compression，目标为 `0.65 * input_budget`；schema/required-fact 校验失败会记录 `compression_rejected` 并保留原始历史。
 - Repository snapshot 只从 isolated workspace 构建，包含有上限文件列表、Git diff summary、已读文件 hash、workspace revision 和最近测试摘要。
 - `evaluate` 读取严格版本化 JSON suite，按 case/repetition 创建新 workspace，运行可信 test/file/diff/result oracle，分别统计 task success 与 Runtime completion。
-- Eval case 显式标记 `task` 或 `negative_control`；报告分别统计 9 个正常任务的成功率与 4 个
-  负控制的 observed failure rate，同时保留全体 run 聚合字段兼容历史报告。
+- Eval case 显式标记 `task` 或 `negative_control`；当前固定 suite 为 10 个正常任务和 4 个
+  负控制。能力主指标是正常任务的 `oracle_success_rate` 和
+  `end_to_end_success_rate = oracle_success && runtime_completed`；负控制明确排除在能力分母
+  外，旧 `task_success` 字段仅作为 schema-v1 兼容别名。
 - `evaluate` 支持显式 provider override，在不修改固定 scripted manifest 的情况下对同一
   组 fixture/oracle 运行真实模型 baseline；实际 backend 配置会写入 manifest snapshot，
   secret 仍只从环境变量读取。
-- Eval 报告包含 calls、input/output/compression tokens、run/model/tool/test/compression latency、failure taxonomy、recovery、permission 和 source-invariant 指标；`report.json` 的比较投影排除随机 session ID/trace path。
+- Eval 报告区分 `tool_attempts`、通过准入边界的 `tool_executions`、
+  `invalid_tool_calls` 和 `repeated_failure_batches`，并继续记录 Token、延迟、failure taxonomy、
+  recovery、permission 和 source invariant；比较投影排除随机 session ID/trace path。
 
 ### Hardening evidence
 
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 当前测试数量：82；在当前 capability probe 成功的环境中全部通过；`tests/live_provider_smoke.py` 为凭据门控的显式测试，不计入默认 discovery。能力受限 runner 会对 7 个 native-only case 显式 skip。
+- 当前测试数量：93；在当前 capability probe 成功的环境中全部通过；`tests/live_provider_smoke.py` 为凭据门控的显式测试，不计入默认 discovery。能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。
 - calculator smoke 产生 48 条连续事件；todo fixture 产生 72 条连续事件并保持 `false → true`。
 - Ruff 强制基线 `E4/E7/E9/F` 仍显式写入 `pyproject.toml`；已使用 `uv` 安装 Ruff 0.16.6，`ruff check src tests examples/todo_cli` 通过。
@@ -111,11 +122,37 @@
 - M4.2 tests 覆盖结构化 argv schema、executable allowlist、cwd containment、profile
   策略、approval fail-closed、非零退出 observation、direct-argv native 边界和
   non-idempotent crash recovery。
-- M5 评测门禁已扩展为 13-case、6-fixture 的 `budgeted` suite：valid runs=13、
+- 历史 M5 评测门禁曾扩展为 13-case、6-fixture 的 `budgeted` suite：valid runs=13、
   `infrastructure_failure=0`、`source_invariant_rate=1.0`、`runtime_completion_rate=0.9231`、
   `task_success_rate=0.6923`、`recovery_rate=1.0`；任务失败均属于预设的 scripted/oracle
   场景，budgeted 报告另记录了 3 次有界的 `compression:summarizer_unconfigured` fallback，
   没有真实模型 failure coverage。
+- 固定 suite 现扩展到 14-case、7-fixture。live compressed 定向验证使用真实 Provider 摘要器、
+  最多两次有界压缩和完整嵌套 summary schema；3 次运行不再出现 context/schema 失败，oracle
+  3/3、端到端 2/3，剩余一次是模型重复读取导致 `tool_budget_exhausted`。
+- M5.1 完成后的 `budgeted` 离线验收为 14/14 valid、基础设施失败 0；10 个正常任务
+  oracle/Runtime/end-to-end 均为 10/10，4 个负控制 observed failure 为 4/4，source invariant
+  和 recovery 均为 100%。
+- 路径契约修复后，pipeline 定向 10 次没有 invalid path、重复失败批次或工具预算耗尽。原始
+  9/10 oracle 中唯一失败是 `lower().strip()` 与 `strip().lower()` 的等价实现，已用
+  `contains_any` 修复过窄 oracle。
+- 独立 `search_lab` 在固定 8-call 预算下，no-search 端到端 0/10；最小只读
+  `search_files` 候选提升到 6/10、oracle 8/10，直接 read 从 75 降至 49、invalid calls 从
+  5 降至 0，但输入 Token 从 73,073 增至 147,027。该证据批准 M5.1，同时保留仍有 4 次失败
+  和 Token 成本上升的限制。
+- 独立 search suite 随后扩大到 3 个不同结构的仓库。当前提示与 search-first 提示各运行
+  15 次 DeepSeek：端到端 12/15→13/15、oracle 12/15→14/15、模型调用 79→73、工具尝试
+  106→101、输入 Token 234,638→207,658（-11.5%），first-search 中位位置 4→1。候选仍有
+  2 次 8-call 耗尽，因此保留提示但不提高预算。
+- `task_runtime.remaining_budgets` 过去错误地在每轮重复 policy 初始上限；现由 Session 已使用
+  step/model/tool 计数计算真实剩余值，并保持旧 `ContextBuildInput` 投影缺字段时按 0 兼容。
+  同时加入命中后停止无关读取、预留一次 restricted test 的紧凑指引。后续 15 次 DeepSeek
+  端到端/Runtime 为 14/15，oracle 14/15，预算耗尽从 2 降为 1、工具尝试 101→100；输入
+  Token 增加 9.0%、模型调用 73→78，因此只认定 Runtime/预算语义改善，不宣称总体效率改善。
+- 非 search capability holdout 复用四类未参与三仓库提示 A/B 的正常任务，scripted 4/4；
+  DeepSeek 每 case 3 次共 12/12 端到端成功，基础设施失败、无效调用、权限违规、重复失败批次
+  和预算耗尽均为 0。所有运行都执行 edit 和 restricted test，没有形成 Git、patch/edit、
+  依赖安装或其他 M5.2 能力的 failure coverage。
 - 新增 fixture 覆盖跨文件定位探针、多文件 bug 后测试失败继续定位、指定文件 changed-path
   约束和长历史 compression；compressed variant 的 long-history case 记录
   `compression_input_tokens=220`、`compression_output_tokens=70`，没有 compression rejection。
@@ -126,10 +163,10 @@
   source invariant=1.0、permission violations=0，单次 task success 为 11/13、10/13、11/13。
   该结果混入 scripted 负控制，不能作为最终真实模型成功率；修复前暴露的 tool-call 组截断问题
   已改为原子组裁剪和 fail-closed，修复后不再出现 Provider `invalid_request`。`budgeted` 长历史
-  case 仍因没有 summarizer 且硬保留内容略超预算而安全失败，需用 `compressed` variant 单独
-  验证；当前仍无 search/Git 新工具证据。
-- Release/Evidence Hardening 已加入 `RESUME_STARTED` recovery event、70% coverage 门槛（本次
-  82 个默认测试启用 subprocess/multiprocessing 合并后实测 74.7%）、23/33 源码文件的 mypy
+  case 仍因没有 summarizer 且硬保留内容略超预算而安全失败；后续 compressed 定向运行已经
+  消除该 context failure，并为 `search_files` 形成独立 A/B 证据。Git 工具仍无对应证据。
+- Release/Evidence Hardening 已加入 `RESUME_STARTED` recovery event、70% coverage 门槛（M5.1
+  的 93 个默认测试启用 subprocess/multiprocessing 合并后实测 75.6%）、23/33 源码文件的 mypy
   检查、`uv.lock`、GitHub Actions CI、calculator/todo
   scripted smoke 和凭据门控的 live provider smoke；CI 会先报告 native capability，能力不足
   时 skip native-only case 和 sandbox-dependent eval，不把 fail-closed 结果当作 native security
@@ -202,11 +239,11 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 ## 4. 尚未实现
 
 - approved network 的显式 approval UI/授权通道、OCI/container image backend；
-- M5 条件能力扩展（search、Git inspection、patch/edit 增强或依赖准备）尚未批准；当前
-  固定 eval 没有显示现有工具覆盖率瓶颈；
-- 真实 Provider 的 3 次 DeepSeek `budgeted` 探索性重复已经执行；用户已完成 adapter smoke，并提供
-  手动、凭据门控的 smoke workflow。三次结果仍混入 scripted 负控制，且长历史 case 需要用
-  `compressed` variant 复核，因此尚未形成可直接比较的最终工具能力 baseline。
+- M5.1 最小只读 `search_files` 已批准并实现；Git inspection、patch/edit 增强和依赖准备仍
+  未获 failure coverage 批准；
+- 已完成 DeepSeek budgeted 探索、compressed 定向、search A/B、budget-aware follow-up 和
+  capability holdout，并保存脱敏摘要；这些仍是小型本地 fixture 证据，不是外部真实仓库基准、
+  托管 CI 历史或生产成功率。
 - 多 Agent、UI、消息平台、Skill 或 RAG。
 
 ## 5. 已知限制与技术债
@@ -235,14 +272,14 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 13. live provider smoke 已提供手动 workflow；本地首次 DeepSeek 尝试已到达 Provider，但因
    smoke 原先只有 16 个输出 token，最终 `content` 为空而失败。现已增加输出预算，并支持
    DeepSeek `thinking: disabled` 配置；adapter smoke 已成功，修复上下文组裁剪后也已完成 3 次
-   `budgeted` live Eval。该结果仍受 scripted 负控制和未配置 summarizer 的长历史预算影响，需
-   `compressed` variant 后再形成最终能力结论。
+   `budgeted` live Eval。后续已用真实 Provider 摘要器运行 compressed 定向验证；该小样本仍
+   不代表通用 Coding 成功率。
    GitHub-hosted runner 的 native capability 也可能不足；native-only case 会显式 skip，相关
    sandbox-dependent eval 也会跳过，不能以此替代具备能力环境的 M4.1/M4.2 安全证据。
 14. `runtime.py`、`persistence.py`、`evaluation.py` 仍是高集中度大模块；本轮只记录维护风险，不做无验收收益的拆分重构。
-15. 当前 13-case、6-fixture 的评测比单 calculator suite 更有覆盖，增加了跨文件、多文件、
-    范围约束和长历史样例，但仍是小型 scripted/offline 数据集；不能代表真实 Coding 任务，
-    也不能证明不需要 search/Git。
+15. 当前固定 14-case/7-fixture suite 与独立 3-repository search suite 比单 calculator 更有
+    覆盖，但仍是小型 scripted/live synthetic 数据集；不能代表真实 Coding 任务，也不能证明
+    不需要 Git 或其他能力。
 
 ## 6. 不允许虚构的项目事实
 

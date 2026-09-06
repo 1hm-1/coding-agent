@@ -1,7 +1,7 @@
 # M5 Eval-driven Capability Expansion 评测证据记录
 
 > 记录日期：2026-09-05
-> 当前决策：M5 的评测扩展已完成；已完成 DeepSeek 3 次重复的探索性 live Eval，并修复一个上下文协议边界问题。search_files、Git inspection、patch/edit 增强和依赖准备等能力扩展暂不实现。
+> 当前决策：M5.1 最小只读 `search_files` 已由独立 10+10 live A/B 证据批准并实现；Git inspection、patch/edit 增强和依赖准备仍不实现。
 
 ## 1. 这次工作要回答什么问题
 
@@ -331,7 +331,7 @@ tool-call turn 与全部结果现在作为不可拆分组参与裁剪；完整�
 4. A/B 没有显示新增工具或当前 context policy 带来可归因的成功率提升。
 5. 已完成 3 次探索性 live Provider Eval，但由于负控制混入、budgeted 长历史预算不足，尚不能作为最终真实模型能力分数。
 
-因此本轮不实现：
+在 2026-09-05 的 13-case 证据下，本轮当时不实现：
 
 - search_files；
 - git_status；
@@ -352,6 +352,128 @@ M5 继续保持“条件阶段”。只有真实模型在多次重复中明确�
 
 进入设计前仍必须先写 decision record、权限增量、schema、成功/失败/恢复验收测试，并做单变量 A/B。若真实 baseline 仍没有稳定工具缺口，当前版本可作为 v0.1.0 工程基线，转向 CI、发布文档和面试演示材料。
 
+### 7.1 2026-09-06 M5.1 search-specific 决策
+
+先完成了三个门禁修复：
+
+- 文件工具 schema 和系统提示明确 workspace-relative path，禁止 `/` 与 `..`，优先使用
+  `repository_snapshot.file_paths`；
+- Eval 新增 `oracle_success`、`end_to_end_success`，并将负控制明确排除在能力分母外；
+- 工具指标拆分为 `tool_attempts`、通过准入边界的 `tool_executions`、
+  `invalid_tool_calls` 和 `repeated_failure_batches`。
+
+路径契约修复后，`pipeline-multi-file-recovery` 定向重复 10 次：Runtime 10/10 完成、无效
+路径 0、重复失败批次 0、工具预算耗尽 0。原始 oracle 为 9/10，但唯一失败实现
+`lower().strip()` 与预期 `strip().lower()` 等价且测试通过，因此这是过窄 oracle；manifest
+现使用 `contains_any` 接受两种等价实现。该案例不再支持 search 立项。
+
+随后增加 14th case / 7th fixture：`search-lab-content-location`。它包含 12 个名称不透明的
+嵌套规则模块，任务不提供实现位置，固定 `max_tool_calls=8`。同一任务的真实 DeepSeek 对照：
+
+| 指标 | No search | `search_files` |
+|---|---:|---:|
+| valid / infrastructure failure | 10 / 0 | 10 / 0 |
+| end-to-end success | 0/10 | 6/10 |
+| oracle success | 0/10 | 8/10 |
+| Runtime completion | 0/10 | 6/10 |
+| direct `read_file` calls | 75 | 49 |
+| tool attempts / executions | 80 / 75 | 72 / 72 |
+| invalid tool calls | 5 | 0 |
+| input / output tokens | 73,073 / 6,811 | 147,027 / 5,207 |
+
+候选显著提高成功率并降低直接读取放大，因此批准最小只读 `search_files`。它只做大小写敏感
+字面量搜索，复用 `READ`/`READ_ONLY`，限制扫描文件、字节和结果数，不支持 regex、glob、
+Shell、Git 或网络。代价同样保留：候选仍有 4 次工具预算失败，输入 Token 约翻倍；这不是
+“search 已解决定位问题”的证据。详细决策与脱敏证据见
+[`decisions/m5-1-search-files.md`](./decisions/m5-1-search-files.md) 和
+[`evidence/deepseek-m5-1-search-2026-09-06.summary.json`](./evidence/deepseek-m5-1-search-2026-09-06.summary.json)。
+
+live compressed 定向验证也改为真实 Provider 摘要器、最多两次有界压缩，并完善嵌套 summary
+schema。3 次运行的 context/schema failure 均为 0，oracle 3/3、端到端 2/3；剩余一次是
+`tool_budget_exhausted`。证据见
+[`evidence/deepseek-compressed-targeted-2026-09-06.summary.json`](./evidence/deepseek-compressed-targeted-2026-09-06.summary.json)。
+
+### 7.2 三仓库 search benchmark 与提示 A/B
+
+初始 10-run 候选的 4 次失败分为两类：两次完全没有调用 search、按不透明文件名顺序盲读；
+两次在较晚搜索和成功修改后耗尽 8-call 预算，没有剩余调用执行测试。Token 分解显示首轮新增
+search schema 约 206 tokens，但模型调用轮次从 no-search 的平均 3 增至 5，重复上下文才是
+73,073→147,027 的主要放大来源。
+
+为避免只优化一个仓库，新增独立 `examples/search_eval_suite.json`：
+
+- `search_lab`：在不透明 invoice rule 中定位 `EAST`；
+- `search_router`：在不透明 error plugin 中定位 `ARCHIVE_LIMIT_REACHED`；
+- `search_transform`：在不透明 compatibility transform 中定位 `legacy_customer_id`。
+
+三个 case 都保持 `max_tool_calls=8`，使用 test/file/changed-path oracle；确定性 scripted 回归
+3/3 通过。随后用相同 case/repetition keys 各做 15 次独立 DeepSeek 请求，仅改变紧凑系统提示：
+当位置未知且任务提供特征 symbol/literal/key/error 时，先 search 再顺序读取。
+
+| 指标 | 当前提示 | Search-first 提示 |
+|---|---:|---:|
+| valid / infrastructure failure | 15 / 0 | 15 / 0 |
+| end-to-end success | 12/15 | 13/15 |
+| oracle success | 12/15 | 14/15 |
+| Runtime completion | 12/15 | 13/15 |
+| tool budget exhausted | 3 | 2 |
+| model calls / tool attempts | 79 / 106 | 73 / 101 |
+| search used runs | 14/15 | 15/15 |
+| first-search mean / median position | 3.5 / 4 | 1.6 / 1 |
+| input / output tokens | 234,638 / 7,733 | 207,658 / 7,461 |
+| invalid calls / source invariant | 0 / 1.0 | 0 / 1.0 |
+
+候选首轮输入平均少 2 tokens，因此没有用额外 context 预算购买改善；总输入 Token 降低约
+11.5%。结果支持保留紧凑 search-first 提示，但样本仍小且两臂是独立随机 Provider 请求，不能
+宣称确定性因果或问题已解决。剩余一次在搜索后继续多读至耗尽，另一次第 8 次调用才完成 edit、
+oracle 已成功但 Runtime 无测试/结束机会。安全预算仍保持 8，不简单提高到 20。脱敏证据见
+[`evidence/deepseek-m5-1-search-expanded-2026-09-06.summary.json`](./evidence/deepseek-m5-1-search-expanded-2026-09-06.summary.json)。
+
+### 7.3 真实剩余预算与测试调用预留
+
+进一步检查发现 `task_runtime.remaining_budgets` 名称与行为不一致：每轮模型请求都重复显示
+policy 初始上限，模型无法看到已经消耗的 tool calls。现改为由 Session 的 step/model/tool
+已使用计数计算真实剩余值，并对旧 `ContextBuildInput` 投影保持缺字段按 0 的兼容读取；紧凑
+系统提示同时要求在相关 search 命中后停止无关读取，并预留一次 restricted test 调用。
+
+在不提高 8-call 预算、同一三仓库 suite 上再运行 15 次 DeepSeek：
+
+| 指标 | Search-first 基线 | Budget-aware 候选 |
+|---|---:|---:|
+| valid / infrastructure failure | 15 / 0 | 15 / 0 |
+| end-to-end success | 13/15 | 14/15 |
+| oracle success | 14/15 | 14/15 |
+| Runtime completion | 13/15 | 14/15 |
+| tool budget exhausted | 2 | 1 |
+| model calls / tool attempts | 73 / 101 | 78 / 100 |
+| first-search mean / median position | 1.6 / 1 | 2.07 / 1 |
+| input / output tokens | 207,658 / 7,461 | 226,338 / 7,228 |
+| invalid calls / source invariant | 0 / 1.0 | 0 / 1.0 |
+
+候选消除了上一臂中“oracle 已成功但没测试调用导致 Runtime 失败”的一例，使 Runtime 与 oracle
+在 14/15 上对齐，预算耗尽减少一次且工具尝试没有增加，因此保留改动。但输入 Token 增加约
+9.0%、模型调用增加 5；两次评测又是独立随机请求，且本轮同时修正预算事实与提示 wording，
+不能将改善归因于单一变量，也不宣称效率提升。剩余一次失败到第 7 次调用才 search，随后耗尽
+预算且没有 edit；单个随机失败不支持继续堆提示或提高预算。脱敏证据见
+[`evidence/deepseek-m5-1-budget-aware-2026-09-06.summary.json`](./evidence/deepseek-m5-1-budget-aware-2026-09-06.summary.json)。
+
+### 7.4 非 search 能力 holdout
+
+为避免围绕 search benchmark 继续过拟合，新增 `examples/capability_holdout_suite.json`，从
+固定 suite 中选择未参与三仓库提示 A/B 的四类正常任务：calculator edit/test、todo
+recovery-shaped edit、checkout 跨文件定位和 settings 范围受限编辑。它复用已审计 fixture，
+因此独立于 search 提示调优，但不是任务全新的外部 benchmark。Scripted 离线门禁为 4/4。
+
+每个 case 使用当前 budget-aware policy 运行 3 次 DeepSeek，共 12 次：valid、oracle、Runtime
+和端到端均为 12/12；基础设施失败、无效调用、重复失败批次、权限违规和预算耗尽均为 0，源
+仓库不变率 100%。工具序列合计为 38 次 read、12 次 edit、12 次 restricted test；没有调用
+search 或 run_command，且每次都执行并通过测试。
+
+这组负证据没有暴露可重复的 Git inspection、patch/edit 增强、依赖安装或其他新工具缺口，
+所以不启动 M5.2，冻结当前五工具集合。限制是仓库较小、每 case 只有 3 次，且 todo 在 live
+运行中都直接修复成功，没有产生新的失败测试恢复证据。脱敏摘要见
+[`evidence/deepseek-m5-capability-holdout-2026-09-06.summary.json`](./evidence/deepseek-m5-capability-holdout-2026-09-06.summary.json)。
+
 ## 8. 当前进度
 
 以路线图计算：
@@ -359,25 +481,35 @@ M5 继续保持“条件阶段”。只有真实模型在多次重复中明确�
 - M0～M4.2：已完成；
 - Release/Evidence Hardening：已完成；
 - M5 评测门禁扩展：本轮完成；
-- M5 新工具能力：0%，尚未满足启动条件；
-- 真实 Provider 多次 baseline：DeepSeek 已完成 3 次探索性重复；需补充 compressed variant 并单独解释负控制后再形成工具决策；
+- M5.1 新工具能力：最小只读 `search_files` 已实现并通过 success/failure/recovery 与 live A/B；
+- 真实 Provider baseline：budgeted 全套、compressed 定向、pipeline、search A/B、budget-aware
+  follow-up 和 12-run capability holdout 已记录；
 - 当前总体工程进度：约 90% 的既定路线图已实现，剩余部分取决于真实模型证据，不按工具数量估算。
 
-下一步不是自动新增工具，而是使用同一真实 Provider 执行 `compressed` variant，验证长历史 case 的压缩路径；在此之前继续保持现有安全边界和四工具集合。
+下一步不是自动新增 Git/Shell 等工具。真实剩余预算和测试调用预留已完成 follow-up；先收集
+新的独立 failure coverage，不再针对单个随机失败继续堆提示，并保持现有安全边界和五工具集合。
 
 ## 9. 门禁清单
 
-- [x] 保持 82 个默认 unittest、四份 semantic golden 和 M4.1/M4.2 边界测试通过。
+- [x] 保持 93 个默认 unittest、四份 semantic golden 和 M4.1/M4.2 边界测试通过。
 - [x] 将新 fixture 纳入 Ruff、compile 和 CI 的 calculator/todo scripted smoke 边界。
-- [x] 扩展到 13 个 case、6 个 fixture，并为每个 case 配置程序化 oracle。
+- [x] 扩展到 14 个 case、7 个 fixture，并为每个 case 配置程序化 oracle。
 - [x] 覆盖跨文件定位、多文件测试失败恢复、changed-path 范围和长历史 compression。
 - [x] 运行 budgeted/compressed Eval，并确认 infrastructure failure 为 0。
 - [x] 运行 passthrough/budgeted 单变量 A/B，并确认 paired keys 与指标可比较。
 - [x] 修复并回归 `RESUME_STARTED` recovery event 计数（现有代码已覆盖）。
 - [x] 配置真实 Provider 后完成单次 live adapter smoke。
-- [x] 配置真实 Provider 后对新版 suite 完成 3 次 live baseline（结果仍标记为探索性，待 compressed variant 补充）。
+- [x] 配置真实 Provider 后对新版 suite 完成 3 次 live baseline，并补充 compressed 定向验证。
 - [x] Eval manifest/report 分离正常任务与负控制统计。
 - [x] 保存脱敏 live-eval 汇总、逐 case 计数、原始 artifact hash 与 provenance 限制。
 - [x] 修复 Provider usage 协议校验与异常 model journal closure。
 - [x] 为普通 Tool handler 增加可终止的 Linux worker 进程边界，保留 sandbox 自有超时边界。
-- [ ] 只有 live failure coverage 明确指向工具缺口时，才新增工具 decision record 和实现。
+- [x] live failure coverage 明确指向内容定位缺口后，新增 M5.1 decision record、最小只读
+  `search_files`、success/failure/recovery 测试和 10+10 A/B。
+- [x] 将 search benchmark 扩大到 3 个仓库，并完成保持 8-call 预算的 15+15 search-first
+  提示 A/B 与脱敏证据。
+- [x] 修复 Runtime context 的真实剩余预算，并完成不提高预算的 15-run live follow-up 与
+  脱敏证据。
+- [x] 建立四类非 search 能力 holdout，完成 4/4 scripted 门禁和 12/12 live 验证；未发现
+  M5.2 failure coverage，保持当前工具集合。
+- [ ] Git、patch/edit 或依赖能力仍需各自独立 failure coverage 和 decision record。

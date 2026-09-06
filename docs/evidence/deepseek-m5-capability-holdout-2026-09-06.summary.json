@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "sanitized_live_eval_capability_holdout_summary",
+  "recorded_at": "2026-09-06",
+  "provider": "openai-compatible",
+  "model": "deepseek-v4-flash",
+  "base_url": "https://api.deepseek.com",
+  "thinking": "disabled",
+  "suite": "examples/capability_holdout_suite.json",
+  "case_count": 4,
+  "repetitions_per_case": 3,
+  "runs": 12,
+  "cases": [
+    "holdout-calculator-edit-test",
+    "holdout-todo-recovery",
+    "holdout-checkout-cross-file",
+    "holdout-settings-scoped"
+  ],
+  "selection": "Normal edit/test, recovery-shaped, cross-file-location, and scoped-edit cases that were not part of the three-repository search prompt A/B.",
+  "offline_gate": {
+    "valid_runs": 4,
+    "infrastructure_failures": 0,
+    "oracle_success": 4,
+    "runtime_completed": 4,
+    "end_to_end_success": 4,
+    "source_invariant_rate": 1.0
+  },
+  "live_result": {
+    "valid_runs": 12,
+    "infrastructure_failures": 0,
+    "oracle_success": 12,
+    "runtime_completed": 12,
+    "end_to_end_success": 12,
+    "tool_budget_exhausted": 0,
+    "invalid_tool_calls": 0,
+    "repeated_failure_batches": 0,
+    "permission_violations": 0,
+    "source_invariant_rate": 1.0,
+    "input_tokens": 126758,
+    "output_tokens": 5924,
+    "model_calls": 49,
+    "tool_attempts": 62,
+    "tool_executions": 62,
+    "tool_calls_by_name": {
+      "read_file": 38,
+      "edit_file": 12,
+      "restricted_test": 12,
+      "search_files": 0,
+      "run_command": 0
+    },
+    "failed_test_observations": 0
+  },
+  "per_case": {
+    "holdout-calculator-edit-test": {
+      "end_to_end_success": "3/3",
+      "input_tokens": 24800,
+      "output_tokens": 895,
+      "model_calls": 12,
+      "tool_attempts": 12
+    },
+    "holdout-todo-recovery": {
+      "end_to_end_success": "3/3",
+      "input_tokens": 33272,
+      "output_tokens": 1691,
+      "model_calls": 12,
+      "tool_attempts": 15
+    },
+    "holdout-checkout-cross-file": {
+      "end_to_end_success": "3/3",
+      "input_tokens": 36645,
+      "output_tokens": 2017,
+      "model_calls": 13,
+      "tool_attempts": 18
+    },
+    "holdout-settings-scoped": {
+      "end_to_end_success": "3/3",
+      "input_tokens": 32041,
+      "output_tokens": 1321,
+      "model_calls": 12,
+      "tool_attempts": 17
+    }
+  },
+  "decision": "do_not_open_m5_2_without_new_failure_coverage",
+  "interpretation": [
+    "No run exposed a repeatable Git-inspection, patch/edit, dependency-installation, search, path, or budget failure.",
+    "All twelve runs made an allowed implementation-only edit and executed a passing restricted test.",
+    "The result supports freezing the five-tool capability set; it does not prove broader coding-task coverage or production readiness."
+  ],
+  "limitations": [
+    "The holdout reuses four checked-in fixtures, so it is independent of the search prompt A/B but not a task-novel external benchmark.",
+    "Three repetitions per case and small Python repositories are a limited sample.",
+    "The recovery-shaped todo task was solved directly in every live run and therefore adds no new failed-test recovery evidence.",
+    "Raw artifacts remain under /tmp and are not checked in."
+  ],
+  "raw_artifact_sha256": {
+    "offline_report.json": "57b800ffe08d085b16ab3882c1b326ee39b583400b5c79c009a9e64a19c78a11",
+    "offline_manifest.snapshot.json": "d0863ba8d067851e8ae102aba43d11a893ef2c715fe1be52264d7b60769571cc",
+    "live_report.json": "86fe1996a74e301a2f96b6a2d62d489b159b753511e328ce502a3ac86b106fe3",
+    "live_manifest.snapshot.json": "d662fbde7234212ce20b8d5685a54cd8ccf5f63c5f075be6630d819e6e3d7e76"
+  },
+  "contains_credentials": false
+}

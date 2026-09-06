@@ -2,7 +2,7 @@
 
 > 路线图状态基线：2026-09-05  
 > 当前完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Release/Evidence Hardening  
-> 下一实施项：**M5 Eval-driven Capability Expansion（条件阶段）**
+> 当前实施项：**M5.1 最小只读 `search_files` 已完成；其余能力继续按证据门控**
 
 路线图用“可验证门禁”而不是代码量定义完成。每个里程碑必须保持已有回归基线，新增能力必须同时提供成功、失败和恢复证据。
 
@@ -19,7 +19,7 @@
 | M3 Context & Evaluation | 已完成 | 长任务上下文和效果能否被量化 | context/compression tests + fixed eval suite/report |
 | M4 OS Isolation | 已完成（M4.1/M4.2） | 不可信执行能否受 OS 强边界约束 | namespace/escape/network/resource + structured argv tests |
 | Release/Evidence Hardening | 已完成 | 交付证据、质量门禁和评测范围是否可复核 | Git/CI/coverage/mypy/live-smoke/eval evidence |
-| M5 Capability Expansion | 条件阶段 | 哪些新工具真正提高任务覆盖率 | eval-driven decision record |
+| M5 Capability Expansion | M5.1 完成，其余条件阶段 | 哪些新工具真正提高任务覆盖率 | eval-driven decision record |
 
 ## 2. 全局里程碑门禁
 
@@ -259,24 +259,32 @@ violations=0。其聚合结果混入 scripted 负控制，不能作为最终真�
 case 仍需用 `compressed` variant 验证。tool-call 组裁剪问题已修复，详细记录见
 [`m5-eval-expansion.md`](./m5-eval-expansion.md)。
 
-决策：本轮不新增 M5 工具，M5 保持条件阶段。只有新增真实任务及程序化 oracle，明确证明
-现有 `read_file`/`edit_file`/`restricted_test`/`run_command` 无法覆盖目标任务时，才重新
-开启 search、Git 专用工具或其他能力的设计与验收。
+后续 2026-09-06 增加独立 `search_lab`：no-search DeepSeek 在固定 8-call 预算下端到端
+0/10，最小只读 `search_files` 候选为 6/10，oracle 8/10；直接 read 75→49、invalid calls
+5→0，但输入 Token 73,073→147,027。该证据批准 M5.1，具体权限/边界和限制见
+[`decisions/m5-1-search-files.md`](./decisions/m5-1-search-files.md)。Git、patch/edit、依赖准备
+仍保持条件阶段。
+
+同日继续把 search benchmark 扩大到 3 个仓库并运行 15+15 提示 A/B：search-first 提示将
+端到端 12/15→13/15、oracle 12/15→14/15、first-search 中位位置 4→1、输入 Token
+234,638→207,658（-11.5%），且不提高 8-call 工具预算。剩余两次预算耗尽继续作为行为证据。
 
 ## 10. Release/Evidence Hardening（已完成，2026-09-05）
 
 - 修正 `AGENTS.md` 与 `HANDOFF.md` 的旧里程碑描述，明确 M4.2 当前基线和 M5 条件门禁；
 - `evaluation.py` 将 `RESUME_STARTED` 纳入 `recovery_events`，并由测试断言恢复指标一致；
 - 初始化 Git 仓库并保留工作副本现状，创建并推送初始提交；新增 GitHub Actions CI，覆盖
-  Ruff、23/33 源码文件 mypy、82 个默认测试、native capability report、70% coverage、
+  Ruff、23/33 源码文件 mypy、93 个默认测试、native capability report、70% coverage、
   compile、calculator/todo scripted smoke 和 offline eval（native capability 可用时）；能力
   受限 runner 的 native-only case 显式 skip，且跳过 sandbox-dependent eval，不视为 native
   security suite 通过；
 - 新增显式、凭据门控的 `tests/live_provider_smoke.py` 与手动 workflow；DeepSeek 首次 live
   请求因过小的 smoke 输出预算得到空 `content`，现已增加预算并支持 `thinking: disabled`，
   用户已重新运行确认成功；另提供 provider override 运行真实 Eval baseline；上下文 tool-call
-  组裁剪问题已修复，修复后已完成 3 次 `budgeted` 探索性 Eval，`compressed` variant 仍待执行；
-- 固定 eval 扩展为 13 case/6 fixture，覆盖跨文件、多文件恢复、范围约束和长历史 compression；仍明确标注为小型 scripted/offline 数据集，不能外推真实 Coding 任务或证明不需要 search/Git；
+  组裁剪问题已修复，修复后已完成 3 次 `budgeted` 探索性 Eval；compressed 定向 3 次不再出现
+  context/schema failure，端到端 2/3；
+- 固定 eval 扩展为 14 case/7 fixture，覆盖跨文件、多文件恢复、范围约束、长历史 compression
+  和 search-specific repository；仍明确标注为小型 scripted/offline 数据集，不能外推真实 Coding 任务；
 - Eval case 显式区分正常任务和负控制，报告分别给出正常任务成功率与负控制 observed failure
   rate；保留全体 run 聚合字段只为历史兼容；
 - Provider usage 与 model journal 异常提交语义、普通 Tool handler 的可终止进程边界已完成回归；
@@ -311,6 +319,9 @@ case 仍需用 `compressed` variant 验证。tool-call 组裁剪问题已修复�
 
 ## 13. 当前下一步
 
-新窗口应从 **M5 Eval-driven Capability Expansion** 的条件评估开始。先运行当前全量测试，
-根据固定 eval 的失败覆盖决定是否增加 search/git 等专用能力；保持 M4.1 namespace/policy/
-harness 边界，不加入 shell 字符串、默认网络、多 Agent 或其他未授权能力。
+M5.1 的 3-repository follow-up 已修复模型上下文中始终显示初始预算的问题，并增加停止无关
+读取、预留测试调用的紧凑行为指引；15 次 live 端到端/Runtime 为 14/15，固定 8-call 预算未
+提高。随后四类非 search capability holdout 的 12 次 live 全部端到端成功，没有形成 Git、
+patch/edit、依赖安装或其他 M5.2 failure coverage。因此冻结当前五工具集合，下一步转向版本
+整理和已托管 CI 证据；只有未来新的独立失败覆盖才能重开能力扩展。保持 M4.1
+namespace/policy/harness 边界，不加入 shell 字符串、默认网络、多 Agent。

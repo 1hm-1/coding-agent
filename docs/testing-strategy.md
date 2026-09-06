@@ -28,8 +28,12 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前验收基线为 82 个测试；在具备 native sandbox capability 的环境中全部通过，能力受限
+当前验收基线为 93 个测试；在具备 native sandbox capability 的环境中全部通过，能力受限
 环境中 native-only case 会显式 skip。live provider smoke 需显式凭据和手动触发。
+
+`examples/capability_holdout_suite.json` 是 M5 的非 search 能力门禁：只包含正常任务，覆盖
+简单 edit/test、recovery-shaped edit、跨文件定位和 scoped edit。它先通过 scripted 离线
+验收，再以 provider override 显式运行；它不进入默认 unittest，也不能替代外部真实仓库基准。
 
 静态检查（安装 Ruff 开发依赖后）：
 
@@ -150,9 +154,15 @@ Linux 环境必须完整运行 native security suite；能力受限的 hosted ru
 | Recovery | execution id、limits、identity、revision 进入 journal/result | 外部调用 crash 进入 `WAITING_APPROVAL`，不得自动重放 |
 
 M4.2 新增的 6 个测试与 M4.1 的 7 个 native sandbox 测试共同覆盖上述边界。固定
-`examples/eval_suite.json` 当前为 13 个 case、覆盖 6 个 fixture；新增跨文件定位、多文件
-恢复、changed-path 范围约束和长历史 compression，`infrastructure_failure=0`，预定义失败
-case 仍保留在分母中。M5 评测与工具门禁的具体证据见 `docs/m5-eval-expansion.md`。
+`examples/eval_suite.json` 当前为 14 个 case、覆盖 7 个 fixture；新增跨文件定位、多文件
+恢复、changed-path 范围约束、长历史 compression 和 search-specific repository。
+能力指标只以正常任务计算 `oracle_success` 与 `end_to_end_success`，负控制单独统计；报告另区分
+tool attempts/executions/invalid calls/repeated failure batches。M5 评测与工具门禁的具体证据见
+`docs/m5-eval-expansion.md`。
+
+`examples/search_eval_suite.json` 是独立的 3-case/3-repository search benchmark。所有 case
+使用相同的 8-call 上限、test/file/changed-path oracle；真实提示 A/B 使用相同 case/repetition
+keys，同时明确 Provider 请求是独立随机样本，不把它描述为确定性 paired trial。
 
 ## 10. Smoke 验收
 

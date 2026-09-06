@@ -2,7 +2,7 @@
 
 > 当前结构与未来结构必须分开阅读。本文件中未标记为“计划”的路径应能在当前仓库找到。
 
-## 1. 当前 M4.2 + Release/Evidence Hardening 结构
+## 1. 当前 M5.1 + Release/Evidence Hardening 结构
 
 ```text
 coding-agent/
@@ -19,8 +19,9 @@ coding-agent/
 │   ├── README.md                     # 文档导航和权威性说明
 │   ├── HANDOFF.md                    # 新窗口开发交接
 │   ├── architecture.md               # 目标架构、当前边界和不变量
-│   ├── contracts.md                  # 当前 M4.2 精确契约
+│   ├── contracts.md                  # 当前 M5.1 精确契约
 │   ├── current-state.md              # 已实现、未实现、已知限制
+│   ├── decisions/                    # Eval-backed capability decision records
 │   ├── evidence/                     # 脱敏、可提交的评测证据摘要
 │   ├── development-guide.md          # 从零上手和变更流程
 │   ├── module-design.md              # 模块职责、依赖和扩展边界
@@ -38,9 +39,11 @@ coding-agent/
 │   ├── fixture/                      # calculator 最小源仓库
 │   ├── scripted_run.json             # calculator 确定性模型脚本
 │   ├── eval_suite.json               # M3 固定离线评测 suite
+│   ├── search_eval_suite.json        # M5.1 三仓库 search-specific benchmark
+│   ├── capability_holdout_suite.json # M5 非 search 能力门禁 holdout
 │   ├── todo_cli/                     # 真实小仓库 fixture
 │   ├── todo_cli_scripted_run.json    # 失败后修复的确定性脚本
-│   ├── mini_repos/                    # M5 多仓库评测 fixture
+│   ├── mini_repos/                    # M5 多仓库评测 fixture（含三个 search benchmark 仓库）
 │   └── eval_scripts/                  # M5 scripted backend/compression 输入
 ├── src/coding_agent/
 │   ├── __init__.py
@@ -77,7 +80,7 @@ coding-agent/
 │   └── tools/
 │       ├── __init__.py
 │       ├── base.py                   # ToolDefinition/Registry/Outcome
-│       ├── builtin.py                # read/edit/restricted_test/run_command
+│       ├── builtin.py                # read/search/edit/restricted_test/run_command
 │       └── harness.py                # 统一执行管线
 └── tests/
     ├── __init__.py                   # 保证 stdlib discovery 进入 tests
@@ -156,7 +159,7 @@ tests/
 
 不要预先创建空目录或无消费者 protocol。实施者可以在满足 [`m2-implementation-plan.md`](./m2-implementation-plan.md) 契约的前提下调整文件拆分，并同步更新本文。
 
-## 4. M3/M4 已实现、M5 条件结构
+## 4. M3/M4 与 M5.1 已实现结构
 
 M3 当前保留 `context.py`、`compression.py` 和 `evaluation.py` 单文件模块；M4.1 已加入
 `sandbox/`，M4.2 增加了结构化命令 profile。只有当单文件已经承担多个独立职责且有实际
@@ -173,6 +176,8 @@ src/coding_agent/
 
 `command_profiles.py` 管理固定 executable allowlist、argv/cwd 限制、环境和资源策略；
 `run_command` 通过同一 ToolHarness、SQLite journal 和 M4 sandbox 执行，不接受 shell 字符串。
+M5.1 在 `tools/builtin.py` 内加入有界、只读、字面量 `search_files`；其 decision record 和
+脱敏 10+10 live A/B 摘要分别位于 `docs/decisions/` 与 `docs/evidence/`。
 M4.1/M4.2 使用 native runtime sample fingerprint；它不是完整 rootfs digest，也不宣称
 Docker/Podman 或 OCI image backend。
 批准网络和扩展资源 profile 仍 fail closed，等待未来明确授权通道。模块职责以

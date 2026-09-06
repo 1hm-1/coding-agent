@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "sanitized_live_eval_budget_aware_followup_summary",
+  "recorded_at": "2026-09-06",
+  "provider": "openai-compatible",
+  "model": "deepseek-v4-flash",
+  "base_url": "https://api.deepseek.com",
+  "thinking": "disabled",
+  "suite": "examples/search_eval_suite.json",
+  "case_count": 3,
+  "repositories": ["search_lab", "search_router", "search_transform"],
+  "repetitions_per_case_per_arm": 5,
+  "runs_per_arm": 15,
+  "policy": {"max_steps": 32, "max_tool_calls": 8},
+  "change_package": [
+    "task_runtime.remaining_budgets reports the current counters instead of the initial maxima",
+    "the compact system policy tells the model to stop unrelated reads after a relevant match and reserve one call for restricted tests"
+  ],
+  "comparison_caveat": "This is a focused follow-up package, not a single-variable deterministic A/B; the arms use independent stochastic Provider requests.",
+  "search_first_baseline": {
+    "valid_runs": 15,
+    "infrastructure_failures": 0,
+    "oracle_success": 14,
+    "runtime_completed": 13,
+    "end_to_end_success": 13,
+    "tool_budget_exhausted": 2,
+    "tool_attempts": 101,
+    "model_calls": 73,
+    "invalid_tool_calls": 0,
+    "search_used_runs": 15,
+    "first_search_position_mean": 1.6,
+    "first_search_position_median": 1.0,
+    "input_tokens": 207658,
+    "output_tokens": 7461,
+    "source_invariant_rate": 1.0
+  },
+  "budget_aware_candidate": {
+    "valid_runs": 15,
+    "infrastructure_failures": 0,
+    "oracle_success": 14,
+    "runtime_completed": 14,
+    "end_to_end_success": 14,
+    "tool_budget_exhausted": 1,
+    "tool_attempts": 100,
+    "model_calls": 78,
+    "invalid_tool_calls": 0,
+    "search_used_runs": 15,
+    "first_search_position_mean": 2.066666666666667,
+    "first_search_position_median": 1.0,
+    "input_tokens": 226338,
+    "output_tokens": 7228,
+    "source_invariant_rate": 1.0
+  },
+  "observed_delta": {
+    "end_to_end_success": 1,
+    "oracle_success": 0,
+    "runtime_completed": 1,
+    "tool_budget_exhausted": -1,
+    "tool_attempts": -1,
+    "model_calls": 5,
+    "first_search_position_mean": 0.4666666666666668,
+    "input_tokens": 18680,
+    "input_tokens_rate": 0.08995560007319728,
+    "output_tokens": -233
+  },
+  "decision": "retain_actual_remaining_budget_contract_and_compact_test_reservation_guidance",
+  "interpretation": [
+    "The prior arm had one oracle-successful edit that exhausted the tool budget before tests, so Runtime failed. The candidate aligned Runtime completion with oracle success in 14/15 runs.",
+    "The fixed eight-call safety budget was not increased, and total tool attempts decreased by one.",
+    "Input tokens increased by about 9.0% and model calls increased by five, so the small stochastic sample does not establish an efficiency improvement.",
+    "One run still read broadly, searched on call seven, and exhausted the budget without an edit. This remains behavior evidence, not justification for a larger budget or a new privileged tool."
+  ],
+  "limitations": [
+    "Three synthetic repositories and five repetitions per case are a small benchmark.",
+    "The follow-up changes both budget truthfulness and compact policy wording, so success changes cannot be attributed to either component alone.",
+    "Raw artifacts remain under /tmp and are not checked in."
+  ],
+  "raw_artifact_sha256": {
+    "baseline_report.json": "fdccd0da7cff7ede22504126027189901c09bb8e8a438ae9b03f52d3aa938031",
+    "baseline_manifest.snapshot.json": "50f0510cc30aff65f594c7cb9bc20cf8a295fa7a1b2d864e4da8de9ace9d615f",
+    "candidate_report.json": "457f815ff02923bd6608acf8318a104cd1fed37d996caca28a9340bd69d7f1f2",
+    "candidate_manifest.snapshot.json": "50f0510cc30aff65f594c7cb9bc20cf8a295fa7a1b2d864e4da8de9ace9d615f"
+  },
+  "contains_credentials": false
+}

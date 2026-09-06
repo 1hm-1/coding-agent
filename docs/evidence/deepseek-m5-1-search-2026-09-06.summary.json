@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "sanitized_live_eval_ab_summary",
+  "recorded_at": "2026-09-06",
+  "provider": "openai-compatible",
+  "model": "deepseek-v4-flash",
+  "base_url": "https://api.deepseek.com",
+  "thinking": "disabled",
+  "case_id": "search-lab-content-location",
+  "variant": "budgeted",
+  "repetitions_per_arm": 10,
+  "policy": {"max_steps": 32, "max_tool_calls": 8},
+  "baseline": {
+    "available_tools": ["read_file", "edit_file", "restricted_test", "run_command"],
+    "valid_runs": 10,
+    "infrastructure_failures": 0,
+    "oracle_success": 0,
+    "runtime_completed": 0,
+    "end_to_end_success": 0,
+    "tool_attempts": 80,
+    "tool_executions": 75,
+    "invalid_tool_calls": 5,
+    "repeated_failure_batches": 1,
+    "read_file_calls": 75,
+    "search_files_calls": 0,
+    "input_tokens": 73073,
+    "output_tokens": 6811,
+    "tool_budget_exhausted": 10
+  },
+  "candidate": {
+    "available_tools": [
+      "read_file",
+      "edit_file",
+      "search_files",
+      "restricted_test",
+      "run_command"
+    ],
+    "valid_runs": 10,
+    "infrastructure_failures": 0,
+    "oracle_success": 8,
+    "runtime_completed": 6,
+    "end_to_end_success": 6,
+    "tool_attempts": 72,
+    "tool_executions": 72,
+    "invalid_tool_calls": 0,
+    "repeated_failure_batches": 0,
+    "read_file_calls": 49,
+    "search_files_calls": 9,
+    "input_tokens": 147027,
+    "output_tokens": 5207,
+    "tool_budget_exhausted": 4
+  },
+  "observed_delta": {
+    "end_to_end_success_rate": 0.6,
+    "oracle_success_rate": 0.8,
+    "runtime_completion_rate": 0.6,
+    "read_file_calls": -26,
+    "tool_attempts": -8,
+    "invalid_tool_calls": -5,
+    "input_tokens": 73954,
+    "output_tokens": -1604
+  },
+  "decision": "approve_minimal_read_only_search_files",
+  "limitations": [
+    "This is one synthetic repository and ten independent repetitions per arm, not a broad coding benchmark.",
+    "The candidate improved end-to-end success but still failed four runs and doubled aggregate input tokens.",
+    "Two candidate failures had oracle-successful edits but exhausted the tool budget before Runtime completion.",
+    "Raw artifacts remain under /tmp and are not checked in."
+  ],
+  "raw_artifact_sha256": {
+    "baseline_report.json": "9176644e5d0cbbff6e519787aa8b162c5a03f3ea48f0d04b03742886c4568f9f",
+    "baseline_manifest.snapshot.json": "4d9ef71cf340fda05d2841fe720b782fd9fa2280ea4e342fe6e75910c75c7383",
+    "candidate_report.json": "88dea8fe49a5ce99fd4872c4ef5f5710bfca63fe7778065120ecb7c75e8f9a60",
+    "candidate_manifest.snapshot.json": "4d9ef71cf340fda05d2841fe720b782fd9fa2280ea4e342fe6e75910c75c7383"
+  },
+  "contains_credentials": false
+}

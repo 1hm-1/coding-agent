@@ -28,7 +28,7 @@ git --version
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-预期：当前应发现 82 个默认测试；在 native sandbox capability 可用时全部通过，能力受限环境中 7 个 native-only case 会显式 skip。`tests/live_provider_smoke.py` 不以 `test_` 命名，不属于默认 discovery；它只在显式配置凭据后运行。若输出 `Ran 0 tests`，检查 `tests/__init__.py` 是否存在，以及命令是否从项目根执行。
+预期：当前应发现 93 个默认测试；在 native sandbox capability 可用时全部通过，能力受限环境中 7 个 native-only case 会显式 skip。`tests/live_provider_smoke.py` 不以 `test_` 命名，不属于默认 discovery；它只在显式配置凭据后运行。若输出 `Ran 0 tests`，检查 `tests/__init__.py` 是否存在，以及命令是否从项目根执行。
 
 可以使用 `uv` 创建虚拟环境并安装项目及开发工具：
 
@@ -43,9 +43,14 @@ PYTHONPATH=src .venv/bin/coverage run -m unittest discover -q
 .venv/bin/coverage report
 ```
 
-当前 M5 条件评估 suite 位于 `examples/eval_suite.json`，包含 13 个 case 和 6 个 fixture；
-它仍是 scripted/offline 证据，不能代替真实 Provider 基线，也不能直接证明需要新增 search
-或 Git 工具。要运行预算化评测、压缩评测或单变量 A/B：
+当前 M5 条件评估 suite 位于 `examples/eval_suite.json`，包含 14 个 case 和 7 个 fixture；
+它仍是 scripted/offline 回归证据，不能代替真实 Provider 基线。M5.1 `search_files` 另有同任务
+10+10 DeepSeek A/B 和 decision record；Git 等后续工具仍需独立 failure coverage。要运行预算化
+评测、压缩评测或单变量 A/B：
+
+`examples/capability_holdout_suite.json` 是不含负控制的非 search 能力门禁。默认先运行
+scripted 版本；只有存在明确的新验证假设且 Provider 凭据可用时才使用 provider override，
+避免无假设地重复消耗 API 配额。
 
 ```bash
 PYTHONPATH=src python3 -m coding_agent.cli \
@@ -62,6 +67,8 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 ```
 
 评测的 fixture、程序化 oracle、结果和 M5 工具门禁解释见 [`m5-eval-expansion.md`](./m5-eval-expansion.md)。
+独立搜索回归使用 `examples/search_eval_suite.json`；它覆盖三个结构不同的内容定位仓库，固定
+8-call 预算，并与主 suite 分开，避免把 search-specific 重复混入通用能力分母。
 
 native sandbox backend 使用 `/usr/bin/python3` 作为固定 runtime；因此无论 Ruff/项目工具
 是否由 `.venv` 提供，M4.1 的实际 namespace security test 都应使用上面的 system
@@ -187,7 +194,7 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 评测器每个 case/repetition 使用新的 SQLite、session 和 workspace；报告中的
 `report.json` 是去除随机执行标识的比较投影，`runs.jsonl` 保留 trace 定位信息。
 
-完成 live smoke 后，可用 provider override 对同一套 13-case fixture/oracle 做真实模型
+完成 live smoke 后，可用 provider override 对同一套 14-case fixture/oracle 做真实模型
 基线；这不会修改仓库中的 scripted manifest：
 
 ```bash

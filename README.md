@@ -5,7 +5,7 @@ M2（SQLite persistence、恢复和模型边界）与 M3（Context Engineering�
 Evaluation）；用最小能力证明完整 runtime
 闭环及其失败语义，而不是用工具数量包装一个聊天接口。
 
-当前已完成 **M4.2 Structured Execution Extension**，并完成 Release/Evidence Hardening。项目已支持离线测试的真实模型 adapter、
+当前已完成 **M5.1 Minimal Read-only Search**，并完成 Release/Evidence Hardening。项目已支持离线测试的真实模型 adapter、
 预算化 context、带 lineage 的摘要、评估报告和 Linux restricted-test OS isolation。新接手开发请从
 [文档索引](docs/README.md)和[新窗口交接](docs/HANDOFF.md)开始，不要仅根据目标架构直接写代码。
 本轮 M5 评测扩展和工具门禁记录见 [M5 评测证据](docs/m5-eval-expansion.md)。
@@ -17,6 +17,7 @@ Evaluation）；用最小能力证明完整 runtime
 - 每个 session 独立复制 workspace，文件路径拒绝越界；
 - 统一 Tool Harness：schema、permission、可终止 timeout 边界、结构化错误、输出限制和审计边界；
 - M1 基线工具：`read_file`、`edit_file`、`restricted_test`；M4.2 增加结构化 `run_command`；
+  M5.1 增加有界、只读的字面量 `search_files`；
 - 测试工具只接受可信 profile 名称，模型不能提交 command/argv；
 - SQLite schema-versioned journal、原子 snapshot/event mutation；
 - 从 SQLite 生成的 schema-versioned JSONL trajectory 和无副作用 replay；
@@ -40,7 +41,7 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 - JSONL 是可删除的导出投影，`export-trace` 可从 SQLite 重建；
 - `INTERRUPTED`、`WAITING_APPROVAL`、lease、model/tool recovery 和 edit reconciliation 已实现；
 - OpenAI-compatible、Anthropic adapter、retry/backoff 和显式 fallback 已实现；
-- M2 完成时的 47 个回归测试、四份 semantic golden、calculator/todo smoke 全部通过；加入 M3/M4 和发布硬化后，默认 discovery 共 82 个测试。
+- M2 完成时的 47 个回归测试、四份 semantic golden、calculator/todo smoke 全部通过；加入 M3/M4/M5.1 和发布硬化后，默认 discovery 共 93 个测试。
 
 ## M3 已实现
 
@@ -48,7 +49,7 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 - hard-retention、section budget、high-watermark 和 deterministic `context_built` manifest；`PassthroughContextBuilder` 保留为 A/B baseline；
 - `SummaryRecord` 以 event range/hash、workspace revision、file/test/error facts 和 `superseded_by` 持久化到 SQLite；压缩失败或 stale 时保留原始历史；
 - `evaluate` CLI 支持严格版本化 JSON suite、隔离 repetition、可信 test/file/diff/result oracle、task/runtime 分离指标和 paired A/B report；
-- `examples/eval_suite.json` 提供 13 个 case、覆盖 6 个 fixture；新增跨文件定位、多文件失败恢复、指定文件范围和长历史 compression 样例，但仍是小型 scripted 数据集，不能代表真实 Coding 任务覆盖率。
+- `examples/eval_suite.json` 提供 14 个 case、覆盖 7 个 fixture；新增跨文件定位、多文件失败恢复、指定文件范围、长历史 compression 和 search-specific 样例，但仍是小型 scripted 数据集，不能代表真实 Coding 任务覆盖率。
 
 ## M4.1 已实现
 
@@ -74,9 +75,19 @@ Linux rootless namespace、只读 rootfs、默认禁网和资源配额边界，�
 
 ## Release/Evidence Hardening 已实现
 
-- Git 工作区已初始化并配置 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、23/33 源码文件 mypy、82 个默认测试、native capability report、70% statement coverage、compile 检查、calculator/todo scripted smoke 和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
+- Git 工作区已初始化并配置 `https://github.com/1hm-1/coding-agent`，同时提供 GitHub Actions 的离线 CI：Ruff、23/33 源码文件 mypy、93 个默认测试、native capability report、70% statement coverage、compile 检查、calculator/todo scripted smoke 和固定离线 eval（native capability 可用时）；能力受限 runner 会显式跳过 native-only case 和 sandbox-dependent eval，不将其当作 native security suite 通过。
 - `tests/live_provider_smoke.py` 和手动 workflow 提供显式凭据门控的真实 Provider smoke；无凭据时不发起网络请求。
-- recovery 指标将 `RESUME_STARTED` 计为 recovery event；扩展后的 13-case/6-fixture eval 基础设施失败为 0；修复上下文 tool-call 组裁剪问题后已完成 3 次 DeepSeek 探索性 Eval，但结果仍不足以证明真实模型需要或不需要 search/Git 能力；详见 [M5 评测证据](docs/m5-eval-expansion.md)。
+- recovery 指标将 `RESUME_STARTED` 计为 recovery event；固定 suite 已扩展到 14-case/7-fixture；
+  独立 search benchmark 的 DeepSeek 10+10 A/B 将端到端成功率从 0/10 提升至 6/10，因而批准
+  M5.1，但该小样本及 Token 成本上升不支持继续自动扩展 Git/Shell；详见
+  [M5 评测证据](docs/m5-eval-expansion.md)。
+- 后续将 search benchmark 扩展为 3 个仓库、每臂 15 次真实运行；有界 search-first 提示把
+  端到端成功从 12/15 提升到 13/15、输入 Token 降低 11.5%，且没有提高 8-call 预算。
+- 修复 `remaining_budgets` 始终显示初始上限的问题，并提示命中后停止无关读取、预留一次测试；
+  同一 benchmark 后续 15 次端到端与 Runtime 完成均为 14/15，Oracle 仍为 14/15，预算耗尽
+  从 2 次降为 1 次。输入 Token 较上一候选增加 9.0%，因此不宣称效率普遍提升。
+- 四类未参与 search 提示 A/B 的 capability holdout 共运行 12 次 DeepSeek，端到端 12/12，
+  没有无效调用、权限违规或预算耗尽；当前证据不支持启动 Git、增强 patch 或依赖安装能力。
 
 ## 快速运行
 

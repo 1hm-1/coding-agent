@@ -1,6 +1,6 @@
 # 新窗口开发交接
 
-> 交接基线：2026-09-05，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2 已完成。下一项是 M5 条件评估，不是重写 M1/M1.5。
+> 交接基线：2026-09-06，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1 已完成。下一项仍须由 Eval failure coverage 决定，不是重写 M1/M1.5。
 
 ## 1. 开始前必须做
 
@@ -13,7 +13,7 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前基线应为 82 个默认测试通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化，不要直接开始 M5。
+当前基线应为 93 个默认测试通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化，不要直接扩展 M5。
 
 ## 2. 工作区事实
 
@@ -37,7 +37,7 @@ PYTHONPATH=src python3 -m unittest discover -v
 - Provider 分支只能存在于 adapter，不进入 Runtime。
 - 不引入多 Agent、UI、RAG、Skill 或 Agent framework。
 
-## 4. M2/M3/M4 完成事实与下一步唯一推荐入口：M5 条件评估
+## 4. M2/M3/M4/M5.1 完成事实与下一步推荐入口
 
 M2.1 已完成 SQLite persistence foundation，M2.2/M2.3 也已严格完成：
 
@@ -58,36 +58,53 @@ M2.1 已完成 SQLite persistence foundation，M2.2/M2.3 也已严格完成：
   argv 和 workspace-relative cwd；非零退出是 observation，网络/扩展资源/approval profile
   在没有授权通道时 fail closed；非幂等 crash 进入 `WAITING_APPROVAL`。
 - Release/Evidence Hardening 已完成：recovery metrics 已将 `RESUME_STARTED` 纳入
-  recovery event；默认 82 个测试、70% statement coverage、23/33 源码文件 mypy、GitHub
+  recovery event；默认 93 个测试、70% statement coverage、23/33 源码文件 mypy、GitHub
   Actions 离线 CI 和手动凭据门控 Provider smoke 已建立。
-- 当前固定 eval 有 13 个 case、覆盖 6 个 fixture，valid 13、基础设施失败为 0；新增跨文件定位、多文件恢复、范围约束和长历史 compression，但失败仍是预设 scripted/oracle 场景，因此它只能作为小型 scripted/offline 证据，不能证明真实 Coding 任务不需要 search 或 Git。详细证据见 `docs/m5-eval-expansion.md`。
-- Eval manifest 已显式区分 9 个正常任务与 4 个负控制，报告分别统计，避免将负控制混入正常任务成功率。
+- 当前固定 eval 有 14 个 case、覆盖 7 个 fixture；Eval manifest 显式区分 10 个正常任务与
+  4 个负控制。能力主指标是正常任务的 `oracle_success` 和
+  `end_to_end_success = oracle_success && runtime_completed`，负控制不混入能力分母。
 - Provider usage 严格校验、model journal 异常 closure、ToolHarness worker 强制超时、`uv.lock`
   和 subprocess/multiprocessing coverage 合并已经加入；native runner 仍由安全集成测试提供证据。
 - OpenAI-compatible adapter 现支持显式 `thinking: disabled`；DeepSeek smoke 首次请求曾因 16
   token 输出上限得到空 `content`，已增加预算并关闭 DeepSeek thinking；用户已重新运行并
   验证 smoke 成功。
-- `evaluate` 现支持 provider override，可直接对固定 13-case suite 运行真实 backend；使用
+- `evaluate` 现支持 provider override，可直接对固定 suite 运行真实 backend；使用
   `--provider openai-compatible --model ... --base-url https://api.deepseek.com --thinking disabled`
   和 `--repetitions 3`。修复后已完成 3 次 DeepSeek `budgeted` 探索性 Eval：39/39 valid、基础设施失败=0、
   task success=0.8205、Runtime completion=0.8462、source invariant=1.0、permission violations=0；
   其中 scripted 负控制和长历史预算问题需要单独解释，不能把 0.8205 当作最终 live baseline。
-- 真实 DeepSeek Eval 暴露的上下文裁剪拆分 assistant tool-call 组问题已修复：原子组保留和
-  fail-closed 回归测试通过，修复后的 3 次运行不再出现 Provider `invalid_request`；下一步先验证
-  `compressed` variant 的长历史路径。
+- 真实 DeepSeek Eval 暴露的上下文裁剪拆分 assistant tool-call 组问题已修复。长历史 compressed
+  定向 3 次使用真实 Provider 摘要器后不再有 context/schema failure，端到端 2/3；剩余一次为
+  `tool_budget_exhausted`。
+- 路径 schema/系统提示已明确 workspace-relative 契约。pipeline 定向 10 次无 invalid path，
+  原始 9/10 唯一 oracle failure 是等价实现，现已用 `contains_any` 修正过窄 oracle。
+- 独立 `search_lab` no-search 基线端到端 0/10，最小只读 `search_files` 候选为 6/10、oracle
+  8/10；因此 M5.1 已批准并实现。它只支持大小写敏感 UTF-8 字面量搜索，具有文件/字节/结果/
+  timeout 上界，不支持 regex/glob/Shell/Git/网络。输入 Token 73,073→147,027、仍有 4 次预算
+  失败，均作为限制保留。证据见 `docs/decisions/m5-1-search-files.md` 与 `docs/evidence/`。
+- `examples/search_eval_suite.json` 把搜索覆盖扩大到 3 个不同结构仓库。当前提示与紧凑
+  search-first 提示各做 15 次 DeepSeek：端到端 12/15→13/15、oracle 12/15→14/15、输入
+  Token -11.5%、first-search 中位位置 4→1；提示已保留，8-call 预算未提高，仍有 2 次耗尽。
+- 后续修复了 `remaining_budgets` 每轮重复初始上限的问题，并加入停止无关读取、预留测试调用
+  的紧凑指引。同一 benchmark 新 15 次端到端/Runtime 为 14/15、oracle 14/15、预算耗尽
+  1 次；工具尝试略降但输入 Token 增加 9.0%，因此保留真实预算契约，不外推效率结论。
+- 四类未参与三仓库提示 A/B 的 capability holdout 已通过 scripted 4/4 和 DeepSeek 12/12；
+  live 运行没有基础设施失败、无效调用、权限违规、预算耗尽，也没有暴露 Git、patch/edit 或
+  依赖能力缺口。证据见 `docs/evidence/deepseek-m5-capability-holdout-2026-09-06.summary.json`。
 
-下一窗口先使用 `docs/m5-eval-expansion.md` 的 13-case/6-fixture 证据和真实 Provider
-baseline 门禁；先运行同一 suite 的 `compressed` variant，解释长历史失败；只有出现新的、可重复的真实模型 failure coverage 后才进入 M5 的
-eval-driven capability expansion 设计，当前不新增工具。保持 M4.1/M4.2 的 OS isolation
-foundation；不要加入 shell 字符串、默认网络或多 Agent。
+当前不启动 M5.2，冻结五工具能力集合。下一窗口先整理版本、检查 Git diff/提交边界并取得已托管
+CI 证据；只有未来新的、可重复的 failure coverage 才能批准 Git inspection、patch/edit 增强
+或依赖准备。
+保持 M4.1/M4.2 的 OS isolation foundation；不要加入 shell 字符串、默认网络或多 Agent。
 
 ## 5. 完成一次开发后的交接动作
 
 - 更新 `docs/current-state.md` 中“已实现/未实现/技术债”；
 - 勾选当前里程碑文档对应 checklist；M2、M3 和 M4.1/M4.2 的 checklist 已完成；
 - 更新 `docs/roadmap.md` 的子阶段状态；
-- 运行全量测试、Ruff、calculator 和 todo smoke；DeepSeek live smoke 和修复后的 3 次探索性
-  `budgeted` Eval 已通过请求门禁；`compressed` variant 仍待验证；
+- 运行全量测试、Ruff、calculator 和 todo smoke；DeepSeek live smoke、compressed 定向、
+  M5.1 search A/B、budget-aware follow-up 和 capability holdout 已有脱敏证据；不必在没有
+  新假设时重复消耗 Provider 配额；
 - 在最终说明中给出测试数量、golden 状态、迁移版本、覆盖率/类型检查/CI 状态和仍未实现项；当前 schema 为 v3，M4.1/M4.2 native backend 不等同于 OCI container；
 - 不使用“生产可用”“完全安全”等超出证据的表述。
 
@@ -98,9 +115,9 @@ foundation；不要加入 shell 字符串、默认网络或多 Agent。
 ```text
 请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、
 docs/contracts.md、docs/requirements-traceability.md、docs/roadmap.md 和
-docs/m4-implementation-plan.md、docs/m5-eval-expansion.md。运行 82 个默认测试的基线后，
-当前 M2.1—M2.3、M3.1—M3.3、M4.1/M4.2 已完成，固定 eval 为 13-case/6-fixture；只评估
-M5 的新能力是否被真实 failure coverage 证明需要，
+docs/m4-implementation-plan.md、docs/m5-eval-expansion.md。运行 93 个默认测试的基线后，
+当前 M2.1—M2.3、M3.1—M3.3、M4.1/M4.2/M5.1 已完成，固定 eval 为 14-case/7-fixture；只评估
+后续 M5 能力是否被真实 failure coverage 证明需要，
 保持现有 OS isolation、structured argv 和 ToolHarness 边界，不增加 shell 字符串、
 默认网络或多 Agent。若确有能力扩展，先写 decision record 和验收测试，再同步
 current-state、roadmap、repository-structure、HANDOFF 和测试证据。

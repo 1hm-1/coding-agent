@@ -1,6 +1,6 @@
 # 当前运行契约
 
-> 适用基线：M4.2。本文描述当前代码；M5 能力扩展仍是条件阶段。
+> 适用基线：M5.1。本文描述当前代码；后续 M5 能力扩展仍是条件阶段。
 
 ## 1. Runtime 状态契约
 
@@ -76,6 +76,10 @@ isolated repository snapshot、latest validated summary、provider/model 和 pen
 call。`ContextBuilder.build()` 返回 `BuiltContext`；Runtime 只消费其 `messages`，并把
 `manifest()` 放入 `context_built` event。
 
+`task_runtime.remaining_budgets` 必须是构建该次模型请求时的实际剩余值，而不是 policy
+初始上限：step/model/tool 分别用上限减去 Session 已使用计数并下限截断为 0。
+`ContextBuildInput` 持久投影中的 `*_used` 字段缺失时按 0 读取，以兼容旧快照。
+
 `BudgetedContextBuilder` 固定按以下顺序装配：
 
 ```text
@@ -147,7 +151,7 @@ SandboxExecutor 的 wall timeout 与进程组清理提供可终止边界。无�
 
 当前 status：`success`、`invalid_arguments`、`permission_denied`、`timeout`、`not_found`、`execution_error`。
 
-### 四个工具
+### 五个工具
 
 `read_file`：
 
@@ -156,6 +160,20 @@ SandboxExecutor 的 wall timeout 与进程组清理提供可终止边界。无�
 ```
 
 - `path` 必填；行号从 1 开始；文件上限 2 MiB。
+- 文件路径必须是 workspace-relative，禁止 `/` 开头、`..` 和 `.git`；模型应优先原样使用
+  `repository_snapshot.file_paths` 中的路径。
+
+`search_files`：
+
+```json
+{"query":"EAST","path":"src","max_results":20}
+```
+
+- `query` 是大小写敏感的 UTF-8 字面量，不接受 regex、glob、Shell 或 Git 语义；
+- `path` 可选且只能是 workspace-relative 文件或目录，默认 `.`；
+- 返回匹配路径、行号和最多 500 字符的行文本；最多 50 个结果；
+- 发现和读取均最多 1000 个候选文件，累计最多读取 8 MiB，单文件最多 2 MiB；跳过
+  `.git`、symlink 和非 UTF-8 文件，且受 Harness 10 秒可终止边界约束。
 
 `edit_file`：
 
@@ -164,6 +182,7 @@ SandboxExecutor 的 wall timeout 与进程组清理提供可终止边界。无�
 ```
 
 - 三字段必填；`old_text` 必须恰好出现一次；目标必须是非 symlink 普通文件；使用同目录临时文件和 `os.replace()` 原子更新。
+- `path` 使用与 `read_file` 相同的 workspace-relative 契约。
 
 `restricted_test`：
 
@@ -249,7 +268,7 @@ rootfs 内容摘要，也不是 OCI image 生命周期承诺。
 
 | Permission | 当前工具 |
 |---|---|
-| `READ` | `read_file` |
+| `READ` | `read_file`、`search_files` |
 | `WRITE` | `edit_file` |
 | `EXECUTE_TEST` | `restricted_test` |
 | `EXECUTE_COMMAND` | `run_command` |

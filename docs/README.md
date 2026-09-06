@@ -15,7 +15,7 @@
 | M4.1 OS 级隔离基础 | 已完成 | [`m4-implementation-plan.md`](./m4-implementation-plan.md) |
 | M4.2 结构化执行扩展 | 已完成 | [`m4-implementation-plan.md`](./m4-implementation-plan.md) |
 | Release/Evidence Hardening | 已完成 | [`roadmap.md`](./roadmap.md)、[`current-state.md`](./current-state.md) |
-| M5 有证据后的能力扩展 | 条件阶段 | [`roadmap.md`](./roadmap.md) |
+| M5 有证据后的能力扩展 | M5.1 已完成，其余条件阶段 | [`roadmap.md`](./roadmap.md) |
 
 当前代码事实以 [`current-state.md`](./current-state.md) 为准。目标架构以 [`architecture.md`](./architecture.md) 为准。两者冲突时，不要假设目标已经实现。
 

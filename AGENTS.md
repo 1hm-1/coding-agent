@@ -3,9 +3,10 @@
 Scope: this file applies to `/home/hmli/code/coding-agent` only.
 
 1. Before editing, read `docs/HANDOFF.md`, `docs/current-state.md`, and the active milestone document.
-2. Current implementation baseline is M4.2 complete. Release/Evidence Hardening covers document
+2. Current implementation baseline is M5.1 complete. Release/Evidence Hardening covers document
    drift, recovery metrics, Git/CI/coverage/type-check evidence, opt-in provider smoke, and
-   multi-repository evaluation; M5 capability expansion remains conditional on failure coverage.
+   multi-repository evaluation; further M5 capability expansion remains conditional on failure
+   coverage.
 3. Preserve the M1/M1.5 vertical slice and all four semantic golden tests.
 4. Do not add a general Shell tool. `restricted_test` accepts trusted profile names only, and
    `run_command` accepts only trusted profiles with structured argv.

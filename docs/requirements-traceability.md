@@ -11,7 +11,7 @@
 | 状态机而非裸循环 | 已实现 | `RuntimeState`、`ALLOWED_TRANSITIONS`、handler map | 合法/非法迁移测试 |
 | tool call、observation、retry、interrupt、resume | 已实现 | Runtime + M2 journal | M1 golden；M2 crash/retry matrix |
 | 统一 Tool contract | 已实现 | `tools/base.py`、`tools/harness.py` | schema/permission/timeout/error/output tests |
-| read/search/edit/shell/test/git | M1 收敛为 read/edit/test；M4.2 增加结构化 `run_command`；其余条件扩展 | M5 条件阶段：search/git/更广执行需由 eval 决定；不提供 shell 字符串 | `test_m4_execution.py`、固定 eval 的 structured-command case；其余能力由后续 eval 证明，不按数量验收 |
+| read/search/edit/shell/test/git | read/edit/test 已实现；M4.2 增加结构化 `run_command`；M5.1 增加只读字面量 `search_files`；其余条件扩展 | search 已由独立 live A/B 批准；后续 capability holdout 12/12 未形成 git/更广执行的失败覆盖；不提供 shell 字符串 | `test_tools.py`、`test_m2_recovery.py`、`test_m4_execution.py`、search decision record、固定 eval 和 capability holdout |
 | 每任务隔离 workspace | M4.1 Linux OS 强隔离已实现；其他平台 fail closed | `workspace.py`、`sandbox/` | source fingerprint、path escape、namespace attack/resource/parallel tests |
 | messages/tool/state/metadata 持久化 | M2 已完成，SQLite authority 包含调用 journal | SQLite journal | transaction、round-trip、rollback、export、recovery tests |
 | 可中断恢复 session | 已实现 | M2.2 Application/Runtime + lease | state-boundary/crash-window/reconciliation/resolution tests |
@@ -29,14 +29,14 @@
 |---|---|---|---|
 | Claude Code/ReAct 完整链路 | [`architecture.md`](./architecture.md) §7、[`contracts.md`](./contracts.md) | 已实现 | 是显式 FSM 的 tool-observation loop，不宣称复刻 Claude Code 内部实现 |
 | Agent Harness | [`architecture.md`](./architecture.md) §9、[`contracts.md`](./contracts.md) §4 | 已实现 | 讲 schema、权限、deadline、归一错误和 observation |
-| 工具慢、阻塞与 timeout | [`current-state.md`](./current-state.md)、[`module-design.md`](./module-design.md) | 部分实现 | 当前同步调用且有 deadline；不要声称已有 callback/async cancellation |
+| 工具慢、阻塞与 timeout | [`current-state.md`](./current-state.md)、[`module-design.md`](./module-design.md) | 已实现可终止边界 | 普通 handler 使用可杀死 worker 进程组；sandbox 工具使用 executor wall timeout；仍不宣称任意 Runtime 时刻可抢占 |
 | 任务中断恢复 | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §4 | 已实现 | 只宣称状态边界中断和定义 crash window 的可解释恢复 |
 | 两类模型后端统一 | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §5 | 已实现 | 两个 adapter 通过离线 contract，另有一次 DeepSeek opt-in smoke；未宣称多次 live baseline 或生产成功率 |
 | retry/fallback | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §5 | 已实现 | 只对分类基础设施错误；质量差不自动 fallback |
 | 重复工具调用/幂等 | [`contracts.md`](./contracts.md)、M2.2 recovery rules | 部分实现 | 已确认结果不重复；未知写操作需 resolution，不能宣称 exactly-once |
 | 上下文压缩与信息丢失 | [`architecture.md`](./architecture.md) §13、[`roadmap.md`](./roadmap.md) §7 | M3 已实现 | 不编造 Token 降幅；用 lineage、required-fact retention 和 task success A/B |
 | 短期/长期记忆 | Context M3；跨会话用户偏好不在当前范围 | 目标边界明确 | Coding task state 不等于用户长期偏好；不要混称 |
-| Eval 体系和 Badcase 定位 | [`testing-strategy.md`](./testing-strategy.md)、[`roadmap.md`](./roadmap.md) §7 | M3 离线 eval 已实现 | 固定 suite 可定位 runtime/harness 轨迹；不外推生产成功率 |
+| Eval 体系和 Badcase 定位 | [`testing-strategy.md`](./testing-strategy.md)、[`roadmap.md`](./roadmap.md) §7 | M3 离线 eval + M5.1 live A/B + capability holdout 已实现 | 能区分 oracle/runtime/e2e 和无效调用；小样本不外推生产成功率 |
 | A/B 与上线迭代 | [`roadmap.md`](./roadmap.md) M3 | 离线 paired A/B 已实现 | 只做固定 suite 的描述性比较；真实流量实验不在当前项目证据内 |
 | 安全、权限、Prompt Injection | [`architecture.md`](./architecture.md) §10、M4.1/M4.2 | 应用层 + Linux namespace 部分实现 | capability fail-closed、structured argv allowlist、secret/network/escape/resource/approval tests；不宣称抵御内核漏洞或跨平台等价 |
 | 单 Agent vs 多 Agent | [`architecture.md`](./architecture.md) §3/§16 | 明确采用单 Agent | 原因是可归因、低成本；只有 eval 证明并行瓶颈才考虑多 Agent |
@@ -50,7 +50,7 @@
 
 - `ScriptedBackend` 驱动的确定性完整任务；
 - 显式 FSM 与非法迁移保护；
-- 四工具统一 Harness（包含结构化 `run_command`）；
+- 五工具统一 Harness（包含只读 `search_files` 和结构化 `run_command`）；
 - source unchanged / isolated workspace modified；
 - permission denied、handler error、timeout 和 test recovery；
 - JSONL replay 与四份 semantic golden；
@@ -66,7 +66,7 @@
 只能作为设计讨论、不能说“项目已经支持”：
 
 - 任意时刻抢占中的 SQLite checkpoint resume；
-- 真实 Provider live API 的运行效果（adapter wire contract 已有离线证据）；
+- 真实 Provider 的通用运行效果（已有脱敏的小样本 DeepSeek 定向证据，不外推生产成功率）；
 - 生产流量中的 retry/fallback 效果；
 - 未在固定数据集、baseline、样本数和成功率 delta 之外外推压缩 Token 节省；
 - 未把当前小型固定 suite 的 task success rate 当作生产成功率；

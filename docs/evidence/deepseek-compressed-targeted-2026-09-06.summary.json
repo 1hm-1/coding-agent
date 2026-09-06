@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "sanitized_live_eval_summary",
+  "recorded_at": "2026-09-06",
+  "provider": "openai-compatible",
+  "model": "deepseek-v4-flash",
+  "base_url": "https://api.deepseek.com",
+  "thinking": "disabled",
+  "case_id": "long-history-compression",
+  "variant": "compressed",
+  "repetitions": 3,
+  "valid_runs": 3,
+  "infrastructure_failures": 0,
+  "oracle_success": 3,
+  "runtime_completed": 2,
+  "end_to_end_success": 2,
+  "context_required_content_exceeds_budget": 0,
+  "compression_schema_invalid": 0,
+  "tool_budget_exhausted": 1,
+  "tool_attempts": 32,
+  "tool_executions": 32,
+  "invalid_tool_calls": 0,
+  "compression_input_tokens": 112381,
+  "compression_output_tokens": 1837,
+  "source_invariant_rate": 1.0,
+  "raw_artifact_sha256": {
+    "report.json": "b72b891acfa1710bbfaaa2881176421e2fa5b04c4a2a580abf582218a6f5c85a",
+    "manifest.snapshot.json": "837a0164fc614313a0ebb2450f1657d21ee61860f504b62b7ed8475cbf135ed9"
+  },
+  "limitations": [
+    "The primary DeepSeek backend was also used as the live summarizer; offline runs retain the deterministic scripted summarizer.",
+    "The remaining failure repeatedly read files until the unchanged twelve-call tool budget was exhausted.",
+    "Raw artifacts remain under /tmp and are not checked in."
+  ],
+  "contains_credentials": false
+}

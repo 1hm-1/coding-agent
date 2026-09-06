@@ -1,8 +1,8 @@
 # 模块设计
 
 > 文档类型：代码边界与依赖规则  
-> 当前基线：M4.2  
-> 下一变化：M5 Eval-driven Capability Expansion
+> 当前基线：M5.1
+> 下一变化：继续以 Eval failure coverage 决定后续 M5 能力
 
 本文回答三个问题：功能应该放在哪个模块、模块之间允许传递什么、错误由谁处理。当前可执行契约见 [`contracts.md`](./contracts.md)，目标架构与安全边界见 [`architecture.md`](./architecture.md)。
 
@@ -54,7 +54,7 @@ tests → public modules above
 | `models/retry.py` | 有界 exponential backoff 计算 | 睡眠、状态迁移 |
 | `tools/base.py` | 工具定义、上下文、结果协议和 registry | 具体授权策略和业务编排 |
 | `tools/harness.py` | lookup、schema、权限、prepare/hash、deadline、错误归一化、输出限制、审计 | 模型决策、workspace 创建 |
-| `tools/builtin.py` | `read_file`、`edit_file`、`restricted_test`、`run_command` handler；将可信 profile/结构化 argv 交给 SandboxPolicy/Executor | 通用 Shell、源仓库直接访问、启动 host subprocess |
+| `tools/builtin.py` | `read_file`、`search_files`、`edit_file`、`restricted_test`、`run_command` handler；将可信 profile/结构化 argv 交给 SandboxPolicy/Executor | 通用 Shell、源仓库直接访问、启动 host subprocess |
 | `test_profiles.py` | 应用可信测试 profile，固定 argv/cwd/env/network/limits/image | 接收模型传入的任意命令 |
 | `command_profiles.py` | 可信 command profile、executable allowlist、argv/cwd 上限和 elevated-resource admission metadata | shell parsing、执行进程、直接授权模型命令 |
 | `sandbox/base.py` | `ExecutionSpec`、`ExecutionResult`、`ResourceLimits`、capability protocol | 启动进程、路径策略、provider 格式 |
