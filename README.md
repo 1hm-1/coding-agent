@@ -212,6 +212,24 @@ L3 独立 holdout 使用 [`memory_retrieval_holdout.py`](examples/memory_retriev
 `0.16666666666666666`，未达到 L3 门槛；命令因此以非零状态报告门禁未通过。结果没有被题目调整
 或宣称为真实 Provider 收益。
 
+S3 的真实 Provider paired harness 通过 `evaluate-memory-live` 显式运行；示例 suite 仅展示 schema，
+不是 checked-in live 结果。off/on pair 只改变 validated Memory Context，并交替先后顺序：
+
+```bash
+PYTHONPATH=src python3 -m coding_agent.cli \
+  --agent-home /tmp/coding-agent-memory-live \
+  evaluate-memory-live \
+  --suite examples/memory_live_ab_suite.json \
+  --provider openai-compatible \
+  --model '<provider-model>' \
+  --output /tmp/coding-agent-memory-live-report \
+  --repetitions 3
+```
+
+Memory 必须由可验证的先前 Runtime completion event 产生；报告使用可信 oracle，记录 Token、
+retrieval、P50/P95 latency、工具/失败与安全不变量，但不保存 reasoning、Secret 或绝对路径。
+详见 [`S3 审查`](docs/evidence/s3-holdout-and-live-ab-review-2026-09-17.md)。
+
 ## 核心能力 / Core capabilities
 
 | 模块 / Area | 已实现 / Implemented |
@@ -222,7 +240,7 @@ L3 独立 holdout 使用 [`memory_retrieval_holdout.py`](examples/memory_retriev
 | Context | 分区预算、hard retention、原子 tool-call 组裁剪、带 lineage 的压缩 / Section budgets, hard retention, atomic tool-call groups, lineage-aware compression |
 | Memory | 受控 episodic/semantic proposal/approval/stale/delete；有界 lexical retrieval；scope/revision/provenance 隔离；仅显式 Python composition / Governed lifecycle, bounded lexical retrieval, scoped provenance; explicit Python composition only |
 | Sandbox | Rootless Linux namespaces、只读 rootfs、默认禁网、资源限制、进程清理 / Rootless namespaces, read-only rootfs, no network, limits, cleanup |
-| Evaluation | 版本化 suite、可信 oracle、正常任务/负控制分离、paired A/B、Provider override / Versioned suites, trusted oracles, separated controls, paired A/B, Provider override |
+| Evaluation | 版本化 suite、可信 oracle、正常任务/负控制分离、context 与 Memory paired A/B、Provider override / Versioned suites, trusted oracles, context and Memory paired A/B, Provider override |
 | Models | Deterministic ScriptedBackend, OpenAI-compatible, Anthropic, retry/backoff, explicit fallback |
 | Audit | SQLite replay、可重建 JSONL、语义 golden、source invariant / SQLite replay, rebuildable JSONL, semantic goldens, source invariant |
 

@@ -96,3 +96,24 @@ manifest Token 与 renderer 一致，兼容 arm warm `3/3`。因此 L3 recall �
 
 该结果继续支持 Memory 仅作显式 Python composition；默认 Application/headless/IPC 不接入，
 真实 Provider cold/warm A/B 与净收益证明仍未完成，P2-M3 不因本 holdout 自动激活。
+
+## 8. S3 Holdout 审查与真实 Provider paired harness
+
+S3 复核确认 L3 使用三个共享 pool、不是一例一池，并通过完整 Runtime final answer 统计 task
+success；但多数 task/memory 是近同构关键词改写，且 deterministic backend 直接持有 expected
+fact/answer。因此 L3 不是强非同源 Provider 证据。五个 recall miss 与两个 hard-negative injection
+只做失败分类；未改检索算法。后续 development set 明确使用另一组 L1/L2 冻结 12-case 数据，
+不使用 L3。未来若基于该 development set 调整算法，必须先冻结新的 Holdout v2，不能重看或改写
+当前 L3 来调参。
+
+新增 `evaluate-memory-live` paired harness：off/on 共用 Provider、model、task、RunPolicy、源码指纹
+和 trusted oracle，pair 内交替执行顺序；Memory 必须由先前完成的 Runtime final result 产生，并以
+committed `run_finished` event 经 journal provenance 校验。报告覆盖 end-to-end/oracle/Runtime、
+Token、retrieval、latency、工具/失败、first relevant action 和安全不变量；写盘前阻止 Secret 与绝对
+路径，且不保存 Provider reasoning。默认 Application/headless/IPC 未改变。
+
+当前只有离线 harness contract test，没有消耗 Provider 凭据或生成 live 结果，因此 S3 结论为
+**有条件通过**：Memory 保持显式 opt-in，继续补冻结真实任务集的 Provider A/B；P2-M3 仍未激活。
+S3 门禁为 139/139 unittest、四份 semantic golden、Ruff、34 文件 mypy、compileall 与
+`git diff --check`；未重跑完整 coverage，因此保留最近一次 78.5% 数字，不制造新覆盖率结论。
+完整审查见 [`s3-holdout-and-live-ab-review-2026-09-17.md`](./evidence/s3-holdout-and-live-ab-review-2026-09-17.md)。

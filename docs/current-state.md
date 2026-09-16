@@ -1,6 +1,6 @@
 # 当前实现状态
 
-> 基线日期：2026-09-16
+> 基线日期：2026-09-17
 > 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Phase 2 P2-M1/P2-M2
 > 当前阶段：Phase 2 P2-M2 Layered Memory 与冻结 benchmark 检索优化已完成；P2-M3 尚未激活
 > 当前附加门禁：Release/Evidence Hardening 已完成（文档、指标、Git/CI、coverage、类型检查、评测证据）。  
@@ -73,8 +73,9 @@
   （`+0.003980499059252907ms`）；延迟受本机调度影响，但回退没有从证据中删除。这不是
   Provider 收益证据。
   脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
-- 当前收口门禁通过 137/137 默认 unittest（既有 136 个无回退，新增 1 个 L3 holdout contract test）、四份既有
-  semantic golden、Ruff、33 个配置范围源码文件 mypy、compileall、78.5% statement coverage、
+- 当前收口门禁通过 139/139 默认 unittest（L3 后 137 个无回退，新增 2 个 live Memory A/B
+  harness contract test）、四份既有 semantic golden、Ruff、34 个配置范围源码文件 mypy 与 compileall；
+  最近一次完整 coverage 仍为 L3 前的 78.5% statement coverage、
   wheel/sdist、独立 wheel Memory import、calculator/todo smoke 与多任务 benchmark；本轮未运行
   真实 Provider。
 - S2 复核发现并修复了 benchmark before renderer 下 record 级 Context Token 归因不一致；总 section
@@ -93,6 +94,15 @@
   后续重复运行仅补采观测 latency：cold/warm mean 为 `41.255672772725426ms`/`42.08423031700982ms`，
   warm-cold mean `+0.8285575442843935ms`；retrieval mean `0.18361411154425392ms`。完整脱敏摘要见
   [`memory-retrieval-holdout-2026-09-16.summary.json`](./evidence/memory-retrieval-holdout-2026-09-16.summary.json)。
+- S3 复核认定 L3 不是一例一池且包含 Runtime task result，但 task/memory 多为关键词近同构改写，
+  deterministic oracle 直接持有 expected answer，故不能视为强非同源 Provider 证据。失败只分类，
+  没有依据 L3 修改检索器；后续 development set 已明确为另一组 L1/L2 冻结 12-case 数据，未来
+  算法修改必须先冻结全新的 Holdout v2。
+- 新增显式 `evaluate-memory-live`：真实 Provider off/on pair 共用 model、任务、预算、源码指纹和
+  trusted oracle，并交替 arm 顺序。Memory 来自先前完成且 journal event 可验证的 Runtime result；
+  报告覆盖 success/completion、Token、retrieval、P50/P95 latency、工具与失败、first relevant action
+  和安全不变量，同时拒绝 Secret/绝对路径且不保存 reasoning。当前仅有离线 harness contract test，
+  尚无 live Provider 净收益结果；默认 Application/headless/IPC 仍未接入 Memory。
 
 ### Model
 
@@ -190,7 +200,7 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后当前开发树为 137 个，在当前
+- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后当前开发树为 139 个，在当前
   capability probe 成功的环境中全部通过。`tests/live_provider_smoke.py` 为凭据门控的显式测试，
   不计入默认 discovery；能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。
@@ -386,7 +396,7 @@ PYTHONPATH=src .venv/bin/python examples/memory_retrieval_holdout.py
     CLI 通过 subprocess smoke 纳入合并数据；namespace runner 为保持 sandbox 环境 allowlist 不注入
     宿主 coverage hook，当前仍显示 0%，其行为证据来自 native integration/security tests。
 12. mypy 当前覆盖 memory、models、tools、context、domain、workspace、command profiles、evaluation、
-    sandbox 和 P2-M1 protocol，共 33 个配置源码文件；其余 Runtime/Application/Persistence/CLI/Compression 历史代码
+    sandbox 和 P2-M1 protocol，共 34 个配置源码文件；其余 Runtime/Application/Persistence/CLI/Compression 历史代码
     尚未达到全仓类型检查标准（本次全仓扫描剩余 75 个错误，集中在 6 个文件）。
 13. live provider smoke 已提供手动 workflow；本地首次 DeepSeek 尝试已到达 Provider，但因
    smoke 原先只有 16 个输出 token，最终 `content` 为空而失败。现已增加输出预算，并支持

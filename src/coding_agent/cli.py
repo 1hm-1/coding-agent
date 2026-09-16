@@ -13,6 +13,7 @@ from coding_agent.models.anthropic import AnthropicBackend
 from coding_agent.models.base import ModelBackend
 from coding_agent.models.openai_compatible import OpenAICompatibleBackend
 from coding_agent.models.scripted import ScriptedBackend
+from coding_agent.memory.live_evaluation import LiveMemoryABRunner, load_live_memory_suite
 from coding_agent.protocol.headless import ProtocolError, run_headless, write_protocol_info
 
 
@@ -154,6 +155,23 @@ def build_parser() -> argparse.ArgumentParser:
         default=("passthrough", "budgeted"),
         help="Context variants used with --ab (default: passthrough budgeted).",
     )
+
+    memory_eval_parser = subparsers.add_parser(
+        "evaluate-memory-live",
+        help="Run a paired real-provider Memory off/on evaluation.",
+    )
+    memory_eval_parser.add_argument("--suite", required=True)
+    memory_eval_parser.add_argument("--suite-root")
+    memory_eval_parser.add_argument("--output", required=True)
+    memory_eval_parser.add_argument("--repetitions", type=int, default=1)
+    memory_eval_parser.add_argument(
+        "--provider", required=True, choices=("openai-compatible", "anthropic")
+    )
+    memory_eval_parser.add_argument("--model", required=True)
+    memory_eval_parser.add_argument("--base-url")
+    memory_eval_parser.add_argument("--api-key-env")
+    memory_eval_parser.add_argument("--thinking", choices=("disabled",))
+    memory_eval_parser.add_argument("--timeout", type=float, default=60.0)
     return parser
 
 
@@ -175,6 +193,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         except Exception:
             print("headless runner failed before producing a terminal result", file=sys.stderr)
             return 70
+    if arguments.command == "evaluate-memory-live":
+        suite, manifest_root = load_live_memory_suite(arguments.suite)
+
+        def backend_factory() -> ModelBackend:
+            return _provider_backend(
+                arguments.provider,
+                arguments.model,
+                arguments.base_url,
+                arguments.api_key_env,
+                arguments.timeout,
+                arguments.thinking,
+            )
+
+        runner = LiveMemoryABRunner(
+            arguments.agent_home,
+            suite_root=arguments.suite_root or manifest_root,
+            provider=arguments.provider,
+            model=arguments.model,
+            backend_factory=backend_factory,
+        )
+        report = runner.run(
+            suite,
+            repetitions=arguments.repetitions,
+            output_dir=arguments.output,
+        )
+        print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0
     if arguments.command == "evaluate":
         suite, manifest_root = load_eval_suite(arguments.suite)
         if arguments.case_id:

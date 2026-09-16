@@ -1,6 +1,6 @@
 # 新窗口开发交接
 
-> 交接基线：2026-09-16，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC、P2-M2 Layered Memory 及其冻结 benchmark 检索优化已完成；P2-M3 尚未激活。
+> 交接基线：2026-09-17，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC、P2-M2 Layered Memory 及 S3 paired live harness 已完成；P2-M3 尚未激活。
 > 固定版本：`v0.1.0`；安装、测试、离线 Eval、Demo 和支持边界见 `docs/releases/v0.1.0.md`。
 
 ## 1. 开始前必须做
@@ -15,7 +15,7 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前开发树应为 137 个默认测试通过（既有 136 个，新增 1 个 L3 holdout contract test）。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
+当前开发树应为 139 个默认测试通过（L3 后 137 个，新增 2 个 live Memory A/B harness contract test）。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
 
 ## 2. 工作区事实
 
@@ -143,7 +143,16 @@ manifest SHA-256 为 `3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f
 `0.6666666666666666`，irrelevant injection `0.16666666666666666`，所以 recall/injection 门槛
 未通过；scope/revision/stale-deleted 泄漏为 0、无相关 Memory 行为变化为 0、manifest Token 一致、
 兼容 arm warm 3/3。该结果已原样保存，未根据结果修改 case；后续重复运行只补采 latency，不重新
-宣称首轮。L3 因此是阻断默认入口的证据，而非真实 Provider 收益结论；真实 Provider A/B 仍待完成。
+宣称首轮。S3 进一步确认其不是一例一池且会跑 Runtime task result，但 task/memory 仍多为关键词
+近同构改写，deterministic oracle 直接持有答案，因此不能作为强非同源 Provider 证据。失败只分类，
+没有据此调参；后续 development set 是另一组 L1/L2 冻结 12-case 数据，算法若再修改必须在查看
+结果前冻结全新的 Holdout v2。
+
+S3 已新增 `evaluate-memory-live` paired harness：同一 Provider/model/task/budget/source revision/oracle，
+pair 内交替 off/on；Memory 必须来自先前 committed Runtime completion event。脱敏报告包含 Token、
+retrieval、latency、工具/失败、first relevant action 与安全不变量，并保留完整 Memory manifest，拒绝
+Secret、绝对路径和 reasoning content。当前仅完成离线 contract test，真实 Provider A/B 仍待凭据
+门控运行；Memory 继续显式 opt-in，P2-M3 未激活。
 
 下一候选是 P2-M3 Profiles/Skill Runtime，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入
 shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。
@@ -168,7 +177,7 @@ shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector b
 ```text
 请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、已完成的
 docs/p2-implementation-plan.md、docs/p2-m2-implementation-plan.md 和 Runtime IPC v1/compatibility
-权威规范。P2-M1/P2-M2 已完成，先运行 137 个默认测试确认基线；P2-M3 尚未激活，不得提前加入
+权威规范。P2-M1/P2-M2 已完成，先运行 139 个默认测试确认基线；P2-M3 尚未激活，不得提前加入
 Skill、MCP、多 Agent、UI、RAG/vector、shell 字符串或默认网络。
 ```
 

@@ -362,7 +362,7 @@ before cold/warm mean 为 `45.834164333731074ms`/`47.033260334198225ms`，after 
 |---|---|---|---|
 | P2-D0 架构与契约设计 | 已完成 | `v2-product-architecture.md`、Runtime IPC v1 文档和 JSON Schema、兼容规则 | producer/consumer 权责、版本、取消、错误、secret/workspace 规则无歧义；明确尚未实现 |
 | P2-M1 Headless Runtime IPC | 已完成（2026-09-16） | `protocol-info`、`run-headless`、stdout JSONL、cooperative cancellation | v1 schema、golden、退出码、v0.1/v0.2 adapter contract vectors 全部通过 |
-| P2-M2 分层记忆 | 已完成（2026-09-16，检索优化已验收；L3 holdout 已记录） | episodic/semantic memory ports、SQLite authority、确定性加权检索与紧凑 Context；显式 Python composition | 原有冻结 A/B 通过；L3 非同源首轮 recall/injection 未过门槛，默认入口关闭，真实 Provider A/B 待完成 |
+| P2-M2 分层记忆 | 已完成（2026-09-16，检索优化已验收；L3/S3 审查已记录） | episodic/semantic memory ports、SQLite authority、确定性加权检索、紧凑 Context 与显式 live paired harness；默认仍关闭 | 原有冻结 A/B 通过；L3 首轮 recall/injection 未过门槛且独立性有限，live harness 已就绪但真实 Provider A/B 待完成 |
 | P2-M3 Profiles 与 Skill Runtime | 未启动 | immutable profile、Skill registry/loader/selector、能力策略 | skill provenance/permission/budget/replay 测试通过，不绕过 ToolHarness |
 | P2-M4 MCP 能力网关 | 未启动 | MCP adapter 经 CapabilityGateway 映射到 Harness | discovery、schema、secret、timeout、审计和恶意 server 负例通过 |
 | P2-M5 可恢复多 Agent 编排 | 未启动 | coordinator FSM、角色 mailboxes、hierarchical budgets、single-writer workspace | crash/replay/cancel/冲突/预算和相对单 Agent eval 通过 |
