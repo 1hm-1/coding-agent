@@ -1,20 +1,21 @@
 # 新窗口开发交接
 
-> 交接基线：2026-09-16，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC 与 P2-M2 Layered Memory 已完成；P2-M3 尚未激活。
+> 交接基线：2026-09-16，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC、P2-M2 Layered Memory 及其冻结 benchmark 检索优化已完成；P2-M3 尚未激活。
 > 固定版本：`v0.1.0`；安装、测试、离线 Eval、Demo 和支持边界见 `docs/releases/v0.1.0.md`。
 
 ## 1. 开始前必须做
 
 1. 将工作目录切换到 `/home/hmli/code/coding-agent`。
 2. 完整阅读 `AGENTS.md`、`docs/README.md`、`docs/current-state.md`。
-3. 阅读已完成的 `docs/p2-implementation-plan.md`、`docs/p2-m2-implementation-plan.md` 与 Runtime IPC 权威规范；开始 P2-M3 前等待用户明确激活。
+3. 阅读已完成的 `docs/p2-implementation-plan.md`、`docs/p2-m2-implementation-plan.md`、
+   `docs/p2-m2-retrieval-optimization.md` 与 Runtime IPC 权威规范；开始 P2-M3 前等待用户明确激活。
 4. 运行：
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前开发树应为 134 个默认测试通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
+当前开发树应为 136 个默认测试通过（冻结 benchmark 提交时为 134，检索优化新增 2 个）。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
 
 ## 2. 工作区事实
 
@@ -113,12 +114,13 @@ checkpoint-before-result 和子进程清理均有 producer contract tests。111 
 Phase 2 P2-M2 已完成：SQLite schema v4、versioned episodic/semantic record、committed journal
 provenance、scope/revision/content policy、proposal/explicit approval/stale/supersede/delete、原子审计、
 bounded lexical retrieval、Context manifest 与 multi-task cold/warm calibration 均有测试。删除 tombstone
-清空原文；unbounded Context preview 不重复写 retrieval audit。134 个默认测试、Ruff、33 文件 mypy、
-compileall、78.3% coverage、wheel/sdist、独立 wheel Memory import、calculator/todo smoke 和多任务
+清空原文；unbounded Context preview 不重复写 retrieval audit。检索优化后为 136 个默认测试、Ruff、33 文件 mypy、
+compileall、78.5% coverage、wheel/sdist、独立 wheel Memory import、calculator/todo smoke 和多任务
 Memory benchmark 均通过。当前 benchmark 已冻结 12 个 case，覆盖相关/无匹配/词面 distractor/
 scope-revision 隔离/stale-deleted/诱导指令拒绝；trusted oracle 为 cold 8/12 → warm 12/12，
-relevant recall=1.0、precision=2/3、irrelevant injection=1/3，无关行为变化率=0，retrieval
-Token=116，Memory context Token=803，scripted model total Token 2740 → 3543（+803）。该结果仍
+同进程 A/B 的 relevant recall 保持 1.0，precision 2/3→1.0、irrelevant injection 1/3→0，retrieval
+Token 116→81，Memory context/额外模型 Token 803→130（-83.8%），scripted model after total
+2740→2870。scope/revision/stale-deleted 泄漏为 0，原始 3-case warm 3/3。该结果仍
 只是不可挑题的合成 baseline，不代表真实 Provider 收益，默认入口与 IPC Memory 继续保持关闭。
 Memory 的交付形态明确为显式 Python composition：默认 `AgentApplication` 与 `run-headless` 不创建、
 查询或注入 Memory，也不把它加入 Runtime IPC capability。
@@ -144,7 +146,7 @@ shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector b
 ```text
 请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、已完成的
 docs/p2-implementation-plan.md、docs/p2-m2-implementation-plan.md 和 Runtime IPC v1/compatibility
-权威规范。P2-M1/P2-M2 已完成，先运行 134 个默认测试确认基线；P2-M3 尚未激活，不得提前加入
+权威规范。P2-M1/P2-M2 已完成，先运行 136 个默认测试确认基线；P2-M3 尚未激活，不得提前加入
 Skill、MCP、多 Agent、UI、RAG/vector、shell 字符串或默认网络。
 ```
 

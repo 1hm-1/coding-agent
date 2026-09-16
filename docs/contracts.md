@@ -367,12 +367,14 @@ supersede 只写新摘要并给旧摘要加 `superseded_by`，stale 标记会让
   version 和同事务 audit event 更新。supersede activation 原子 stale 旧 active record。
 - delete 是 tombstone：清空 content，保留 content hash、provenance 和 audit；所有非 active 状态均
   不可检索。同 scope/kind/content hash 重复项返回 conflict，不静默覆盖。
-- `LexicalMemoryRetriever` 只使用确定性 lexical overlap 与 metadata filtering；top-k 和 Token budget
-  是硬上限，scope/revision/expiry/status 均先过滤。query 原文不落库，只保存 hash、selected
-  manifest、成本和 latency。
+- `LexicalMemoryRetriever` 只使用确定性加权 lexical overlap 与 metadata filtering；词形小型归一、
+  常见词降权、末尾信息词加权、最低相关性、scope tie-break 和相对 score floor 都是固定规则；
+  top-k/Token 是硬上限，scope/revision/expiry/status 均先过滤。query 原文不落库，只保存 hash、
+  selected manifest、retrieval 成本和 latency。
 - `BudgetedContextBuilder` 仅在显式注入 retriever/query factory 时启用 Memory；检索内容作为不可信
-  参考数据，不能授权工具或覆盖 policy。manifest 记录 selection 和最终 `included` 状态；预算不足
-  时整体丢弃可选 Memory section。unbounded preview 不写 audit。
+  参考数据，不能授权工具或覆盖 policy。模型文本只含紧凑 notice/content；manifest 记录完整
+  ID/version/score/provenance、retrieval 估算、所用 counter、实际 Context Token 成本和最终
+  `included` 状态；预算不足时整体丢弃可选 Memory section。unbounded preview 不写 audit。
 - Memory SQLite schema 是私有实现，不属于 Runtime IPC v1。当前没有 Memory CLI/UI；Procedural
   memory、Skill、embedding/vector/RAG 均未实现。
 

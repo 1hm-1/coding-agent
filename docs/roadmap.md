@@ -2,7 +2,7 @@
 
 > 路线图状态基线：2026-09-16
 > 当前完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Release/Evidence Hardening  
-> 当前实施项：**Phase 2 P2-M2 Layered Memory 已完成；P2-M3 尚未激活**
+> 当前实施项：**Phase 2 P2-M2 Layered Memory 与检索优化已完成；P2-M3 尚未激活**
 > 当前证据补充：简历 benchmark 的 scripted 校准及 `deepseek-flash` live 25-run/压缩
 > 10-pair 已完成；live 稳定性为 24/25，压缩没有节省 Token，见 `docs/resume-benchmark.md`。
 
@@ -336,7 +336,9 @@ M5.1 代码、文档与脱敏证据已推送，Python 3.10/3.11 托管 CI 成功
 Context manifest、泄漏/注入负例和三任务 cold/warm 验收均通过。随后补充了不改变检索算法的
 12-case 冻结 baseline，覆盖相关性、无匹配、词面 distractor、scope/revision 隔离、
 stale/deleted 和诱导指令拒绝，并补齐 precision、行为变化、Memory context Token 与
-Token-per-successful-task 指标。Memory 只通过显式 Python composition 提供，默认
+Token-per-successful-task 指标。其后完成同一冻结集合上的检索/Context A/B：recall 保持 1.0，
+irrelevant injection 1/3→0，Memory 额外模型 Token 803→130（-83.8%），隔离泄漏保持 0。
+Memory 只通过显式 Python composition 提供，默认
 Application/headless 不启用；P2-M3 尚未激活，也没有真实 Provider 净收益结论。
 
 ## 14. Phase 2 分阶段路线
@@ -345,7 +347,7 @@ Application/headless 不启用；P2-M3 尚未激活，也没有真实 Provider �
 |---|---|---|---|
 | P2-D0 架构与契约设计 | 已完成 | `v2-product-architecture.md`、Runtime IPC v1 文档和 JSON Schema、兼容规则 | producer/consumer 权责、版本、取消、错误、secret/workspace 规则无歧义；明确尚未实现 |
 | P2-M1 Headless Runtime IPC | 已完成（2026-09-16） | `protocol-info`、`run-headless`、stdout JSONL、cooperative cancellation | v1 schema、golden、退出码、v0.1/v0.2 adapter contract vectors 全部通过 |
-| P2-M2 分层记忆 | 已完成（2026-09-16） | episodic/semantic memory ports、SQLite authority 与策略；显式 Python composition | provenance、隔离、遗忘、注入防护和 12-case 冻结 cold/warm baseline 已通过；默认入口关闭，不外推真实 Provider 收益 |
+| P2-M2 分层记忆 | 已完成（2026-09-16，检索优化已验收） | episodic/semantic memory ports、SQLite authority、确定性加权检索与紧凑 Context；显式 Python composition | provenance、隔离、遗忘、注入防护和冻结 A/B 已通过；默认入口关闭，不外推真实 Provider 收益 |
 | P2-M3 Profiles 与 Skill Runtime | 未启动 | immutable profile、Skill registry/loader/selector、能力策略 | skill provenance/permission/budget/replay 测试通过，不绕过 ToolHarness |
 | P2-M4 MCP 能力网关 | 未启动 | MCP adapter 经 CapabilityGateway 映射到 Harness | discovery、schema、secret、timeout、审计和恶意 server 负例通过 |
 | P2-M5 可恢复多 Agent 编排 | 未启动 | coordinator FSM、角色 mailboxes、hierarchical budgets、single-writer workspace | crash/replay/cancel/冲突/预算和相对单 Agent eval 通过 |

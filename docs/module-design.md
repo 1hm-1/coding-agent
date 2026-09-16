@@ -74,7 +74,7 @@ tests → public modules above
 | `memory/domain.py` | versioned episodic/semantic record、scope/status、provenance 与 retrieval value objects | SQL、模型调用、Runtime 状态 |
 | `memory/policy.py`、`memory/service.py` | write scope/provenance/content policy 与显式 proposal/approval/stale/delete lifecycle | 绕过 approval、工具执行、Context 拼装 |
 | `memory/sqlite.py` | record/lifecycle/retrieval audit 的 SQLite v4 authority 与原子 optimistic transition | 检索排序、权限决策、公共 IPC |
-| `memory/retrieval.py` | deterministic lexical/metadata selection、top-k/Token/scope/revision/expiry filtering | embedding/vector、隐式写入 |
+| `memory/retrieval.py` | deterministic weighted lexical/metadata selection、threshold/scope priority/top-k/Token/revision/expiry filtering | embedding/vector、隐式写入 |
 | `memory/evaluation.py` | cold/warm paired task success、recall、injection、Token/latency 聚合 | 把 recall 当 task success、生产收益推断 |
 | `export.py` | 已提交 DB events 到 JSONL 的原子 projection 导出 | 状态决策、replay 规则 |
 | `compression.py` | 摘要模型调用边界、event lineage、schema/required-fact 验证、stale 判定 | 权限判定、Runtime 状态迁移、覆盖原始事件 |
@@ -211,7 +211,9 @@ class AgentApplication:
 P2-M2 的 Memory 是可选的调用方组合：调用者可以把 `SQLiteMemoryStore`、
 `MemoryService`、`LexicalMemoryRetriever` 和 query factory 装配到 `BudgetedContextBuilder`，
 再把该 builder 传给 Application。默认 `AgentApplication` 与 `protocol.headless` 不创建、查询
-或注入 Memory；Memory 也不是当前 Runtime IPC capability。
+或注入 Memory；Memory 也不是当前 Runtime IPC capability。retriever 使用确定性加权 lexical
+coverage、metadata 隔离、scope tie-break、最低门槛与相对分数截断；模型 Memory section 只含
+不可信边界和内容，完整 ID/version/score/provenance/实际 Context Token 成本留在 manifest。
 
 ## 5. 调用所有权和失败所有权
 

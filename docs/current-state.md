@@ -2,7 +2,7 @@
 
 > 基线日期：2026-09-16
 > 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Phase 2 P2-M1/P2-M2
-> 当前阶段：Phase 2 P2-M2 Layered Memory 已完成；P2-M3 尚未激活
+> 当前阶段：Phase 2 P2-M2 Layered Memory 与冻结 benchmark 检索优化已完成；P2-M3 尚未激活
 > 当前附加门禁：Release/Evidence Hardening 已完成（文档、指标、Git/CI、coverage、类型检查、评测证据）。  
 > 固定发布基线：`v0.1.0`（复现命令与边界见 [`releases/v0.1.0.md`](./releases/v0.1.0.md)）。
 > Phase 2 P2-D0 设计与 P2-M1 producer 已完成。除“尚未实现”章节外，本文只描述已经存在并通过测试的行为。
@@ -47,25 +47,27 @@
 - 所有写入先是 `proposed`；schema、journal provenance、scope ownership、revision、Secret、完整工具
   输出、宿主绝对路径、嵌入式指令和去重检查通过后，仍需显式 activate。支持 reject、stale、
   supersede 和 delete；delete 清空原文，只保留 tombstone/hash/audit。
-- 首版检索是确定性 lexical + metadata baseline，限制 top-k 与 Token，过滤 scope、revision、expiry、
-  stale/deleted。没有加入 embedding、vector backend 或 RAG framework。
+- 确定性 lexical + metadata retrieval 对词形做小型归一，按 query/record coverage 加权、常见词
+  降权、末尾信息词加权，并使用最低相关性、scope 稳定优先级和相对 score floor 动态截断；仍限制
+  top-k/Token 并过滤 scope、revision、expiry、stale/deleted。没有 embedding、vector 或 RAG framework。
 - `BudgetedContextBuilder` 只在显式配置 retriever/query factory 时增加 `memory` section；内容标记为
-  不可信参考数据。`context_built` manifest 记录 retrieval id、memory/schema/record version、score、
-  Token cost、provenance 和最终是否实际注入；unbounded preview 不重复写 retrieval audit。
+  不可信参考数据。模型只接收紧凑 notice 与内容列表；`context_built` manifest 仍记录 retrieval id、
+  memory/schema/record version、score、完整 provenance、retrieval Token 估算、实际 Context Token 成本
+  和最终是否注入；unbounded preview 不重复写 retrieval audit。
 - 本阶段交付形态是 Python composition：调用方可将 `SQLiteMemoryStore`、`MemoryService`、
   `LexicalMemoryRetriever` 和 query factory 组装到 `BudgetedContextBuilder`；默认
   `AgentApplication` 与 `run-headless` 不创建、查询或注入 Memory，也不公布 Memory IPC capability。
 - 已将 cold/warm Runtime benchmark 固定为 12 个 case：4 个明确相关、2 个无匹配、2 个词面相似
   但语义无关、1 个错误 user scope、1 个错误 repository/revision、1 个 stale/deleted 和 1 个
-  诱导指令拒绝负例。trusted task oracle 为 cold 8/12 → warm 12/12，relevant recall=1.0，
-  precision=2/3，irrelevant injection=1/3；无关 case 的行为变化率为 0。retrieval cost 为
-  116 Token，Memory context Token 为 803，scripted model total Token 为 2740 → 3543（+803），
-  Token per successful task 为 cold 342.5、warm 295.25（仅 model），计入 retrieval 后 warm
-  为 304.92。最近一次本地运行 wall latency mean 为 cold 44.53ms、warm 47.71ms，warm-cold
-  mean +3.18ms；延迟是本机测量值。该基线没有修改检索算法，不是 Provider 收益证据。
+  诱导指令拒绝负例。同进程 before/after A/B 复现旧基线并验证候选：trusted task oracle 保持
+  cold 8/12 → warm 12/12，relevant recall 1.0→1.0，precision 2/3→1.0，irrelevant injection
+  1/3→0；scope/revision/stale-deleted 泄漏为 0，原始 3-case warm 3/3。retrieval cost 116→81，
+  Memory context/额外模型 Token 803→130，下降 83.8%；after scripted model total 为
+  2740→2870。Token per successful task after 为 cold 342.5、warm 239.17（仅 model），计入
+  retrieval 后 warm 245.92。延迟仍受本机调度影响，不作为优化验收指标；这不是 Provider 收益证据。
   脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
-- P2-M2 验收通过 134/134 默认 unittest、四份既有 semantic golden、Ruff、33 个配置范围源码文件
-  mypy、compileall、78.3% coverage、wheel/sdist、独立 wheel Memory import、calculator/todo smoke
+- 当前验收通过 136/136 默认 unittest（原 134 个无回退，新增 2 个检索测试）、四份既有 semantic golden、Ruff、33 个配置范围源码文件
+  mypy、compileall、78.5% coverage、wheel/sdist、独立 wheel Memory import、calculator/todo smoke
   与多任务 benchmark。
 
 ### Model
@@ -164,7 +166,7 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 后当前开发树为 134 个，在当前
+- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后当前开发树为 136 个，在当前
   capability probe 成功的环境中全部通过。`tests/live_provider_smoke.py` 为凭据门控的显式测试，
   不计入默认 discovery；能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。
@@ -370,10 +372,9 @@ PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
 16. 简历 benchmark 的 scripted 校准不是模型能力证据；live 数字只适用于记录的五个小型
     fixture、`deepseek-flash` 和 worktree content snapshot。压缩 A/B 没有产生 Token 节省，
     不得将 10% 的小样本 Runtime completion 差异外推成一般收益。
-17. P2-M2 Memory benchmark 现在使用 12 个冻结 case 的确定性 trusted oracle 和 scripted Token
-    估算；relevant recall=1.0、precision=2/3、irrelevant injection=1/3，且无关 case 行为变化率
-    为 0，但 warm 的 scripted model total Token 仍增加 803、wall latency mean 增加约 3.18ms。
-    这只是不可挑题的 lexical baseline，不能据此宣称真实模型净收益或启用默认
+17. P2-M2 Memory benchmark 使用 12 个冻结 case 的确定性 trusted oracle 和 scripted Token
+    估算；检索/Context A/B 达到 recall=1.0、precision=1.0、irrelevant injection=0，额外模型
+    Token 从 803 降到 130。它仍是不可挑题的小型合成 benchmark，不能据此宣称真实模型净收益或启用默认
     Application/headless Memory。
 
 ## 6. 不允许虚构的项目事实

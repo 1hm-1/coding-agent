@@ -307,6 +307,7 @@ class MemoryHit:
             "score": self.score,
             "token_cost": self.token_cost,
             "source_run_id": self.record.source_run_id,
+            "source_agent_id": self.record.source_agent_id,
             "source_event_refs": list(self.record.source_event_refs),
             "repository_revision": self.record.repository_revision,
         }

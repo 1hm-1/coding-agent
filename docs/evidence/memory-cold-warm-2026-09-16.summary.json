@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "evidence_kind": "deterministic_memory_cold_warm_benchmark",
   "recorded_at": "2026-09-16",
   "benchmark": "examples/memory_cold_warm_benchmark.py",
@@ -34,10 +34,33 @@
     "instruction-injection-negative"
   ],
   "seed_controls": {
-    "active": 8,
+    "active": 10,
     "stale": 1,
     "deleted": 1,
     "policy_rejected": 1
+  },
+  "before_after": {
+    "before": {
+      "relevant_recall": 1.0,
+      "precision": 0.6666666666666666,
+      "irrelevant_injection_rate": 0.3333333333333333,
+      "retrieval_tokens_total": 116,
+      "memory_context_tokens_total": 803,
+      "model_tokens_warm_minus_cold": 803
+    },
+    "after": {
+      "relevant_recall": 1.0,
+      "precision": 1.0,
+      "irrelevant_injection_rate": 0.0,
+      "retrieval_tokens_total": 81,
+      "memory_context_tokens_total": 130,
+      "model_tokens_warm_minus_cold": 130
+    },
+    "memory_extra_model_token_reduction_fraction": 0.838107098381071,
+    "false_positive_cases_removed": [
+      "deploy-region-distractor",
+      "invoice-label-distractor"
+    ]
   },
   "results": {
     "paired_cases": 12,
@@ -47,51 +70,49 @@
       "delta": 0.33333333333333337
     },
     "relevant_recall": 1.0,
-    "precision": 0.6666666666666666,
-    "irrelevant_injection_rate": 0.3333333333333333,
+    "precision": 1.0,
+    "irrelevant_injection_rate": 0.0,
     "unrelated_behavior_change_rate": 0.0,
     "unrelated_memory_behavior_change_rate": 0.0,
     "retrieval_tokens": {
-      "total": 116,
-      "mean": 9.666666666666666
+      "total": 81,
+      "mean": 6.75
     },
     "memory_context_tokens": {
-      "total": 803,
-      "mean": 66.91666666666667,
-      "max": 136
+      "total": 130,
+      "mean": 10.833333333333334,
+      "max": 34
     },
     "model_tokens": {
       "cold_total": 2740,
-      "warm_total": 3543,
-      "warm_minus_cold_total": 803
+      "warm_total": 2870,
+      "warm_minus_cold_total": 130
     },
     "tokens_per_successful_task": {
       "model": {
         "cold": 342.5,
-        "warm": 295.25
+        "warm": 239.16666666666666
       },
       "model_plus_retrieval": {
         "cold": 342.5,
-        "warm": 304.9166666666667
+        "warm": 245.91666666666666
       }
     },
-    "wall_latency_ms": {
-      "cold_total": 534.398544990836,
-      "cold_mean": 44.53321208256966,
-      "cold_p50": 43.4965700005705,
-      "cold_p95": 52.26890699850628,
-      "warm_total": 572.5383649987634,
-      "warm_mean": 47.71153041656362,
-      "warm_p50": 46.98744100096519,
-      "warm_p95": 53.389360997243784,
-      "warm_minus_cold_mean": 3.178318333993957
+    "leakage_selected_counts": {
+      "scope": 0,
+      "revision": 0,
+      "stale_deleted": 0
+    },
+    "original_three_case_warm_success": {
+      "successful": 3,
+      "total": 3
     }
   },
   "limitations": [
     "The oracle and model usage are deterministic synthetic fixtures, not Provider quality evidence.",
     "Each pair uses an isolated memory pool so no-match and isolation controls are not cross-case contaminated.",
-    "Latency is one local run and is sensitive to host scheduling.",
-    "This baseline does not change retrieval scoring and does not justify default Application/headless or IPC Memory integration."
+    "Latency is emitted by the executable report but is not used for optimization acceptance because it is sensitive to host scheduling.",
+    "The A/B changes deterministic retrieval and Context representation; it does not justify default Application/headless or IPC Memory integration."
   ],
   "contains_credentials": false
 }

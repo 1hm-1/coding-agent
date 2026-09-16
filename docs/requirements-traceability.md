@@ -20,7 +20,7 @@
 | success/tool/token/latency/failure/recovery 指标 | M3 已完成离线聚合 | `evaluation.py` + committed events | report schema、失败分母和 recovery tests |
 | replayable structured trajectory | 已实现，M2.1 已将 SQLite 设为 authority | `trajectory.py` / SQLite export | sequence/replay/golden/export equivalence |
 | Release/Evidence hardening | 已完成 | Git/CI、coverage、扩大的 mypy 门禁、recovery metrics、multi-repository eval、opt-in provider smoke | `.github/workflows/`、`pyproject.toml`、`evaluation.py`、`examples/eval_suite.json`、默认测试与手动 smoke；提交 `cf82f3c` 的 Python 3.10/3.11 hosted CI 成功；不宣称生产成功率 |
-| 成熟终端 Agent 产品扩展 | P2-M1/P2-M2 已实现，其余已设计未实现 | [`v2-product-architecture.md`](./v2-product-architecture.md) | Headless IPC 与 episodic/semantic Memory（显式 Python composition）已有证据；默认 Application/headless 不启用 Memory；Skill/MCP、多 Agent 和终端层仍需逐阶段验收 |
+| 成熟终端 Agent 产品扩展 | P2-M1/P2-M2 已实现，其余已设计未实现 | [`v2-product-architecture.md`](./v2-product-architecture.md) | Headless IPC 与 episodic/semantic Memory（显式 Python composition）已有证据；冻结检索 A/B 保持 recall 1.0、消除 benchmark 误注入并减少 83.8% Memory 额外模型 Token；默认 Application/headless 不启用 Memory；Skill/MCP、多 Agent 和终端层仍需逐阶段验收 |
 | Runtime 与 Agent Platform 集成 | P2-M1 producer 已完成；Platform consumer 待外部验证 | [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md)、`protocol/v1/*.schema.json`、[`p2-implementation-plan.md`](./p2-implementation-plan.md)、`tests/test_protocol.py` | discovery/headless、golden、取消/退出码、v0.1/v0.2 vectors 已通过；consumer suite 尚未执行 |
 
 ## 2. 面试高频主题映射
@@ -37,7 +37,7 @@
 | retry/fallback | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §5 | 已实现 | 只对分类基础设施错误；质量差不自动 fallback |
 | 重复工具调用/幂等 | [`contracts.md`](./contracts.md)、M2.2 recovery rules | 部分实现 | 已确认结果不重复；未知写操作需 resolution，不能宣称 exactly-once |
 | 上下文压缩与信息丢失 | [`architecture.md`](./architecture.md) §13、[`roadmap.md`](./roadmap.md) §7 | M3 已实现 | 不编造 Token 降幅；用 lineage、required-fact retention 和 task success A/B |
-| 短期/长期记忆 | Context M3 与 P2-M2 episodic/semantic 已实现 | 已实现（procedural 未来设计） | 可讲受控 lifecycle、provenance、scope、bounded retrieval 和 12-case 冻结 cold/warm baseline；当前只支持显式 Python composition，procedural memory/Skill 到 P2-M3 |
+| 短期/长期记忆 | Context M3 与 P2-M2 episodic/semantic 已实现 | 已实现（procedural 未来设计） | 可讲受控 lifecycle、provenance、scope、加权 lexical retrieval 和 12-case 冻结 A/B；Token 降幅只适用于 scripted benchmark，当前只支持显式 Python composition，procedural memory/Skill 到 P2-M3 |
 | Eval 体系和 Badcase 定位 | [`testing-strategy.md`](./testing-strategy.md)、[`roadmap.md`](./roadmap.md) §7 | M3 离线 eval + M5.1 live A/B + capability holdout 已实现 | 能区分 oracle/runtime/e2e 和无效调用；小样本不外推生产成功率 |
 | A/B 与上线迭代 | [`roadmap.md`](./roadmap.md) M3 | 离线 paired A/B 已实现 | 只做固定 suite 的描述性比较；真实流量实验不在当前项目证据内 |
 | 安全、权限、Prompt Injection | [`architecture.md`](./architecture.md) §10、M4.1/M4.2 | 应用层 + Linux namespace 部分实现 | capability fail-closed、structured argv allowlist、secret/network/escape/resource/approval tests；不宣称抵御内核漏洞或跨平台等价 |

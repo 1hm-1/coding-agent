@@ -29,8 +29,8 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-固定 `v0.1.0` 验收基线为 93 个测试；P2-M1 完成后为 111 个，P2-M2 完成后当前开发树为
-134 个。具备 native sandbox capability 的环境中全部通过，能力受限
+固定 `v0.1.0` 验收基线为 93 个测试；P2-M1 完成后为 111 个，P2-M2 冻结 benchmark 后为
+134 个，检索优化后当前开发树为 136 个。具备 native sandbox capability 的环境中全部通过，能力受限
 环境中 native-only case 会显式 skip。live provider smoke 需显式凭据和手动触发。
 
 `examples/capability_holdout_suite.json` 是 M5 的非 search 能力门禁：只包含正常任务，覆盖
@@ -115,7 +115,8 @@ P2-M2 的 Memory calibration 使用 12 个冻结的确定性 Runtime cold/warm p
 无匹配、2 个词面相似但语义无关，以及 user scope、repository/revision、stale/deleted 和诱导
 指令拒绝控制。它报告 trusted task oracle、relevant recall、precision、irrelevant injection、
 无关 Memory 导致的行为变化、retrieval/Memory-context Token、scripted model Token、Token per
-successful task 和端到端 wall latency；只验证当前 lexical baseline 的评测链路，不作为真实
+successful task 和端到端 wall latency。runner 在同一 case/seed/cold 结果上运行冻结旧算法与候选
+算法，报告 precision/recall、误注入与 Memory 额外模型 Token 的 before/after；它仍不作为真实
 Provider 或生产收益证据。
 
 ## 7. M3 Context、Compression 与 Evaluation 矩阵

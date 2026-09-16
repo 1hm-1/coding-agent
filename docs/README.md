@@ -20,6 +20,7 @@
 | Phase 2 产品化架构与 IPC 契约（P2-D0） | 设计已完成 | [`v2-product-architecture.md`](./v2-product-architecture.md)、[`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md) |
 | Phase 2 P2-M1 Headless Runtime IPC | 已完成 | [`p2-implementation-plan.md`](./p2-implementation-plan.md) |
 | Phase 2 P2-M2 Layered Memory | 已完成 | [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md) |
+| P2-M2 Retrieval/Token 优化 | 已完成 | [`p2-m2-retrieval-optimization.md`](./p2-m2-retrieval-optimization.md) |
 
 当前代码事实以 [`current-state.md`](./current-state.md) 为准。目标架构以 [`architecture.md`](./architecture.md) 为准。两者冲突时，不要假设目标已经实现。
 
@@ -40,6 +41,7 @@
 11. [`requirements-traceability.md`](./requirements-traceability.md)：原始目标与面试能力的证据边界。
 12. [`p2-implementation-plan.md`](./p2-implementation-plan.md)：已完成 P2-M1 范围、验收证据和后续顺序。
 13. [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md)：已完成 Memory 范围、策略与验收证据。
+14. [`p2-m2-retrieval-optimization.md`](./p2-m2-retrieval-optimization.md)：冻结 benchmark 上的检索精度与 Token A/B。
 
 做代码评审：先读 `contracts.md` 和 `testing-strategy.md`，再对照当前里程碑退出条件。
 

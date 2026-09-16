@@ -466,6 +466,59 @@ class MemoryRetrievalTest(MemoryFixture):
         self.assertEqual(selection.hits, ())
         self.assertEqual(selection.total_token_cost, 0)
 
+    def test_weighted_threshold_filters_topic_distractors(self) -> None:
+        relevant = self.activate("Invoice totals must be rounded to two decimal places")
+        self.activate("Invoice totals labels use title case")
+        selection = self.retriever().retrieve(
+            MemoryQuery(
+                text="How should invoice totals be rounded?",
+                repository_id="repository-a",
+                repository_revision="revision-a",
+            )
+        )
+        self.assertEqual(
+            [hit.record.memory_id for hit in selection.hits],
+            [relevant.memory_id],
+        )
+        self.activate("This is what the user required")
+        common_only = self.retriever().retrieve(
+            MemoryQuery(
+                text="What is required for this user?",
+                repository_id="repository-a",
+                repository_revision="revision-a",
+            )
+        )
+        self.assertEqual(common_only.hits, ())
+
+    def test_scope_priority_and_relative_score_floor_are_deterministic(self) -> None:
+        session = self.activate(
+            "Invoice formatter currency totals",
+            scope=MemoryScope.SESSION,
+            revision=None,
+        )
+        self.activate(
+            "Invoice formatter currency totals",
+            scope=MemoryScope.USER,
+            revision=None,
+        )
+        self.activate("Invoice formatter currency legacy")
+        selection = self.retriever().retrieve(
+            MemoryQuery(
+                text="invoice formatter currency totals",
+                session_id="session-a",
+                repository_id="repository-a",
+                repository_revision="revision-a",
+                user_id="user-a",
+                top_k=3,
+            )
+        )
+        self.assertEqual(selection.hits[0].record.memory_id, session.memory_id)
+        self.assertEqual(len(selection.hits), 2)
+        self.assertEqual(
+            {hit.record.scope for hit in selection.hits},
+            {MemoryScope.SESSION, MemoryScope.USER},
+        )
+
 
 class MemoryContextAndEvaluationTest(MemoryFixture):
     def test_default_application_and_headless_do_not_wire_memory(self) -> None:
@@ -516,7 +569,7 @@ class MemoryContextAndEvaluationTest(MemoryFixture):
         )
         report = json.loads(completed.stdout)
         self.assertEqual(report["benchmark"], "p2-m2-memory-cold-warm")
-        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["schema_version"], 3)
         self.assertEqual(report["frozen_case_count"], 12)
         self.assertEqual(report["implementation"]["default_application_enabled"], False)
         self.assertEqual(report["implementation"]["headless_enabled"], False)
@@ -546,30 +599,47 @@ class MemoryContextAndEvaluationTest(MemoryFixture):
             {"cold": 2 / 3, "warm": 1.0, "delta": 1.0 - 2 / 3},
         )
         self.assertEqual(summary["relevant_recall"], 1.0)
-        self.assertEqual(summary["precision"], 2 / 3)
-        self.assertEqual(summary["irrelevant_injection_rate"], 1 / 3)
+        self.assertEqual(summary["precision"], 1.0)
+        self.assertEqual(summary["irrelevant_injection_rate"], 0.0)
         self.assertEqual(summary["unrelated_behavior_change_rate"], 0.0)
         self.assertEqual(summary["unrelated_memory_behavior_change_rate"], 0.0)
-        self.assertEqual(summary["retrieval_tokens"], {"total": 116, "mean": 116 / 12})
-        self.assertEqual(summary["memory_context_tokens"], {"total": 803, "mean": 803 / 12, "max": 136})
+        self.assertEqual(summary["retrieval_tokens"], {"total": 81, "mean": 81 / 12})
+        self.assertEqual(summary["memory_context_tokens"], {"total": 130, "mean": 130 / 12, "max": 34})
         self.assertEqual(summary["model_tokens"]["cold"]["total"]["total"], 2740)
-        self.assertEqual(summary["model_tokens"]["warm"]["total"]["total"], 3543)
-        self.assertEqual(summary["model_tokens"]["delta_total"], 803)
+        self.assertEqual(summary["model_tokens"]["warm"]["total"]["total"], 2870)
+        self.assertEqual(summary["model_tokens"]["delta_total"], 130)
         self.assertEqual(
             summary["tokens_per_successful_task"],
             {
-                "model": {"cold": 342.5, "warm": 295.25},
+                "model": {"cold": 342.5, "warm": 239.16666666666666},
                 "model_plus_retrieval": {
                     "cold": 342.5,
-                    "warm": 304.9166666666667,
+                    "warm": 245.91666666666666,
                 },
             },
+        )
+        comparison = report["ab"]["comparison"]
+        self.assertEqual(
+            comparison["memory_extra_model_tokens"],
+            {"before": 803, "after": 130, "reduction_fraction": 673 / 803},
+        )
+        self.assertEqual(
+            comparison["irrelevant_injection_rate"],
+            {"before": 1 / 3, "after": 0.0},
+        )
+        self.assertEqual(
+            report["acceptance"]["leakage_selected_counts"],
+            {"scope": 0, "revision": 0, "stale_deleted": 0},
+        )
+        self.assertEqual(
+            report["acceptance"]["original_three_case_warm_success"],
+            {"successful": 3, "total": 3},
         )
         by_case = {case["case_id"]: case for case in summary["cases"]}
         for case_id in ("logging-format-no-match", "auth-retry-no-match"):
             self.assertEqual(by_case[case_id]["selected_memory_ids"], [])
         for case_id in ("deploy-region-distractor", "invoice-label-distractor"):
-            self.assertEqual(len(by_case[case_id]["selected_memory_ids"]), 1)
+            self.assertEqual(by_case[case_id]["selected_memory_ids"], [])
             self.assertFalse(by_case[case_id]["behavior_changed"])
         for case_id in (
             "wrong-user-scope",
@@ -733,13 +803,32 @@ class MemoryContextAndEvaluationTest(MemoryFixture):
             ["system", "task_runtime", "repository", "memory", "summary", "recent"],
         )
         memory_section = next(section for section in built.sections if section.name == "memory")
-        self.assertIn("untrusted reference data", memory_section.messages[0].content)
+        self.assertIn("untrusted data", memory_section.messages[0].content)
+        self.assertNotIn("source_run_id", memory_section.messages[0].content)
         self.assertEqual(memory_section.source_refs, (f"memory:{active.memory_id}:v1",))
         assert built.memory is not None
         self.assertTrue(built.memory["included"])
         self.assertEqual(built.memory["included_memory_ids"], [active.memory_id])
         self.assertEqual(built.memory["records"][0]["memory_id"], active.memory_id)
         self.assertEqual(built.memory["records"][0]["source_run_id"], "run-1")
+        self.assertEqual(built.memory["records"][0]["source_agent_id"], "agent-1")
+        self.assertEqual(
+            built.memory["records"][0]["provenance"],
+            {
+                "source_run_id": "run-1",
+                "source_agent_id": "agent-1",
+                "source_event_refs": ["event-ref-1"],
+            },
+        )
+        self.assertEqual(built.memory["retrieval_id"], "context-retrieval")
+        self.assertEqual(
+            built.memory["actual_context_token_cost"],
+            memory_section.estimated_tokens,
+        )
+        self.assertGreater(
+            built.memory["records"][0]["actual_context_token_cost"],
+            0,
+        )
         round_trip = BuiltContext.from_dict(built.to_dict())
         self.assertEqual(round_trip.memory, built.memory)
 

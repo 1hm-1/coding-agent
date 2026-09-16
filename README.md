@@ -196,7 +196,8 @@ zero infrastructure failures, and a source invariant rate of 1.0.
 PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
 ```
 
-该 benchmark 使用 12 个冻结 case 和可信 oracle，比较默认 context 与显式 Memory composition，
+该 benchmark 使用 12 个冻结 case 和可信 oracle，在共享 cold 结果上运行旧检索/JSON Context 与
+加权检索/紧凑 Context 的 before/after A/B，并比较默认 context 与显式 Memory composition，
 覆盖明确相关、无匹配、词面相似但语义无关、错误 user scope、错误 repository/revision、
 stale/deleted 以及诱导指令拒绝。它报告 task success、relevant recall、precision/irrelevant
 injection、无关 Memory 导致的行为变化、scripted model Token、retrieval Token、Memory context
@@ -290,6 +291,7 @@ the compression A/B did not save tokens and remains a small local benchmark.
 | [v0.1.0 发布说明 / Release notes](docs/releases/v0.1.0.md) | 固定复现步骤与完整边界 / Pinned reproduction and full boundaries |
 | [Phase 2 实施计划 / Implementation plan](docs/p2-implementation-plan.md) | 已完成 P2-M1 checklist 与后续路线 / Completed P2-M1 checklist and staged roadmap |
 | [P2-M2 Memory 计划 / P2-M2 Memory plan](docs/p2-m2-implementation-plan.md) | Memory 契约、benchmark 与退出证据 / Memory contract, benchmark, and exit evidence |
+| [Memory 检索优化 / Retrieval optimization](docs/p2-m2-retrieval-optimization.md) | 冻结 A/B、检索精度与 Token 证据 / Frozen A/B, retrieval precision, and token evidence |
 | [Phase 2 产品架构 / Product architecture](docs/v2-product-architecture.md) | 已实现 Memory 与未来 Skill/MCP、多 Agent、终端边界 / Implemented Memory and staged future capabilities |
 | [Runtime IPC v1](docs/protocol/runtime-ipc-v1.md) | 已实现的 producer 进程契约；Platform consumer 仍外置 / Implemented producer contract; Platform consumer remains external |
 

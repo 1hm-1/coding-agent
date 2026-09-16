@@ -22,6 +22,7 @@ coding-agent/
 │   ├── v2-product-architecture.md    # Phase 2 产品化架构与阶段边界
 │   ├── p2-implementation-plan.md     # P2-M1 已完成实施记录与 Phase 2 顺序
 │   ├── p2-m2-implementation-plan.md  # P2-M2 已完成 Memory 实施与验收记录
+│   ├── p2-m2-retrieval-optimization.md # 冻结 benchmark 上的检索/Token A/B 验收
 │   ├── contracts.md                  # 当前 M5.1 精确契约
 │   ├── current-state.md              # 已实现、未实现、已知限制
 │   ├── decisions/                    # Eval-backed capability decision records
@@ -61,7 +62,7 @@ coding-agent/
 │   ├── capability_holdout_suite.json # M5 非 search 能力门禁 holdout
 │   ├── todo_cli/                     # 真实小仓库 fixture
 │   ├── todo_cli_scripted_run.json    # 失败后修复的确定性脚本
-│   ├── memory_cold_warm_benchmark.py # P2-M2 多任务 cold/warm benchmark
+│   ├── memory_cold_warm_benchmark.py # P2-M2 冻结 cold/warm + retrieval/Context A/B
 │   ├── mini_repos/                    # M5 多仓库评测 fixture（含三个 search benchmark 仓库）
 │   └── eval_scripts/                  # M5 scripted backend/compression 输入
 ├── src/coding_agent/
@@ -85,7 +86,7 @@ coding-agent/
 │   │   ├── policy.py                 # scope/content admission
 │   │   ├── service.py                # proposal/approval/lifecycle + provenance
 │   │   ├── sqlite.py                 # schema v4 Memory authority
-│   │   ├── retrieval.py              # bounded lexical/metadata baseline
+│   │   ├── retrieval.py              # bounded weighted lexical/metadata retrieval
 │   │   └── evaluation.py             # cold/warm quality metrics
 │   ├── protocol/
 │   │   ├── __init__.py               # Runtime IPC public exports
@@ -227,7 +228,7 @@ src/coding_agent/memory/
 ├── policy.py                  # scope/content admission
 ├── service.py                 # proposal/approval/lifecycle + journal provenance
 ├── sqlite.py                  # schema v4 Memory authority
-├── retrieval.py              # bounded lexical/metadata baseline
+├── retrieval.py              # bounded weighted lexical/metadata retrieval
 └── evaluation.py             # cold/warm quality metrics
 
 tests/test_memory.py           # lifecycle/rollback/leakage/context/eval contract

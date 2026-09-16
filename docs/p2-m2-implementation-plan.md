@@ -83,3 +83,8 @@ Builder。Working memory 继续由现有 session/messages/context 提供；Proce
   脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
   它证明 A/B 和指标链路，不代表真实 Provider 或生产收益。
 - SQLite schema 已迁移到 v4。P2-M3 仍未激活。
+
+冻结上述 baseline 后，已按 [`p2-m2-retrieval-optimization.md`](./p2-m2-retrieval-optimization.md)
+完成同一 12-case 集合的 before/after：recall 1.0→1.0、precision 2/3→1.0、irrelevant
+injection 1/3→0，Memory 额外模型 Token 803→130（-83.8%），隔离泄漏保持 0；当前默认测试
+为 136/136。原始完成证据保留在上文，避免用优化后数字重写冻结基线。
