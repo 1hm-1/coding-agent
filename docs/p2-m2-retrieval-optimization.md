@@ -138,3 +138,16 @@ negative、冲突记忆、无记忆、user scope、repository revision、stale/d
 本轮收口已通过静态 manifest 契约 3/3、Ruff、全量 unittest 142/142 和 git diff --check。上述检查
 只验证仓库内的 manifest、冻结说明与现有实现，没有导入或执行用户保管的 Holdout 正文；manifest 仍
 保持 executed: false、results_generated: false。
+
+## 10. S3.5 检索泛化修复与算法冻结
+
+基于 L1/L2 12-case development set 和自建通用标点 micro case，修复 tokenizer 把自然语言词尾
+`.:-` 当作 term 内容的问题；identifier 内部 `v1.2`、`cache-key` 保持不变。没有增加 alias、literal、
+case 特判、末尾词规则或默认 Memory wiring。L1/L2 的 recall `1.0`、irrelevant injection `0`、
+retrieval Token `81`、warm model Token `2870`、Memory Context Token `130`、scope/revision/status
+leakage `0/0/0` 与原始三任务 `3/3` 均不变；通用 punctuation micro recall 从 `0/1` 提升为 `1/1`，
+topic-only negative 仍未注入。
+
+旧 L3 只保留冻结 evidence/hash contract，不再用候选算法重复执行已知 Holdout。未访问用户保管的
+Holdout v2，未修改任何 Holdout manifest/hash。算法在本提交冻结；完整报告见
+[`s3-5-retrieval-algorithm-freeze-2026-09-17.md`](./evidence/s3-5-retrieval-algorithm-freeze-2026-09-17.md)。

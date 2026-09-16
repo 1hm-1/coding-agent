@@ -57,7 +57,11 @@ _SCOPE_PRIORITY = {
 
 
 def _normalize_term(term: str) -> str:
-    value = term.casefold()
+    # The scanner keeps '.', ':' and '-' so identifiers such as ``v1.2`` and
+    # ``cache-key`` remain one term.  Those same characters are ordinary sentence
+    # punctuation at a token boundary, however, and must not make ``interval`` and
+    # ``interval:`` different lexical evidence.
+    value = term.casefold().strip(".:-")
     # Small lexical equivalence classes cover common inflection and wording without
     # turning this deterministic retriever into a semantic/vector system.
     aliases = {

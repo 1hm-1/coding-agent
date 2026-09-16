@@ -50,6 +50,9 @@
 - 确定性 lexical + metadata retrieval 对词形做小型归一，按 query/record coverage 加权、常见词
   降权、末尾信息词加权，并使用最低相关性、scope 稳定优先级和相对 score floor 动态截断；仍限制
   top-k/Token 并过滤 scope、revision、expiry、stale/deleted。没有 embedding、vector 或 RAG framework。
+- S3.5 在不访问 Holdout 的前提下增加通用 term 边界标点规范化，保留 identifier 内部标点；L1/L2
+  12-case 所有质量/Token 指标不变，自建 punctuation development recall `0/1→1/1` 且 negative
+  injection 仍为 0。检索策略随后冻结，默认 Memory 路径仍关闭。
 - `BudgetedContextBuilder` 只在显式配置 retriever/query factory 时增加 `memory` section；内容标记为
   不可信参考数据。模型只接收紧凑 notice 与内容列表；`context_built` manifest 仍记录 retrieval id、
   memory/schema/record version、score、完整 provenance、retrieval Token 估算、实际 Context Token 成本
@@ -112,6 +115,9 @@
   S3.5 算法冻结后首次执行，不能据此宣称真实模型收益。
 - 本轮 L3.5 收口实际通过静态 manifest 契约 3/3、Ruff、全量 unittest 142/142 和 git diff --check；
   这些检查没有导入或执行 Holdout 正文，manifest 仍保持 executed: false、results_generated: false。
+- S3.5 算法冻结收口通过 143/143 unittest（含四份 semantic golden）、Ruff、34 文件 mypy、
+  compileall 与 git diff --check；L1/L2 Runtime benchmark 的 recall/injection/retrieval/model Token、
+  leakage、兼容 arm 和 manifest attribution 均无回退。未运行 coverage，最近一次 78.5% 证据不变。
 
 ### Model
 
@@ -209,7 +215,7 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后当前开发树为 139 个，在当前
+- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后为 139 个，L3.5 manifest 后为 142 个，S3.5 算法冻结后当前开发树为 143 个，在当前
   capability probe 成功的环境中全部通过。`tests/live_provider_smoke.py` 为凭据门控的显式测试，
   不计入默认 discovery；能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。

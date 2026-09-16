@@ -15,7 +15,9 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-本轮收口为 142/142 个默认测试通过（L3 后 137 个，新增 2 个 live Memory A/B harness contract test 和 3 个 L3.5 v2 静态 manifest contract test）。Ruff 与 git diff --check 也通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
+本轮收口为 143/143 个默认测试通过（`6c47a7d` 的 142 个无回退，新增 1 个通用边界标点
+development test）。Ruff、34 文件 mypy、compileall 与 git diff --check 也通过。
+`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
 
 ## 2. 工作区事实
 
@@ -161,6 +163,11 @@ d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f。主 suite 有
 单独保留且不计入主 Holdout。manifest 明确 executed: false 和 results_generated: false；必须
 等 S3.5 算法冻结后才可第一次运行，不能先看结果再改 case。
 
+S3.5 已只用 L1/L2 development set 与自建通用标点 case 修复 lexical term 边界标点问题；内部
+identifier 标点保留，没有新增 alias/literal/末尾词特判。L1/L2 recall、误注入、retrieval/model
+Token、scope leakage、三任务兼容 arm 与 manifest attribution 均不回退。历史 L3 测试现在只校验
+冻结 evidence/hash，不再用候选算法重跑已知 Holdout；用户保管的 Holdout v2 未访问或执行。
+
 下一候选是 P2-M3 Profiles/Skill Runtime，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入
 shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。
 
@@ -184,7 +191,7 @@ shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector b
 ```text
 请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、已完成的
 docs/p2-implementation-plan.md、docs/p2-m2-implementation-plan.md 和 Runtime IPC v1/compatibility
-权威规范。P2-M1/P2-M2 已完成，先运行 139 个默认测试确认基线；P2-M3 尚未激活，不得提前加入
+权威规范。P2-M1/P2-M2 已完成，先运行 143 个默认测试确认基线；P2-M3 尚未激活，不得提前加入
 Skill、MCP、多 Agent、UI、RAG/vector、shell 字符串或默认网络。
 ```
 

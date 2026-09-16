@@ -19,7 +19,7 @@ from coding_agent.memory.domain import (
 )
 from coding_agent.memory.evaluation import MemoryPairResult, summarize_memory_pairs
 from coding_agent.memory.policy import MemoryPolicyError, MemoryWriteContext
-from coding_agent.memory.retrieval import LexicalMemoryRetriever
+from coding_agent.memory.retrieval import LexicalMemoryRetriever, lexical_terms
 from coding_agent.memory.service import JournalProvenanceValidator, MemoryService
 from coding_agent.memory.sqlite import (
     DuplicateMemory,
@@ -489,6 +489,25 @@ class MemoryRetrievalTest(MemoryFixture):
             )
         )
         self.assertEqual(common_only.hits, ())
+
+    def test_boundary_punctuation_is_normalized_without_admitting_topic_noise(self) -> None:
+        # S3.5 development data: generic prose punctuation, unrelated to either
+        # frozen holdout. Internal identifier punctuation must remain intact.
+        relevant = self.activate("Retention interval: seven cycles.")
+        self.activate("Retention documentation index.")
+        selection = self.retriever().retrieve(
+            MemoryQuery(
+                text="What retention interval?",
+                repository_id="repository-a",
+                repository_revision="revision-a",
+            )
+        )
+        self.assertEqual(
+            [hit.record.memory_id for hit in selection.hits],
+            [relevant.memory_id],
+        )
+        self.assertIn("interval", selection.hits[0].matched_terms)
+        self.assertEqual(lexical_terms("api v1.2 cache-key:"), {"api", "v1.2", "cache-key"})
 
     def test_scope_priority_and_relative_score_floor_are_deterministic(self) -> None:
         session = self.activate(
