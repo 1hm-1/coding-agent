@@ -73,7 +73,7 @@
   （`+0.003980499059252907ms`）；延迟受本机调度影响，但回退没有从证据中删除。这不是
   Provider 收益证据。
   脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
-- 当前收口门禁通过 139/139 默认 unittest（L3 后 137 个无回退，新增 2 个 live Memory A/B
+- 上一轮收口门禁（加入 L3.5 v2 静态契约测试前）通过 139/139 默认 unittest（L3 后 137 个无回退，新增 2 个 live Memory A/B
   harness contract test）、四份既有 semantic golden、Ruff、34 个配置范围源码文件 mypy 与 compileall；
   最近一次完整 coverage 仍为 L3 前的 78.5% statement coverage、
   wheel/sdist、独立 wheel Memory import、calculator/todo smoke 与多任务 benchmark；本轮未运行
@@ -103,6 +103,15 @@
   报告覆盖 success/completion、Token、retrieval、P50/P95 latency、工具与失败、first relevant action
   和安全不变量，同时拒绝 Secret/绝对路径且不保存 reasoning。当前仅有离线 harness contract test，
   尚无 live Provider 净收益结果；默认 Application/headless/IPC 仍未接入 Memory。
+- L3.5 Holdout v2 已完成“先冻结元数据、后等待算法冻结”的准备：正文已移至用户保管的仓库外目录，
+  共享仓库只保留 manifest/hash/冻结说明；20 个 case 分布在 4 个新任务领域、
+  4 个共享 Memory pool，包含 paraphrase、hard negative、冲突记忆、无记忆、scope/revision、
+  stale/deleted 和 prompt-injection 负例。manifest SHA-256 为
+  d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f；主 Holdout 不含原始
+  5298ba0 三任务兼容 arm。当前只完成静态结构/哈希契约，executed: false、无任何结果；必须等
+  S3.5 算法冻结后首次执行，不能据此宣称真实模型收益。
+- 本轮 L3.5 收口实际通过静态 manifest 契约 3/3、Ruff、全量 unittest 142/142 和 git diff --check；
+  这些检查没有导入或执行 Holdout 正文，manifest 仍保持 executed: false、results_generated: false。
 
 ### Model
 

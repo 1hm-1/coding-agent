@@ -15,7 +15,7 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前开发树应为 139 个默认测试通过（L3 后 137 个，新增 2 个 live Memory A/B harness contract test）。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
+本轮收口为 142/142 个默认测试通过（L3 后 137 个，新增 2 个 live Memory A/B harness contract test 和 3 个 L3.5 v2 静态 manifest contract test）。Ruff 与 git diff --check 也通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
 
 ## 2. 工作区事实
 
@@ -153,6 +153,13 @@ pair 内交替 off/on；Memory 必须来自先前 committed Runtime completion e
 retrieval、latency、工具/失败、first relevant action 与安全不变量，并保留完整 Memory manifest，拒绝
 Secret、绝对路径和 reasoning content。当前仅完成离线 contract test，真实 Provider A/B 仍待凭据
 门控运行；Memory 继续显式 opt-in，P2-M3 未激活。
+
+L3.5 Holdout v2 已先完成冻结准备，但刻意没有首次执行：正文已移至用户保管的仓库外目录，共享仓库仅
+保留 metadata 在 docs/evidence/memory-retrieval-holdout-v2.manifest.json，suite SHA-256 为
+d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f。主 suite 有 20 个 case、4 个
+独立任务领域、4 个共享 pool；oracle 只检查代码、测试、文件或工具行为，原始 5298ba0 三任务 arm
+单独保留且不计入主 Holdout。manifest 明确 executed: false 和 results_generated: false；必须
+等 S3.5 算法冻结后才可第一次运行，不能先看结果再改 case。
 
 下一候选是 P2-M3 Profiles/Skill Runtime，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入
 shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。

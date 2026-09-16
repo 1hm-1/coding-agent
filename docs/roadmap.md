@@ -356,6 +356,15 @@ before cold/warm mean 为 `45.834164333731074ms`/`47.033260334198225ms`，after 
 因此 L3 的 recall/injection 门槛未通过，首轮结果已冻结并原样保存；真实 Provider cold/warm A/B
 与净收益证明仍是默认入口或 IPC 集成的前置条件，P2-M3 保持未激活。
 
+L3.5 Holdout v2 已完成盲测准备：20 个非近同构 case、4 个任务领域、4 个共享 Memory pool，以及
+只检查代码/测试/文件/工具行为的 oracle 已冻结；5298ba0 三任务兼容 arm 单独保留。其 manifest
+SHA-256 为 d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f，当前无执行或结果记录。
+必须等待 S3.5 算法冻结后才首次执行；在此之前不得修改 case、根据结果调参或把 Holdout 当作模型收益
+证据。
+
+本轮收口实际通过静态 manifest 契约 3/3、Ruff、全量 unittest 142/142 和 git diff --check；正文仍在
+仓库外用户保管位置，manifest 保持 executed=false，未产生 Holdout 结果。
+
 ## 14. Phase 2 分阶段路线
 
 | 子阶段 | 状态 | 交付物 | 退出门禁 |

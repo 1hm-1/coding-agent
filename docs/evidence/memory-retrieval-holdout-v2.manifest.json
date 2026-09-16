@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "holdout_id": "l3.5-memory-retrieval-holdout-v2",
+  "body_storage": {
+    "kind": "user_managed_out_of_repo",
+    "relative_label": "l3.5-memory-retrieval-holdout-v2/memory_retrieval_holdout_v2.json",
+    "repository_path": null,
+    "content_sha256": "d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f"
+  },
+  "suite_sha256": "d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f",
+  "baseline_commit": "8ebc800",
+  "algorithm_gate": "S3.5 algorithm freeze required before first execution",
+  "freeze_status": "metadata_frozen_body_in_user_custody_results_absent",
+  "execution": {
+    "executed": false,
+    "results_generated": false,
+    "first_run_reserved": true
+  },
+  "main_holdout": {
+    "case_count": 20,
+    "repository_count": 4,
+    "shared_memory_pool_count": 4,
+    "minimum_cases_per_shared_pool": 5,
+    "category_counts": {
+      "paraphrase": 7,
+      "hard_negative": 4,
+      "conflict_memory": 2,
+      "no_memory": 2,
+      "scope_isolation": 2,
+      "revision_isolation": 1,
+      "stale_deleted": 1,
+      "prompt_injection_negative": 1
+    },
+    "revision_isolation_case_ids": [
+      "harbor-05-route-revision-conflict",
+      "kiln-04-schema-revision"
+    ]
+  },
+  "repositories": [
+    {
+      "repository_id": "cinder-catalog",
+      "domain": "tabular archive ingestion",
+      "memory_pool_id": "pool-cinder",
+      "case_count": 5
+    },
+    {
+      "repository_id": "harbor-console",
+      "domain": "request routing and audit events",
+      "memory_pool_id": "pool-harbor",
+      "case_count": 5
+    },
+    {
+      "repository_id": "meadow-notes",
+      "domain": "personal notes and archive indexing",
+      "memory_pool_id": "pool-meadow",
+      "case_count": 5
+    },
+    {
+      "repository_id": "kiln-metrics",
+      "domain": "measurement validation and reporting",
+      "memory_pool_id": "pool-kiln",
+      "case_count": 5
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "cinder-01-empty-lines",
+      "repository_id": "cinder-catalog",
+      "memory_pool_id": "pool-cinder",
+      "category": "paraphrase",
+      "expected_oracle_type": "test_and_file"
+    },
+    {
+      "case_id": "cinder-02-duplicate-order",
+      "repository_id": "cinder-catalog",
+      "memory_pool_id": "pool-cinder",
+      "category": "paraphrase",
+      "expected_oracle_type": "test_result"
+    },
+    {
+      "case_id": "cinder-03-export-escaping-hard-negative",
+      "repository_id": "cinder-catalog",
+      "memory_pool_id": "pool-cinder",
+      "category": "hard_negative",
+      "expected_oracle_type": "test_and_file"
+    },
+    {
+      "case_id": "cinder-04-malformed-conflict",
+      "repository_id": "cinder-catalog",
+      "memory_pool_id": "pool-cinder",
+      "category": "conflict_memory",
+      "expected_oracle_type": "test_result"
+    },
+    {
+      "case_id": "cinder-05-count-helper-no-memory",
+      "repository_id": "cinder-catalog",
+      "memory_pool_id": "pool-cinder",
+      "category": "no_memory",
+      "expected_oracle_type": "test_and_file"
+    },
+    {
+      "case_id": "harbor-01-breaker-stop",
+      "repository_id": "harbor-console",
+      "memory_pool_id": "pool-harbor",
+      "category": "paraphrase",
+      "expected_oracle_type": "tool_behavior"
+    },
+    {
+      "case_id": "harbor-02-headerless-fallback",
+      "repository_id": "harbor-console",
+      "memory_pool_id": "pool-harbor",
+      "category": "paraphrase",
+      "expected_oracle_type": "test_result"
+    },
+    {
+      "case_id": "harbor-03-redirect-query-hard-negative",
+      "repository_id": "harbor-console",
+      "memory_pool_id": "pool-harbor",
+      "category": "hard_negative",
+      "expected_oracle_type": "test_and_file"
+    },
+    {
+      "case_id": "harbor-04-tenant-zone-scope",
+      "repository_id": "harbor-console",
+      "memory_pool_id": "pool-harbor",
+      "category": "scope_isolation",
+      "expected_oracle_type": "test_result"
+    },
+    {
+      "case_id": "harbor-05-route-revision-conflict",
+      "repository_id": "harbor-console",
+      "memory_pool_id": "pool-harbor",
+      "category": "conflict_memory",
+      "expected_oracle_type": "test_and_file"
+    },
+    {
+      "case_id": "meadow-01-undated-order",
+      "repository_id": "meadow-notes",
+      "memory_pool_id": "pool-meadow",
+      "category": "paraphrase",
+      "expected_oracle_type": "test_result"
+    },
+    {
+      "case_id": "meadow-02-literal-dash-hard-negative",
+      "repository_id": "meadow-notes",
+      "memory_pool_id": "pool-meadow",
+      "category": "hard_negative",
+      "expected_oracle_type": "test_and_file"
+    },
+    {
+      "case_id": "meadow-03-deleted-index-entry",
+      "repository_id": "meadow-notes",
+      "memory_pool_id": "pool-meadow",
+      "category": "stale_deleted",
+      "expected_oracle_type": "file_behavior"
+    },
+    {
+      "case_id": "meadow-04-dry-run-no-memory",
+      "repository_id": "meadow-notes",
+      "memory_pool_id": "pool-meadow",
+      "category": "no_memory",
+      "expected_oracle_type": "file_behavior"
+    },
+    {
+      "case_id": "meadow-05-private-archive-scope",
+      "repository_id": "meadow-notes",
+      "memory_pool_id": "pool-meadow",
+      "category": "scope_isolation",
+      "expected_oracle_type": "test_result"
+    },
+    {
+      "case_id": "kiln-01-display-precision",
+      "repository_id": "kiln-metrics",
+      "memory_pool_id": "pool-kiln",
+      "category": "paraphrase",
+      "expected_oracle_type": "test_and_file"
+    },
+    {
+      "case_id": "kiln-02-negative-duration",
+      "repository_id": "kiln-metrics",
+      "memory_pool_id": "pool-kiln",
+      "category": "paraphrase",
+      "expected_oracle_type": "test_result"
+    },
+    {
+      "case_id": "kiln-03-duration-palette-hard-negative",
+      "repository_id": "kiln-metrics",
+      "memory_pool_id": "pool-kiln",
+      "category": "hard_negative",
+      "expected_oracle_type": "test_and_file"
+    },
+    {
+      "case_id": "kiln-04-schema-revision",
+      "repository_id": "kiln-metrics",
+      "memory_pool_id": "pool-kiln",
+      "category": "revision_isolation",
+      "expected_oracle_type": "test_result"
+    },
+    {
+      "case_id": "kiln-05-prompt-injection-negative",
+      "repository_id": "kiln-metrics",
+      "memory_pool_id": "pool-kiln",
+      "category": "prompt_injection_negative",
+      "expected_oracle_type": "tool_behavior"
+    }
+  ],
+  "evaluation_contract": {
+    "oracle_must_be_behavioral": true,
+    "allowed_oracle_types": [
+      "test_result",
+      "test_and_file",
+      "file_behavior",
+      "tool_behavior"
+    ],
+    "natural_language_answer_oracles": false,
+    "no_memory_behavior_comparison": {
+      "case_ids": [
+        "cinder-05-count-helper-no-memory",
+        "meadow-04-dry-run-no-memory"
+      ],
+      "required_comparison": "memory_on_vs_memory_off",
+      "expected_behavior_delta": "none"
+    },
+    "required_scope_and_state_leakage_count": 0,
+    "required_metrics": [
+      "task_success",
+      "relevant_recall",
+      "precision",
+      "irrelevant_injection",
+      "irrelevant_memory_behavior_delta",
+      "retrieval_tokens",
+      "model_total_tokens",
+      "cold_latency",
+      "warm_latency",
+      "tokens_per_successful_task"
+    ]
+  },
+  "compatibility_arm": {
+    "source_commit": "5298ba0",
+    "source_suite": "examples/memory_retrieval_holdout.py",
+    "pool_id": "pool-compat-5298ba0",
+    "case_ids": [
+      "compat-01",
+      "compat-02",
+      "compat-03"
+    ],
+    "count": 3,
+    "counted_in_main_holdout": false,
+    "execution_status": "deferred_with_holdout"
+  }
+}

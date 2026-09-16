@@ -117,3 +117,24 @@ Token、retrieval、latency、工具/失败、first relevant action 和安全不
 S3 门禁为 139/139 unittest、四份 semantic golden、Ruff、34 文件 mypy、compileall 与
 `git diff --check`；未重跑完整 coverage，因此保留最近一次 78.5% 数字，不制造新覆盖率结论。
 完整审查见 [`s3-holdout-and-live-ab-review-2026-09-17.md`](./evidence/s3-holdout-and-live-ab-review-2026-09-17.md)。
+
+## 9. L3.5 盲测 Holdout v2（只冻结，不执行）
+
+为避免 development set 污染，已先建立 L3.5 Holdout v2 的正文、共享 Memory pool 和 metadata
+manifest，但本轮不调用检索器、Runtime、oracle 或 benchmark，也不生成结果。正文已转移到用户保管的
+仓库外目录；共享仓库只保留对外可审计的 case ID、预期 oracle 类型和冻结状态，位于
+[memory-retrieval-holdout-v2.manifest.json](./evidence/memory-retrieval-holdout-v2.manifest.json)。
+
+manifest 固定 suite SHA-256 为
+d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f，主 Holdout 为 20 个 case、
+4 个新任务领域/fixture repository 和 4 个共享 pool（每池 5 个 case）。覆盖 paraphrase、hard
+negative、冲突记忆、无记忆、user scope、repository revision、stale/deleted 与 prompt-injection
+负例；oracle 只检查测试、文件或工具行为，并为无记忆 case 保留 memory-on/off 行为等价比较。
+原始 5298ba0 三任务共享池兼容 arm 单独保留，不计入 20 个主 case。
+
+当前 manifest 标记 executed: false、results_generated: false。只有 S3.5 算法冻结后才允许
+首次执行；在此之前不得根据正文或任何未生成的结果调整 case、检索算法或宣称模型收益。
+
+本轮收口已通过静态 manifest 契约 3/3、Ruff、全量 unittest 142/142 和 git diff --check。上述检查
+只验证仓库内的 manifest、冻结说明与现有实现，没有导入或执行用户保管的 Holdout 正文；manifest 仍
+保持 executed: false、results_generated: false。
