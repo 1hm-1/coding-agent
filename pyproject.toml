@@ -51,6 +51,7 @@ files = [
     "src/coding_agent/context.py",
     "src/coding_agent/domain.py",
     "src/coding_agent/evaluation.py",
+    "src/coding_agent/memory",
     "src/coding_agent/models",
     "src/coding_agent/protocol",
     "src/coding_agent/sandbox",

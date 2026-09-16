@@ -1,8 +1,8 @@
 # 当前实现状态
 
-> 基线日期：2026-09-15
-> 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2  
-> 当前阶段：Phase 2 P2-M1 Headless Runtime IPC 已完成；P2-M2 尚未激活
+> 基线日期：2026-09-16
+> 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Phase 2 P2-M1/P2-M2
+> 当前阶段：Phase 2 P2-M2 Layered Memory 已完成；P2-M3 尚未激活
 > 当前附加门禁：Release/Evidence Hardening 已完成（文档、指标、Git/CI、coverage、类型检查、评测证据）。  
 > 固定发布基线：`v0.1.0`（复现命令与边界见 [`releases/v0.1.0.md`](./releases/v0.1.0.md)）。
 > Phase 2 P2-D0 设计与 P2-M1 producer 已完成。除“尚未实现”章节外，本文只描述已经存在并通过测试的行为。
@@ -36,6 +36,33 @@
   `real_model_backend`。P2-M1 验收通过 111/111 默认 unittest、Runtime IPC goldens/vectors、Ruff、
   26 个配置范围源码文件 mypy、compileall、76.8% coverage、wheel/sdist、独立 wheel discovery 与
   calculator/todo smoke。
+
+### Layered Memory（P2-M2 已完成）
+
+- Working memory 继续由 session/messages/context 管理；新增的长期层只包含 episodic 与 semantic
+  memory，scope 为 session/repository/user。Procedural memory 仍属于未来 P2-M3 Skill。
+- `MemoryRecord` v1 保存 scope/kind/content、committed Runtime provenance、repository revision、
+  confidence/expiry、status、supersedes、content hash 和 optimistic version。SQLite schema v4 的
+  `memory_records`、`memory_events`、`memory_retrievals` 分别作为记录、生命周期和检索审计 authority。
+- 所有写入先是 `proposed`；schema、journal provenance、scope ownership、revision、Secret、完整工具
+  输出、宿主绝对路径、嵌入式指令和去重检查通过后，仍需显式 activate。支持 reject、stale、
+  supersede 和 delete；delete 清空原文，只保留 tombstone/hash/audit。
+- 首版检索是确定性 lexical + metadata baseline，限制 top-k 与 Token，过滤 scope、revision、expiry、
+  stale/deleted。没有加入 embedding、vector backend 或 RAG framework。
+- `BudgetedContextBuilder` 只在显式配置 retriever/query factory 时增加 `memory` section；内容标记为
+  不可信参考数据。`context_built` manifest 记录 retrieval id、memory/schema/record version、score、
+  Token cost、provenance 和最终是否实际注入；unbounded preview 不重复写 retrieval audit。
+- 本阶段交付形态是 Python composition：调用方可将 `SQLiteMemoryStore`、`MemoryService`、
+  `LexicalMemoryRetriever` 和 query factory 组装到 `BudgetedContextBuilder`；默认
+  `AgentApplication` 与 `run-headless` 不创建、查询或注入 Memory，也不公布 Memory IPC capability。
+- 三任务 cold/warm Runtime benchmark 的 trusted task oracle 为 cold 0/3 → warm 3/3，relevant
+  recall=1.0，irrelevant injection=0.5；retrieval cost 为 109 Token（均值 36.33），scripted model
+  total Token 为 691 → 1338（+647）。最近一次本地运行 wall latency 为 cold 137.17ms total/
+  45.72ms mean，warm 146.36ms total/48.79ms mean，warm-cold mean +3.07ms；延迟是本机测量值。
+  脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
+- P2-M2 验收通过 134/134 默认 unittest、四份既有 semantic golden、Ruff、33 个配置范围源码文件
+  mypy、compileall、78.3% coverage、wheel/sdist、独立 wheel Memory import、calculator/todo smoke
+  与多任务 benchmark。
 
 ### Model
 
@@ -133,12 +160,12 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 完成后当前开发树为 111 个，在当前
+- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 后当前开发树为 134 个，在当前
   capability probe 成功的环境中全部通过。`tests/live_provider_smoke.py` 为凭据门控的显式测试，
   不计入默认 discovery；能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。
 - calculator smoke 产生 48 条连续事件；todo fixture 产生 72 条连续事件并保持 `false → true`。
-- Ruff 强制基线 `E4/E7/E9/F` 仍显式写入 `pyproject.toml`；已使用 `uv` 安装 Ruff 0.16.6，`ruff check src tests examples/todo_cli` 通过。
+- Ruff 强制基线 `E4/E7/E9/F` 仍显式写入 `pyproject.toml`；已使用 `uv` 安装 Ruff 0.16.6，`ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py` 通过。
 - M2.2 recovery tests 覆盖 interrupt 后复用已保存模型响应、四个工具 crash window、edit hash reconciliation、三种人工 resolution、lease takeover 和 source/workspace resume rejection。
 - M2.3 adapter tests 覆盖 OpenAI-compatible/Anthropic text、tool call、usage、Unicode、HTTP error、protocol error、retry/fallback 和 secret 不落盘；用户已用 DeepSeek 完成 opt-in live API smoke，并在上下文修复后完成 3 次探索性 live Eval。
 - M3.1/M3.2 tests 覆盖 exact/fallback counter、unknown model、section boundary/hard retention、tool-call group preservation、deterministic manifest、summary round-trip、stale invalidation、required-fact rejection、compression fallback 和 raw-event preservation。
@@ -253,7 +280,7 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 ```
 
 ```bash
-.venv/bin/ruff check src tests examples/todo_cli
+.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
 ```
 
 ```bash
@@ -267,7 +294,11 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 ```
 
 ```bash
-PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
+PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
+```
+
+```bash
+PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
 ```
 
 可用的恢复命令包括 `sessions`、`show`、`interrupt`、`resume` 和
@@ -282,7 +313,8 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 - 已完成 DeepSeek budgeted 探索、compressed 定向、search A/B、budget-aware follow-up 和
   capability holdout，并保存脱敏摘要；这些仍是小型本地 fixture 证据，不是外部真实仓库基准、
   托管 CI 历史或生产成功率。
-- 多 Agent、终端交互层、Skill/MCP、分层长期记忆或 RAG；这些能力已有 Phase 2 设计，但代码未实现；
+- 多 Agent、终端交互层、Skill/MCP、procedural memory、向量检索或 RAG；这些能力已有 Phase 2
+  设计但代码未实现；episodic/semantic memory 已由 P2-M2 实现；
 - Agent Platform consumer adapter；本仓库只交付 producer contract、Schema、golden 与可复用
   vectors。`v0.1.0` 不支持 IPC；P2-M1 实现只存在于 `0.2.0.dev0` 开发树。
 
@@ -294,7 +326,7 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
   producer authority；四类 document 均由自动测试验证，vectors 随 wheel/sdist 发布；
 - 初始多 Agent 拓扑计划采用 Manager/Explorer/Implementer/Reviewer，并坚持单写者 workspace 规则；
 - P2-M1—P2-M6 必须逐阶段实现和验收，不允许一次性把设计目录全部脚手架化；
-- P2-M1 已冻结；P2-M2 Memory 是下一候选里程碑，但在用户明确激活前不实现。
+- P2-M1 与 P2-M2 已冻结；P2-M3 Profiles/Skill Runtime 是下一候选，但尚未激活。
 
 ## 5. 已知限制与技术债
 
@@ -317,8 +349,8 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 11. 当前 coverage 是 statement coverage，发布门槛为 70%；coverage 不等同于安全或任务成功率证明。
     CLI 通过 subprocess smoke 纳入合并数据；namespace runner 为保持 sandbox 环境 allowlist 不注入
     宿主 coverage hook，当前仍显示 0%，其行为证据来自 native integration/security tests。
-12. mypy 当前覆盖 models、tools、context、domain、workspace、command profiles、evaluation、
-    sandbox 和 P2-M1 protocol，共 26/36 个源码文件；其余 Runtime/Application/Persistence/CLI/Compression 历史代码
+12. mypy 当前覆盖 memory、models、tools、context、domain、workspace、command profiles、evaluation、
+    sandbox 和 P2-M1 protocol，共 33 个配置源码文件；其余 Runtime/Application/Persistence/CLI/Compression 历史代码
     尚未达到全仓类型检查标准（本次全仓扫描剩余 75 个错误，集中在 6 个文件）。
 13. live provider smoke 已提供手动 workflow；本地首次 DeepSeek 尝试已到达 Provider，但因
    smoke 原先只有 16 个输出 token，最终 `content` 为空而失败。现已增加输出预算，并支持
@@ -334,6 +366,9 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 16. 简历 benchmark 的 scripted 校准不是模型能力证据；live 数字只适用于记录的五个小型
     fixture、`deepseek-flash` 和 worktree content snapshot。压缩 A/B 没有产生 Token 节省，
     不得将 10% 的小样本 Runtime completion 差异外推成一般收益。
+17. P2-M2 Memory benchmark 使用确定性 trusted oracle 和 scripted Token 估算；warm 组的
+    irrelevant injection=0.5 且 scripted model total Token 增加 647，说明当前 lexical baseline
+    的召回收益伴随上下文成本和噪声，不能据此启用默认 Application/headless Memory。
 
 ## 6. 不允许虚构的项目事实
 

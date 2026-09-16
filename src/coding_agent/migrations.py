@@ -7,7 +7,7 @@ from typing import Callable, Sequence
 from coding_agent.domain import utc_now
 
 
-LATEST_SCHEMA_VERSION = 3
+LATEST_SCHEMA_VERSION = 4
 
 
 class MigrationError(RuntimeError):
@@ -162,7 +162,71 @@ V3 = Migration(
 )
 
 
-MIGRATIONS: tuple[Migration, ...] = (V1, V2, V3)
+V4 = Migration(
+    version=4,
+    statements=(
+        """
+        CREATE TABLE IF NOT EXISTS memory_records (
+            memory_id TEXT PRIMARY KEY,
+            schema_version INTEGER NOT NULL,
+            scope TEXT NOT NULL,
+            scope_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            content TEXT NOT NULL,
+            source_run_id TEXT NOT NULL,
+            source_agent_id TEXT NOT NULL,
+            source_event_refs_json TEXT NOT NULL,
+            repository_revision TEXT,
+            confidence REAL NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT,
+            status TEXT NOT NULL,
+            supersedes TEXT REFERENCES memory_records(memory_id),
+            content_hash TEXT NOT NULL,
+            version INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            UNIQUE(scope, scope_id, kind, content_hash)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS memory_events (
+            event_id TEXT PRIMARY KEY,
+            memory_id TEXT NOT NULL REFERENCES memory_records(memory_id),
+            event_type TEXT NOT NULL,
+            actor_id TEXT NOT NULL,
+            from_status TEXT,
+            to_status TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS memory_retrievals (
+            retrieval_id TEXT PRIMARY KEY,
+            query_hash TEXT NOT NULL,
+            session_id TEXT,
+            repository_id TEXT,
+            user_id TEXT,
+            repository_revision TEXT,
+            selected_json TEXT NOT NULL,
+            token_cost INTEGER NOT NULL,
+            duration_ms REAL NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS memory_records_scope_status "
+        "ON memory_records(scope, scope_id, status, kind)",
+        "CREATE INDEX IF NOT EXISTS memory_records_expiry "
+        "ON memory_records(status, expires_at)",
+        "CREATE INDEX IF NOT EXISTS memory_events_record_time "
+        "ON memory_events(memory_id, created_at, event_id)",
+        "CREATE INDEX IF NOT EXISTS memory_retrievals_query_time "
+        "ON memory_retrievals(query_hash, created_at, retrieval_id)",
+    ),
+)
+
+
+MIGRATIONS: tuple[Migration, ...] = (V1, V2, V3, V4)
 
 
 def _validate_migrations(migrations: Sequence[Migration]) -> None:

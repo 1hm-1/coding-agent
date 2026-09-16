@@ -31,7 +31,7 @@ git --version
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-预期：当前开发树应发现 111 个默认测试；在 native sandbox capability 可用时全部通过，能力受限环境中 native-only case 会显式 skip。`tests/live_provider_smoke.py` 不以 `test_` 命名，不属于默认 discovery；它只在显式配置凭据后运行。若输出 `Ran 0 tests`，检查 `tests/__init__.py` 是否存在，以及命令是否从项目根执行。
+预期：当前开发树应发现 134 个默认测试；在 native sandbox capability 可用时全部通过，能力受限环境中 native-only case 会显式 skip。`tests/live_provider_smoke.py` 不以 `test_` 命名，不属于默认 discovery；它只在显式配置凭据后运行。若输出 `Ran 0 tests`，检查 `tests/__init__.py` 是否存在，以及命令是否从项目根执行。
 
 可以使用 `uv` 创建虚拟环境并安装项目及开发工具：
 
@@ -39,7 +39,7 @@ PYTHONPATH=src python3 -m unittest discover -v
 uv venv .venv
 uv sync --locked --extra dev
 PYTHONPATH=src .venv/bin/python -m unittest discover -v
-.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos
+.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
 .venv/bin/mypy
 PYTHONPATH=src .venv/bin/coverage run -m unittest discover -q
 .venv/bin/coverage combine
@@ -121,7 +121,8 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 
 预期 todo replay 的关键结果：`final_state=completed`、`test_outcomes=[false,true]`、`source_unchanged=true`。
 
-当前默认把事实写入 `<agent-home>/state.db`（schema v3，含 summaries 派生缓存）；JSONL 是导出投影。删除 trace 后可运行：
+当前默认把事实写入 `<agent-home>/state.db`（schema v4，含 summaries 派生缓存及 P2-M2 Memory
+record/lifecycle/retrieval audit）；JSONL 仍只投影 Runtime events。删除 trace 后可运行：
 
 ```bash
 PYTHONPATH=src python3 -m coding_agent.cli \
@@ -141,20 +142,22 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 6. `trajectory.py`：理解 JSONL、replay 和 golden projection；
 7. `persistence.py`、`migrations.py`、`export.py`：理解 SQLite authority 和 DB→JSONL projection；
 8. `compression.py`、`evaluation.py`：理解 summary lineage、oracle、metrics 和 A/B；
-9. `command_profiles.py`、`sandbox/base.py`、`sandbox/policy.py`、`sandbox/local_container.py`、`sandbox/runner.py`：理解 M4.2 structured argv/profile 与 M4.1 OS boundary、capability probe 和 fail-closed cleanup；
-10. `application.py`、`cli.py` 和 `protocol/headless.py`：最后看组装、入口与公共进程边界；
-11. `tests/test_vertical_slice.py`、`tests/test_hardening.py`、`tests/test_persistence.py`、`tests/test_m2_recovery.py`、`tests/test_models.py`、`tests/test_m3_context.py`、`tests/test_m3_evaluation.py`、`tests/test_m4_sandbox.py` 与 `tests/test_m4_execution.py`：用测试验证理解。
+9. `memory/`：理解长期记忆 domain、policy/service、SQLite authority、bounded retrieval 和
+   cold/warm metrics；
+10. `command_profiles.py`、`sandbox/base.py`、`sandbox/policy.py`、`sandbox/local_container.py`、`sandbox/runner.py`：理解 M4.2 structured argv/profile 与 M4.1 OS boundary、capability probe 和 fail-closed cleanup；
+11. `application.py`、`cli.py` 和 `protocol/headless.py`：最后看组装、入口与公共进程边界；
+12. `tests/test_vertical_slice.py`、`tests/test_hardening.py`、`tests/test_persistence.py`、`tests/test_m2_recovery.py`、`tests/test_models.py`、`tests/test_m3_context.py`、`tests/test_m3_evaluation.py`、`tests/test_m4_sandbox.py`、`tests/test_m4_execution.py` 与 `tests/test_memory.py`：用测试验证理解。
 
 ## 5. 标准开发流程
 
 每个变更按以下顺序进行：
 
 1. 在 `roadmap.md` 找到当前里程碑和明确退出条件。
-2. 阅读对应实施文档；当前唯一活跃文档是 `p2-implementation-plan.md`。
+2. 阅读对应实施文档；P2-M1/P2-M2 已冻结，未来变更必须先有新里程碑明确激活。
 3. 运行全量基线并保存结果，确认不是在已有红灯上开发。
 4. 先写失败用例或 fault scenario，再修改生产代码。
 5. 只改当前里程碑需要的最小模块，不顺手扩展工具/UI/multi-agent。
-6. 运行目标测试、全量测试、静态检查和两个 smoke demo。
+6. 运行目标测试、全量测试、静态检查、两个 smoke demo 和对应的离线 benchmark。
 7. 检查四份 M1.5 golden；不得通过删除 golden 获得绿灯。
 8. M4 变更还必须运行 native capability/security tests，确认没有 host subprocess fallback；M4.2 变更还要覆盖 profile/argv/approval/recovery contract。
 9. 更新 `current-state.md`、实施 checklist 和 README；未完成能力保持“未实现”。
@@ -162,7 +165,7 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 当前强制静态检查命令：
 
 ```bash
-.venv/bin/ruff check src tests examples/todo_cli
+.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
 .venv/bin/mypy
 ```
 

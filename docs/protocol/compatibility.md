@@ -52,7 +52,7 @@ coding-agent future → 仍可使用 v1，并通过 capabilities 表达 memory/s
 | Runtime release | Protocol | Producer suite | Agent Platform consumer suite | 状态 |
 |---|---:|---|---|---|
 | `v0.1.0` | 无 | 不适用 | 不适用 | 已发布 Runtime；不得宣称 IPC v1 |
-| `0.2.0.dev0`（P2-M1 开发树） | `1` | 111 tests + schema/golden/vector + build/smoke 通过 | 待 Platform 验证 | producer 完成，尚非发布 tag |
+| `0.2.0.dev0`（P2-M1/P2-M2 开发树） | `1` | 134 tests + P2-M1 schema/golden/vector + P2-M2 build/smoke 通过 | 待 Platform 验证 | producer 完成，Memory 仍是私有显式 composition，尚非发布 tag |
 | Phase 2 product release | `1` 或后续版本 | 待实现 | 待验证 | 设计 |
 
 不得预填“通过”。实现发布时记录：

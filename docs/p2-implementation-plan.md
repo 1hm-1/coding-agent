@@ -1,9 +1,9 @@
 # Phase 2 Implementation Plan
 
-> 状态：P2-M1 已完成；P2-M2 尚未激活。
+> 状态：P2-M1 与 P2-M2 已完成；P2-M3 尚未激活。
 > 激活日期：2026-09-15
 > 当前开发版本：`0.2.0.dev0`；`v0.1.0` 仍是固定发布基线。
-> 唯一活跃实现范围：P2-M1 Headless Runtime IPC。
+> 当前没有活跃实现范围；P2-M1/P2-M2 已冻结，下一候选为 P2-M3，但必须等待用户明确激活。
 
 ## 1. 产品目标与实施顺序
 
@@ -23,7 +23,7 @@ Memory 是首个产品能力里程碑。P2-M1 先固定 Runtime 的公共进程�
 MCP 和多 Agent 的内部演进都能由同一 producer contract 回归保护。不得跳过 P2-M1 直接让产品层
 读取私有 SQLite、trajectory 或 Runtime Python 类型。
 
-## 2. P2-M1 范围
+## 2. P2-M1 范围（已完成）
 
 只实现 [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md) 已定义的单 Agent producer：
 
@@ -35,7 +35,8 @@ MCP 和多 Agent 的内部演进都能由同一 producer contract 回归保护�
 - SIGINT cooperative cancellation、checkpoint-before-result 和子进程清理；
 - producer semantic golden 与供 consumer 复用的不可变 contract vectors。
 
-本阶段不实现 Memory、Skill、MCP、多 Agent、TUI、通用 Shell、默认网络或 Platform consumer。
+本 P2-M1 阶段不实现 Memory、Skill、MCP、多 Agent、TUI、通用 Shell、默认网络或 Platform
+consumer。P2-M2 已在独立实施文档中完成；其 Memory 只通过显式 Python composition 使用。
 
 ## 3. 不变量
 
@@ -83,9 +84,10 @@ MCP 和多 Agent 的内部演进都能由同一 producer contract 回归保护�
 - [x] producer semantic golden 和 v0.1-kernel/v0.2-bridge contract vectors 通过。
 - [x] 全量 unittest、Ruff、mypy、coverage、compile、build 和既有 smoke 通过。
 - [x] `current-state.md`、roadmap、structure、HANDOFF、README 与 compatibility matrix 同步。
-- [x] 只有以上项目全部完成后，P2-M1 才能标记“已完成”；P2-M2 Memory 作为下一候选里程碑，仍需用户明确激活。
+- [x] 只有以上项目全部完成后，P2-M1 才能标记“已完成”；P2-M2 后续单独激活并按
+  `p2-m2-implementation-plan.md` 完成。
 
-## 5. 完成证据
+## 5. P2-M1 完成证据
 
 `src/coding_agent/protocol/` 已实现 discovery、严格 request validator、headless composition、公共
 event projector、terminal result、连续 JSONL writer、稳定退出码和 cooperative cancellation。
@@ -99,4 +101,5 @@ statement coverage、wheel/sdist build、独立 wheel 安装后的 discovery smo
 顺序和活动 sandbox 子进程清理；crash-after-events-before-result、stdout I/O/oversize/重复 result
 也有确定性负例。
 
-P2-M1 到此冻结。Memory、Skill、MCP、多 Agent、TUI、RAG 和 Platform consumer 均未在本里程碑实现。
+P2-M1 到此冻结。Memory、Skill、MCP、多 Agent、TUI、RAG 和 Platform consumer 均未在本里程碑实现；
+P2-M2 的当前实现与证据见 [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md)。

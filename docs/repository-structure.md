@@ -2,7 +2,7 @@
 
 > 当前结构与未来结构必须分开阅读。本文件中未标记为“计划”的路径应能在当前仓库找到。
 
-## 1. 当前 M5.1 + Release/Evidence Hardening + P2-M1 完成结构
+## 1. 当前 M5.1 + Release/Evidence Hardening + P2-M1/P2-M2 完成结构
 
 ```text
 coding-agent/
@@ -20,7 +20,8 @@ coding-agent/
 │   ├── HANDOFF.md                    # 新窗口开发交接
 │   ├── architecture.md               # 目标架构、当前边界和不变量
 │   ├── v2-product-architecture.md    # Phase 2 产品化架构与阶段边界
-│   ├── p2-implementation-plan.md     # 当前 P2-M1 实施清单
+│   ├── p2-implementation-plan.md     # P2-M1 已完成实施记录与 Phase 2 顺序
+│   ├── p2-m2-implementation-plan.md  # P2-M2 已完成 Memory 实施与验收记录
 │   ├── contracts.md                  # 当前 M5.1 精确契约
 │   ├── current-state.md              # 已实现、未实现、已知限制
 │   ├── decisions/                    # Eval-backed capability decision records
@@ -60,6 +61,7 @@ coding-agent/
 │   ├── capability_holdout_suite.json # M5 非 search 能力门禁 holdout
 │   ├── todo_cli/                     # 真实小仓库 fixture
 │   ├── todo_cli_scripted_run.json    # 失败后修复的确定性脚本
+│   ├── memory_cold_warm_benchmark.py # P2-M2 多任务 cold/warm benchmark
 │   ├── mini_repos/                    # M5 多仓库评测 fixture（含三个 search benchmark 仓库）
 │   └── eval_scripts/                  # M5 scripted backend/compression 输入
 ├── src/coding_agent/
@@ -78,6 +80,13 @@ coding-agent/
 │   ├── trajectory.py                 # 兼容 JSONL、replay、semantic projection
 │   ├── workspace.py                  # workspace 生命周期、路径守卫和 repo snapshot
 │   ├── evaluation.py                 # versioned suite、oracle、runner、metrics、A/B
+│   ├── memory/
+│   │   ├── domain.py                 # MemoryRecord/query/hit/selection
+│   │   ├── policy.py                 # scope/content admission
+│   │   ├── service.py                # proposal/approval/lifecycle + provenance
+│   │   ├── sqlite.py                 # schema v4 Memory authority
+│   │   ├── retrieval.py              # bounded lexical/metadata baseline
+│   │   └── evaluation.py             # cold/warm quality metrics
 │   ├── protocol/
 │   │   ├── __init__.py               # Runtime IPC public exports
 │   │   ├── headless.py               # discovery、validation、projection、headless execution
@@ -122,6 +131,7 @@ coding-agent/
     ├── live_provider_smoke.py           # opt-in provider adapter smoke, not default discovery
     ├── test_persistence.py
     ├── test_protocol.py               # Runtime IPC producer contract/fault/cancel tests
+    ├── test_memory.py                 # Memory lifecycle/retrieval/evaluation contracts
     ├── test_state_machine.py
     ├── test_tools.py
     ├── test_vertical_slice.py
@@ -140,7 +150,7 @@ CLI 的 `--agent-home` 必须在 source 外。例如：
 
 ```text
 /tmp/coding-agent-demo/
-├── state.db                          # SQLite 权威事实来源（schema v3）
+├── state.db                          # SQLite 权威事实来源（schema v4，含 Memory audit）
 ├── traces/
 │   └── <session-id>.jsonl
 └── workspaces/
@@ -178,7 +188,7 @@ tests/
 └── test_models.py              # M2.3 offline adapter/retry contract tests
 
 <agent-home>/
-├── state.db                    # 已实现：schema v3 权威事实来源，含 summaries
+├── state.db                    # 已实现：schema v4 权威事实来源，含 summaries + Memory
 ├── traces/                     # 已实现：从 DB 导出的可重建 projection
 └── workspaces/
 ```
@@ -208,6 +218,22 @@ M4.1/M4.2 使用 native runtime sample fingerprint；它不是完整 rootfs dige
 Docker/Podman 或 OCI image backend。
 批准网络和扩展资源 profile 仍 fail closed，等待未来明确授权通道。模块职责以
 [`module-design.md`](./module-design.md) 为准，里程碑顺序以 [`roadmap.md`](./roadmap.md) 为准。
+
+P2-M2 新增的实际结构：
+
+```text
+src/coding_agent/memory/
+├── domain.py                  # MemoryRecord/query/hit/selection
+├── policy.py                  # scope/content admission
+├── service.py                 # proposal/approval/lifecycle + journal provenance
+├── sqlite.py                  # schema v4 Memory authority
+├── retrieval.py              # bounded lexical/metadata baseline
+└── evaluation.py             # cold/warm quality metrics
+
+tests/test_memory.py           # lifecycle/rollback/leakage/context/eval contract
+```
+
+Memory 没有 CLI 管理面或公共 Runtime IPC 字段；这些交互入口留到对应产品里程碑。
 
 ## 5. 文件放置规则
 

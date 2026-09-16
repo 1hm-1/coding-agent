@@ -30,7 +30,7 @@ jobs:
           uv venv .venv
           uv sync --locked --extra dev
       - name: Ruff
-        run: .venv/bin/ruff check src tests examples/todo_cli examples/mini_repos
+        run: .venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
       - name: Expanded mypy source-surface check
         run: .venv/bin/mypy
       - name: Report native sandbox capability
@@ -52,7 +52,7 @@ jobs:
           .venv/bin/coverage combine
           .venv/bin/coverage report
       - name: Compile check
-        run: .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos
+        run: .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
       - name: Package build
         run: uv build --out-dir "${RUNNER_TEMP}/dist-${{ matrix.python-version }}"
       - name: Calculator and todo scripted smoke
@@ -74,6 +74,10 @@ jobs:
             --source examples/todo_cli \
             --task "Fix the empty input crash and run tests." \
             --script examples/todo_cli_scripted_run.json
+      - name: P2-M2 Memory cold/warm benchmark
+        env:
+          PYTHONPATH: src
+        run: .venv/bin/python examples/memory_cold_warm_benchmark.py
       - name: Offline evaluation suite
         env:
           PYTHONPATH: src

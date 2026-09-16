@@ -1,6 +1,6 @@
 # Coding Agent Phase 2 Product Architecture
 
-> 文档状态：已批准设计；P2-M1 producer 已完成，后续能力尚未激活。
+> 文档状态：已批准设计；P2-M1 producer 与 P2-M2 Layered Memory 已完成，P2-M3 尚未激活。
 > 固定发布基线：`v0.1.0`；当前开发版本为 `0.2.0.dev0`，事实仍以 [`current-state.md`](./current-state.md) 为准。
 > 实施约束：任何子阶段开始前仍需单独激活、补充验收测试并更新交接文档。
 
@@ -312,6 +312,11 @@ backend。无论使用哪种算法，都必须有：
 - relevant recall、irrelevant injection、task success、Token 和 latency 指标；
 - cross-user/cross-repository leakage 负例。
 
+P2-M2 的当前交付是显式 Python composition：调用方将 Memory store、service、retriever 和 query
+factory 组装到 `BudgetedContextBuilder`。默认 `AgentApplication` 与 `run-headless` 不自动创建、
+查询或注入 Memory，也不把 Memory 声明为 Runtime IPC capability；默认启用需要后续独立的
+产品入口、权限和评测决策。
+
 ## 8. Skill 系统
 
 Skill 是 Procedural Memory，不是没有权限模型的 Prompt 文件拼接。
@@ -609,6 +614,6 @@ Phase 2 只有在以下事实全部存在时，才能宣传为成熟终端 Codin
 
 ## 16. 当前实施决策
 
-用户已于 2026-09-15 明确激活 P2-M1；当前按 [`p2-implementation-plan.md`](./p2-implementation-plan.md)
-只实现 Runtime IPC producer。P2-M1 全部门禁通过前不得开始 Memory、Skill、MCP、多 Agent 或
-TUI；其后优先进入 P2-M2 Memory。
+P2-M1 与 P2-M2 已通过各自退出门禁。P2-M2 只实现 episodic/semantic Memory，验收见
+[`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md)。P2-M3 尚未激活；不得提前
+开始 Skill、MCP、多 Agent、TUI、RAG 或向量检索。

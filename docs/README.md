@@ -19,6 +19,7 @@
 | M5 有证据后的能力扩展 | M5.1 已完成，其余条件阶段 | [`roadmap.md`](./roadmap.md) |
 | Phase 2 产品化架构与 IPC 契约（P2-D0） | 设计已完成 | [`v2-product-architecture.md`](./v2-product-architecture.md)、[`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md) |
 | Phase 2 P2-M1 Headless Runtime IPC | 已完成 | [`p2-implementation-plan.md`](./p2-implementation-plan.md) |
+| Phase 2 P2-M2 Layered Memory | 已完成 | [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md) |
 
 当前代码事实以 [`current-state.md`](./current-state.md) 为准。目标架构以 [`architecture.md`](./architecture.md) 为准。两者冲突时，不要假设目标已经实现。
 
@@ -34,10 +35,11 @@
 6. [`m2-implementation-plan.md`](./m2-implementation-plan.md)：M2 子阶段的实施顺序与验收；
 7. [`m3-implementation-plan.md`](./m3-implementation-plan.md)：Context、Compression 和 Eval 验收；
 8. [`architecture.md`](./architecture.md) 与 [`module-design.md`](./module-design.md)：v0.1 Runtime 架构；
-9. [`v2-product-architecture.md`](./v2-product-architecture.md)：未来分层记忆、Skill/MCP 网关与可恢复多 Agent 编排；
-10. [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md)：未来 Runtime 与 Agent Platform 的进程契约；
+9. [`v2-product-architecture.md`](./v2-product-architecture.md)：已完成 Memory 与未来 Skill/MCP、多 Agent 边界；
+10. [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md)：当前 Runtime producer 与未来 Agent Platform consumer 的进程契约；
 11. [`requirements-traceability.md`](./requirements-traceability.md)：原始目标与面试能力的证据边界。
 12. [`p2-implementation-plan.md`](./p2-implementation-plan.md)：已完成 P2-M1 范围、验收证据和后续顺序。
+13. [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md)：已完成 Memory 范围、策略与验收证据。
 
 做代码评审：先读 `contracts.md` 和 `testing-strategy.md`，再对照当前里程碑退出条件。
 
@@ -67,6 +69,7 @@
 | `m4-implementation-plan.md` | 如何用 OS 强边界隔离执行并验证 threat model？ |
 | `m5-eval-expansion.md` | 新工具能力是否已经被评测证据证明需要？ |
 | `p2-implementation-plan.md` | P2-M1 实现了什么、哪些门禁已经通过？ |
+| `p2-m2-implementation-plan.md` | P2-M2 Memory 实现了什么、哪些信任与质量门禁已经通过？ |
 | `resume-benchmark.md` | 简历稳定性指标和上下文压缩开关 A/B 如何设计、运行与解读？ |
 | `releases/v0.1.0.md` | 固定版本如何安装、验收、运行 Eval/Demo，支持边界是什么？ |
 | `HANDOFF.md` | 当前工作区如何安全交接？ |

@@ -3,14 +3,14 @@
 Scope: this file applies to `/home/hmli/code/coding-agent` only.
 
 1. Before editing, read `docs/HANDOFF.md`, `docs/current-state.md`, and the active milestone document.
-2. Current implementation baseline is Phase 2 P2-M1 Headless Runtime IPC complete. P2-M2 Memory is
-   the next candidate milestone but remains inactive until the user explicitly activates it.
+2. Current stable implementation baseline is Phase 2 P2-M2 Layered Memory complete. P2-M3 Profiles
+   and Skill Runtime is the next candidate milestone but remains inactive until explicitly activated.
 3. Preserve the M1/M1.5 vertical slice and all four semantic golden tests.
 4. Do not add a general Shell tool. `restricted_test` accepts trusted profile names only, and
    `run_command` accepts only trusted profiles with structured argv.
 5. Never let Runtime bypass ToolHarness for side effects, and never write to the source repository.
 6. Keep provider-specific formats inside model adapters. Keep state transitions inside the FSM.
-7. Memory, Skill, MCP, multi-agent, UI, RAG, and framework dependencies remain deferred until
+7. Skill, MCP, multi-agent, UI, RAG, vector stores, and framework dependencies remain deferred until
    their named milestone is explicitly activated.
 8. Run `PYTHONPATH=src python3 -m unittest discover -v` after relevant changes.
 9. Update `docs/current-state.md`, the active checklist, and roadmap status when behavior changes.

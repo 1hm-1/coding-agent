@@ -763,6 +763,7 @@ class BuiltContext:
     pre_compression_input_tokens: int | None = None
     high_watermark_tokens: int | None = None
     target_after_compression_tokens: int | None = None
+    memory: JsonObject | None = None
 
     @property
     def needs_compression(self) -> bool:
@@ -778,7 +779,7 @@ class BuiltContext:
         return source_tokens > self.high_watermark_tokens
 
     def manifest(self) -> JsonObject:
-        return {
+        result: JsonObject = {
             "manifest_version": self.manifest_version,
             "provider": self.provider,
             "model": self.model,
@@ -795,6 +796,9 @@ class BuiltContext:
             "last_test": self.last_test,
             "compressed": self.compressed,
         }
+        if self.memory is not None:
+            result["memory"] = self.memory
+        return result
 
     def to_dict(self) -> JsonObject:
         return {
@@ -842,6 +846,7 @@ class BuiltContext:
                 if raw.get("target_after_compression_tokens") is not None
                 else None
             ),
+            memory=(dict(raw["memory"]) if isinstance(raw.get("memory"), Mapping) else None),
         )
 
 

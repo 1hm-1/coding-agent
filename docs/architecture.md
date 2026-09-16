@@ -1,8 +1,10 @@
 # Coding Agent Runtime Kernel 架构设计
 
 > 文档类型：v0.1 Runtime Kernel 架构与不变量
-> 当前实现：M5.1，见 [`current-state.md`](./current-state.md)
-> Phase 2 产品架构：P2-M1 producer 已完成，见 [`v2-product-architecture.md`](./v2-product-architecture.md) 与 [`p2-implementation-plan.md`](./p2-implementation-plan.md)
+> 当前 Runtime Kernel：M5.1，见 [`current-state.md`](./current-state.md)
+> Phase 2 产品架构：P2-M1 producer 与 P2-M2 Layered Memory 已完成；Memory 仅显式组装，见
+> [`v2-product-architecture.md`](./v2-product-architecture.md)、[`p2-implementation-plan.md`](./p2-implementation-plan.md)
+> 与 [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md)
 
 ## 1. 状态标记
 
@@ -91,6 +93,7 @@ CLI
 AgentApplication (composition root)
  │
  ├── ContextBuilder ── Passthrough / Budgeted ── optional CompressionEngine
+ │                  └── optional MemoryRetriever + query factory (P2-M2)
  ├── ModelBackend ── Scripted/OpenAI-compatible/Anthropic/Fallback
  ├── ToolRegistry ── ToolHarness ── WorkspaceGuard
  │                         ├──────── Trusted TestProfile
@@ -106,6 +109,8 @@ AgentApplication (composition root)
 通过 lease、checkpoint 和调用 journal 支持状态边界跨进程 resume。`ScriptedBackend` 让决策完全可复现，因此 M1/M1.5 的失败能归因于 Runtime/Harness，而不是模型随机性。
 M3 的 Eval Runner 在每个 case/repetition 使用新 SQLite、workspace 和 session；报告从
 committed events 汇总调用、Token、延迟、失败、恢复、权限和 source invariant。
+P2-M2 的 MemoryService、SQLiteMemoryStore 和 lexical retriever 由调用方显式组装到 ContextBuilder；
+默认 `AgentApplication` 与 `run-headless` 不创建 Memory service、不查询 Memory，也不把它加入 IPC capability。
 
 ## 6. 目标架构
 
@@ -124,7 +129,7 @@ Application Use Cases
        │
        └──── Agent Runtime (explicit FSM)
                     │
-                    ├── Context Engine ─ recent/task/repo/summary
+                    ├── Context Engine ─ recent/task/repo/optional memory/summary
                     ├── ModelBackend ─── Scripted/OpenAI/Anthropic/Fallback
                     └── Tool Harness ─── registry/policy/timeout/journal
                                               │
@@ -143,7 +148,8 @@ SQLite events ──→ Metrics / Eval Oracle / Failure Report / Trace Export
 4. Runtime 将 `session_created` 和初始 user message 与 checkpoint 一起提交到 SQLite。
 5. `WorkspaceManager` 复制 source，移除外部 symlink，初始化独立 Git baseline。
 6. Context Engine 从 isolated workspace 生成 bounded repository snapshot，按固定 sections
-   装配；高水位时通过 `ModelBackend` 生成经过验证的 summary。
+   装配；Memory 只有在调用方显式提供 retriever/query factory 时才加入；高水位时通过
+   `ModelBackend` 生成经过验证的 summary。
 7. Runtime 记录 context manifest 和 model call start，调用 `ScriptedBackend` 或真实 adapter。
 8. 若模型返回 tool calls，Runtime 记录 assistant message 并进入工具调度。
 9. Harness 依次执行 lookup、schema、permission、deadline、handler、错误映射和输出限制；
@@ -256,6 +262,11 @@ M2.1 的 SQLite 使用 WAL、foreign keys、busy timeout 和 schema migrations�
 
 M2.2 加入 tool intent/result journal、lease、interrupt/resume 和 reconciliation。恢复读取数据库事实，而不是根据最后一行日志猜测；不确定写操作进入 approval。JSONL 导出失败不影响已经提交的 Runtime 状态，并可以从 DB 重建。
 
+P2-M2 在同一 SQLite 文件中增加私有 `memory_records`、`memory_events` 和
+`memory_retrievals` 表；它们只属于 Memory composition，不是 Runtime IPC v1 的公共 schema。
+默认 Application/headless 仍只运行 Runtime journal 路径，只有显式传入 Memory-enabled
+ContextBuilder 才会产生检索审计和 `context_built.memory` manifest。
+
 详细 schema、事务和 crash window 见 [`m2-implementation-plan.md`](./m2-implementation-plan.md)。
 
 ## 12. Model Backend [M2]
@@ -273,14 +284,16 @@ Secrets 只在 adapter 请求边界存在，不写入 Session、DB、Event 或�
 1. system policy/tool schemas；
 2. task state 和预算；
 3. repository snapshot/diff/last test；
-4. structured summary；
-5. recent raw messages/observations。
+4. optional validated Memory reference data；
+5. structured summary；
+6. recent raw messages/observations。
 
 压缩由 token 高水位触发，不按固定消息条数。摘要必须保存 source event range/hash、workspace revision、目标、约束、修改、测试、错误和未完成项。文件变化后旧事实标 stale；实时工具结果优先。
 
 当前实现使用 `ContextBuildInput`、`ContextSection`、`BuiltContext` 和
 `TokenCounter`；model capability registry 选择上下文上限及 exact/命名 fallback counter。
-压缩策略用 required-fact retention、task success 和 token reduction 做 A/B。M1 的
+P2-M2 Memory section 由显式 retriever/query factory 开启，内容只是不可信参考数据；默认
+Application/headless 不开启它。压缩策略用 required-fact retention、task success 和 token reduction 做 A/B。M1 的
 passthrough builder 保持为 baseline；摘要失败时 raw history 保留。详细契约和验收记录见
 [`m3-implementation-plan.md`](./m3-implementation-plan.md)。
 
@@ -325,7 +338,7 @@ Agent 失败 run 留在有效分母并保留 trace；manifest/fixture/oracle 配
 
 以下变更必须先更新设计并激活对应里程碑再编码：
 
-- 实现多 Agent、Memory、Skill/MCP 或终端产品层；
+- 扩大 Memory scope/信任模型、引入 vector/RAG，或实现多 Agent、Skill/MCP、终端产品层；
 - 增加通用 Shell 或网络访问；
 - 改变 Event/Golden schema；
 - 改变 source isolation threat model；

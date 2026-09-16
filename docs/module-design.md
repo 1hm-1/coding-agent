@@ -2,12 +2,13 @@
 
 > 文档类型：代码边界与依赖规则  
 > 当前基线：M5.1
-> 当前变化：Phase 2 P2-M1 producer 已完成；P2-M2 尚未激活
+> 当前变化：Phase 2 P2-M1 producer 与 P2-M2 Layered Memory 已完成；P2-M3 尚未激活
 
 本文回答当前 v0.1 Runtime 的三个问题：功能应该放在哪个模块、模块之间允许传递什么、错误由谁处理。
 当前可执行契约见 [`contracts.md`](./contracts.md)，Runtime 架构与安全边界见
-[`architecture.md`](./architecture.md)。未来产品层、Memory、Skill/MCP 与多 Agent 模块边界单独见
-[`v2-product-architecture.md`](./v2-product-architecture.md)，不得把未来目录误当成已实现模块。
+[`architecture.md`](./architecture.md)。P2-M2 Memory 与未来产品层、Skill/MCP、多 Agent 边界见
+[`v2-product-architecture.md`](./v2-product-architecture.md)；只有本文列出的 Memory 模块已实现，
+不得把其余未来目录误当成现有模块。
 
 ## 1. 设计原则
 
@@ -34,7 +35,8 @@ cli
       ├── workspace
       ├── test_profiles
       ├── sandbox ──────── sandbox protocol + policy + Linux backend
-      └── persistence ─── domain + migrations
+      ├── persistence ─── domain + migrations
+      └── memory ──────── memory domain/policy + migrations
 
 tests → public modules above
 ```
@@ -67,8 +69,13 @@ tests → public modules above
 | `sandbox/runner.py` | namespace 内私有 rootfs、mount、limits、直接 argv、进程树监控/清理 | 被应用直接 import；不能成为通用命令入口 |
 | `workspace.py` | 创建隔离副本、路径防逃逸、fingerprint、Git baseline | 判断任务是否修复成功 |
 | `trajectory.py` | 兼容 JSONL store、record、replay、semantic projection | 恢复执行、再次调用工具、SQLite SQL |
-| `persistence.py` | SQLite schema v3、snapshot/message/event/checkpoint、model/tool journal、summary、lease 原子 mutation | 模型/工具调用、状态迁移决策、JSONL 格式化 |
+| `persistence.py` | SQLite schema v4、snapshot/message/event/checkpoint、model/tool journal、summary、lease 原子 mutation | 模型/工具调用、状态迁移决策、Memory lifecycle、JSONL 格式化 |
 | `migrations.py` | 有序、幂等、未知未来版本拒绝的 schema migration | session 业务状态、运行时编排 |
+| `memory/domain.py` | versioned episodic/semantic record、scope/status、provenance 与 retrieval value objects | SQL、模型调用、Runtime 状态 |
+| `memory/policy.py`、`memory/service.py` | write scope/provenance/content policy 与显式 proposal/approval/stale/delete lifecycle | 绕过 approval、工具执行、Context 拼装 |
+| `memory/sqlite.py` | record/lifecycle/retrieval audit 的 SQLite v4 authority 与原子 optimistic transition | 检索排序、权限决策、公共 IPC |
+| `memory/retrieval.py` | deterministic lexical/metadata selection、top-k/Token/scope/revision/expiry filtering | embedding/vector、隐式写入 |
+| `memory/evaluation.py` | cold/warm paired task success、recall、injection、Token/latency 聚合 | 把 recall 当 task success、生产收益推断 |
 | `export.py` | 已提交 DB events 到 JSONL 的原子 projection 导出 | 状态决策、replay 规则 |
 | `compression.py` | 摘要模型调用边界、event lineage、schema/required-fact 验证、stale 判定 | 权限判定、Runtime 状态迁移、覆盖原始事件 |
 | `evaluation.py` | versioned suite、containment、trusted oracle、fresh run、metrics、A/B report | 改变 Runtime 完成语义、绕过 Harness、生产流量实验 |
@@ -200,6 +207,11 @@ class AgentApplication:
 
 调用者通过 Application 开始任务、resume、interrupt、resolve、inspect、replay 或 export，
 不直接实例化一半依赖。CLI 不直接更新 SQLite。
+
+P2-M2 的 Memory 是可选的调用方组合：调用者可以把 `SQLiteMemoryStore`、
+`MemoryService`、`LexicalMemoryRetriever` 和 query factory 装配到 `BudgetedContextBuilder`，
+再把该 builder 传给 Application。默认 `AgentApplication` 与 `protocol.headless` 不创建、查询
+或注入 Memory；Memory 也不是当前 Runtime IPC capability。
 
 ## 5. 调用所有权和失败所有权
 

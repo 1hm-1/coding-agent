@@ -21,7 +21,14 @@ from coding_agent.domain import (
     ToolStatus,
 )
 from coding_agent.export import export_trace
-from coding_agent.migrations import FutureSchemaVersion
+from coding_agent.migrations import (
+    FutureSchemaVersion,
+    Migration,
+    MigrationRunner,
+    V1,
+    V2,
+    V3,
+)
 from coding_agent.persistence import (
     JournalConflict,
     JournalMutation,
@@ -86,7 +93,7 @@ class PersistenceFoundationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             db_path = Path(temporary) / "state.db"
             journal = SQLiteRunJournal(db_path)
-            self.assertEqual(journal.schema_version, 3)
+            self.assertEqual(journal.schema_version, 4)
             self.assertEqual(journal.connection.execute("PRAGMA foreign_keys").fetchone()[0], 1)
             self.assertEqual(
                 journal.connection.execute("PRAGMA journal_mode").fetchone()[0].lower(),
@@ -122,6 +129,9 @@ class PersistenceFoundationTest(unittest.TestCase):
                     "model_calls",
                     "tool_calls",
                     "summaries",
+                    "memory_records",
+                    "memory_events",
+                    "memory_retrievals",
                     "sqlite_sequence",
                 },
             )
@@ -141,6 +151,29 @@ class PersistenceFoundationTest(unittest.TestCase):
             connection.close()
             with self.assertRaises(FutureSchemaVersion):
                 SQLiteRunJournal(db_path)
+
+    def test_memory_schema_migration_rolls_back_partial_version(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            connection = sqlite3.connect(Path(temporary) / "state.db")
+            broken_v4 = Migration(
+                version=4,
+                statements=(
+                    "CREATE TABLE partial_memory_table(id TEXT PRIMARY KEY)",
+                    "THIS IS NOT VALID SQL",
+                ),
+            )
+            with self.assertRaises(sqlite3.OperationalError):
+                MigrationRunner((V1, V2, V3, broken_v4)).migrate(connection)
+            self.assertIsNone(
+                connection.execute(
+                    "SELECT name FROM sqlite_master WHERE name = 'partial_memory_table'"
+                ).fetchone()
+            )
+            self.assertEqual(
+                [row[0] for row in connection.execute("SELECT version FROM schema_migrations")],
+                [1, 2, 3],
+            )
+            connection.close()
 
     def test_snapshot_and_session_message_event_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

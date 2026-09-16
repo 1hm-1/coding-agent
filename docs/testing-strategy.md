@@ -20,6 +20,7 @@
 | `test_m3_evaluation.py` | eval/integration | strict manifest/containment、fresh repetition、trusted oracle、基础设施失败、task/runtime 分离、metrics、paired A/B |
 | `test_m4_sandbox.py` | security/integration/fault | capability fail-closed、namespace escape/network/secret/symlink/proc/device、resource/output limits、process cleanup、parallel session、SQLite recovery |
 | `test_m4_execution.py` | security/contract/integration/fault | structured argv/profile allowlist、cwd/schema、approval fail-closed、non-zero observation、sandbox cleanup 和 non-idempotent recovery |
+| `test_memory.py` | contract/security/integration/fault/eval | schema v4、proposal lifecycle、provenance/scope/content policy、transaction rollback、bounded retrieval、leakage、Context manifest、默认入口关闭与多任务 cold/warm benchmark |
 | `live_provider_smoke.py` | opt-in live contract | 凭据门控的 OpenAI-compatible/Anthropic 真实 adapter 请求；不进入默认 discovery |
 
 当前统一命令：
@@ -28,7 +29,8 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-固定 `v0.1.0` 验收基线为 93 个测试；P2-M1 完成后当前开发树为 111 个。具备 native sandbox capability 的环境中全部通过，能力受限
+固定 `v0.1.0` 验收基线为 93 个测试；P2-M1 完成后为 111 个，P2-M2 完成后当前开发树为
+134 个。具备 native sandbox capability 的环境中全部通过，能力受限
 环境中 native-only case 会显式 skip。live provider smoke 需显式凭据和手动触发。
 
 `examples/capability_holdout_suite.json` 是 M5 的非 search 能力门禁：只包含正常任务，覆盖
@@ -109,6 +111,10 @@ crash matrix 和 M2.3 的 adapter/retry contract 分别由 `test_m2_recovery.py`
 `test_models.py` 覆盖。默认测试完全离线；真实 Provider live smoke 仅在有凭据时人工触发，
 本次因无凭据未执行。
 
+P2-M2 的 Memory calibration 使用三个确定性 Runtime cold/warm pair。它同时报告 trusted task
+oracle、relevant recall、irrelevant injection、retrieval Token/latency、scripted model Token 和
+端到端 wall latency；只验证评测链路，不作为真实 Provider 或生产收益证据。
+
 ## 7. M3 Context、Compression 与 Evaluation 矩阵
 
 | 能力 | 正常路径 | 必须故障/恢复路径 |
@@ -186,12 +192,13 @@ keys，同时明确 Provider 请求是独立随机样本，不把它描述为确
 lint
   └─ ruff check
 typed-release-surface
-  └─ mypy (26/36 source files: models/tools/context/domain/workspace/command_profiles/evaluation/sandbox/protocol)
+  └─ mypy (33 configured source files: memory/models/tools/context/domain/workspace/command_profiles/evaluation/sandbox/protocol)
 unit-contract
   └─ capability report + coverage run unittest discover + combine + report (fail-under=70)
 golden-smoke
   ├─ compileall + wheel/sdist build
   ├─ calculator/todo scripted smoke (native capability available时)
+  ├─ P2-M2 multi-task Memory cold/warm benchmark
   └─ offline eval suite (native capability available时)
 ```
 

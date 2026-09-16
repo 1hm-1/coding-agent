@@ -1,6 +1,6 @@
 # 当前运行契约
 
-> 适用基线：M5.1。本文描述当前代码；后续 M5 能力扩展仍是条件阶段。
+> 适用基线：Phase 2 P2-M2。本文描述当前代码；P2-M3 及后续能力仍未激活。
 
 ## 1. Runtime 状态契约
 
@@ -335,8 +335,10 @@ rootfs 内容摘要，也不是 OCI image 生命周期承诺。
 
 ## 10. M2/M3 持久化与恢复契约
 
-- 默认 `AgentApplication` 打开 `<agent-home>/state.db`，启动时运行有序 migration；当前 schema version 为 3。
-- SQLite `sessions`、`messages`、`events`、`checkpoints`、`model_calls`、`tool_calls` 和 `summaries` 是当前 session、恢复和摘要事实来源；默认连接打开 `foreign_keys=ON`、`journal_mode=WAL`、`busy_timeout=5000`。
+- 默认 `AgentApplication` 打开 `<agent-home>/state.db`，启动时运行有序 migration；当前 schema version 为 4。
+- SQLite `sessions`、`messages`、`events`、`checkpoints`、`model_calls`、`tool_calls`、`summaries`
+  以及 Memory 三张表是各自 Runtime/Memory 事实来源；默认连接打开 `foreign_keys=ON`、
+  `journal_mode=WAL`、`busy_timeout=5000`。
 - `RuntimeSnapshot` 使用显式 `snapshot_version=2` JSON；包含 pending/active call、resume target、retry metadata、approval/interruption 字段、policy、failure 和计数，不使用 pickle。
 - `create_session()` 原子建立 session、初始 checkpoint、user message 和 `session_created`/`message_added` 事件。
 - `JournalMutation` 用 `expected_state` 与 `expected_version` 做乐观并发校验；session state、checkpoint、version、event sequence 以及可选 message 在同一短事务中提交。冲突和提交前故障都不得留下部分写入。
@@ -352,6 +354,27 @@ rootfs 内容摘要，也不是 OCI image 生命周期承诺。
 `summaries` 行保存摘要 JSON 及其 lineage 索引。摘要更新不改变原始 event sequence；
 supersede 只写新摘要并给旧摘要加 `superseded_by`，stale 标记会让 Context Engine 停止
 使用该摘要。
+
+### 10.1 P2-M2 Memory 契约
+
+- 长期 `MemoryRecord` schema version 为 1；kind 只有 `episodic|semantic`，scope 只有
+  `session|repository|user`，status 只有 `proposed|active|stale|rejected|deleted`。
+- `MemoryService.propose()` 只生成 `proposed`。调用方必须提供 `MemoryWriteContext` 和可验证的
+  run/agent/event provenance；`JournalProvenanceValidator` 只接受 committed Runtime event id。
+- scope id 必须与 write context 所有权相同；repository record 必须绑定 revision。Secret、完整工具
+  输出、宿主绝对路径和常见嵌入式指令在写入前 fail closed。
+- 只有显式 `activate()` 可把 proposed 变为 active；reject/stale/delete/supersede 均以 optimistic
+  version 和同事务 audit event 更新。supersede activation 原子 stale 旧 active record。
+- delete 是 tombstone：清空 content，保留 content hash、provenance 和 audit；所有非 active 状态均
+  不可检索。同 scope/kind/content hash 重复项返回 conflict，不静默覆盖。
+- `LexicalMemoryRetriever` 只使用确定性 lexical overlap 与 metadata filtering；top-k 和 Token budget
+  是硬上限，scope/revision/expiry/status 均先过滤。query 原文不落库，只保存 hash、selected
+  manifest、成本和 latency。
+- `BudgetedContextBuilder` 仅在显式注入 retriever/query factory 时启用 Memory；检索内容作为不可信
+  参考数据，不能授权工具或覆盖 policy。manifest 记录 selection 和最终 `included` 状态；预算不足
+  时整体丢弃可选 Memory section。unbounded preview 不写 audit。
+- Memory SQLite schema 是私有实现，不属于 Runtime IPC v1。当前没有 Memory CLI/UI；Procedural
+  memory、Skill、embedding/vector/RAG 均未实现。
 
 ## 11. Evaluation 契约
 

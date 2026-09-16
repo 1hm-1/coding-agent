@@ -1,20 +1,20 @@
 # 新窗口开发交接
 
-> 交接基线：2026-09-16，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1 与 Phase 2 P2-M1 Headless Runtime IPC 已完成；P2-M2 尚未激活。
+> 交接基线：2026-09-16，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC 与 P2-M2 Layered Memory 已完成；P2-M3 尚未激活。
 > 固定版本：`v0.1.0`；安装、测试、离线 Eval、Demo 和支持边界见 `docs/releases/v0.1.0.md`。
 
 ## 1. 开始前必须做
 
 1. 将工作目录切换到 `/home/hmli/code/coding-agent`。
 2. 完整阅读 `AGENTS.md`、`docs/README.md`、`docs/current-state.md`。
-3. 阅读已完成的 `docs/p2-implementation-plan.md` 与 Runtime IPC 权威规范；开始后续能力前等待用户明确激活对应里程碑。
+3. 阅读已完成的 `docs/p2-implementation-plan.md`、`docs/p2-m2-implementation-plan.md` 与 Runtime IPC 权威规范；开始 P2-M3 前等待用户明确激活。
 4. 运行：
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前开发树应为 111 个默认测试通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
+当前开发树应为 134 个默认测试通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
 
 ## 2. 工作区事实
 
@@ -36,7 +36,8 @@ PYTHONPATH=src python3 -m unittest discover -v
 - 四份 semantic golden 必须持续通过。
 - JSONL 只能从当前 SQLite committed events 重建；不能反过来把 JSONL 当恢复事实来源。
 - Provider 分支只能存在于 adapter，不进入 Runtime。
-- Phase 2 P2-M1 producer 已实现；多 Agent、终端、Memory、Skill/MCP 仍未激活，没有明确里程碑不得加入代码或依赖。
+- Phase 2 P2-M1 producer 与 P2-M2 episodic/semantic Memory 已实现；多 Agent、终端、Skill/MCP、
+  procedural memory、RAG/vector 仍未激活，没有明确里程碑不得加入代码或依赖。
 - `v0.1.0` 没有 `protocol-info`、`run-headless` 或 Runtime IPC v1；这些能力只属于当前 `0.2.0.dev0` 开发树。
 
 ## 4. M2/M3/M4/M5.1 完成事实与下一步推荐入口
@@ -109,18 +110,29 @@ checkpoint-before-result 和子进程清理均有 producer contract tests。111 
 配置范围源码文件 mypy、compileall、76.8% coverage、wheel/sdist、独立 wheel discovery 与两个
 既有 smoke 均通过。Agent Platform consumer 不在本仓库实现。
 
-下一候选是 P2-M2 Memory，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入 shell 字符串、
-默认网络、Skill、MCP、多 Agent、UI 或 RAG。
+Phase 2 P2-M2 已完成：SQLite schema v4、versioned episodic/semantic record、committed journal
+provenance、scope/revision/content policy、proposal/explicit approval/stale/supersede/delete、原子审计、
+bounded lexical retrieval、Context manifest 与 multi-task cold/warm calibration 均有测试。删除 tombstone
+清空原文；unbounded Context preview 不重复写 retrieval audit。134 个默认测试、Ruff、33 文件 mypy、
+compileall、78.3% coverage、wheel/sdist、独立 wheel Memory import、calculator/todo smoke 和多任务
+Memory benchmark 均通过。三任务 trusted oracle 为 cold 0/3 → warm 3/3，relevant recall=1.0、
+irrelevant injection=0.5，scripted model total Token 691 → 1338（+647）；这只证明链路和成本可观测，
+不外推真实 Provider 收益。
+Memory 的交付形态明确为显式 Python composition：默认 `AgentApplication` 与 `run-headless` 不创建、
+查询或注入 Memory，也不把它加入 Runtime IPC capability。
+
+下一候选是 P2-M3 Profiles/Skill Runtime，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入
+shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。
 
 ## 5. 完成一次开发后的交接动作
 
 - 更新 `docs/current-state.md` 中“已实现/未实现/技术债”；
 - 勾选当前里程碑文档对应 checklist；M2、M3 和 M4.1/M4.2 的 checklist 已完成；
 - 更新 `docs/roadmap.md` 的子阶段状态；
-- 运行全量测试、Ruff、calculator 和 todo smoke；DeepSeek live smoke、compressed 定向、
+- 运行全量测试、Ruff、calculator、todo smoke 和 P2-M2 Memory cold/warm benchmark；DeepSeek live smoke、compressed 定向、
   M5.1 search A/B、budget-aware follow-up 和 capability holdout 已有脱敏证据；不必在没有
   新假设时重复消耗 Provider 配额；
-- 在最终说明中给出测试数量、golden 状态、迁移版本、覆盖率/类型检查/CI 状态和仍未实现项；当前 schema 为 v3，M4.1/M4.2 native backend 不等同于 OCI container；
+- 在最终说明中给出测试数量、golden 状态、迁移版本、覆盖率/类型检查/CI 状态和仍未实现项；当前 schema 为 v4，M4.1/M4.2 native backend 不等同于 OCI container；
 - 不使用“生产可用”“完全安全”等超出证据的表述。
 
 ## 6. 新窗口建议首条指令
@@ -129,9 +141,9 @@ checkpoint-before-result 和子进程清理均有 producer contract tests。111 
 
 ```text
 请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、已完成的
-docs/p2-implementation-plan.md 和 Runtime IPC v1/compatibility 权威规范。P2-M1 已完成，先运行
-111 个默认测试确认基线；P2-M2 尚未激活，不得提前加入 Memory、Skill、MCP、多 Agent、UI、
-RAG、shell 字符串或默认网络。
+docs/p2-implementation-plan.md、docs/p2-m2-implementation-plan.md 和 Runtime IPC v1/compatibility
+权威规范。P2-M1/P2-M2 已完成，先运行 134 个默认测试确认基线；P2-M3 尚未激活，不得提前加入
+Skill、MCP、多 Agent、UI、RAG/vector、shell 字符串或默认网络。
 ```
 
 若新 Agent 建议扩大范围，先要求它指出当前 roadmap 门禁或 acceptance criteria 需要该变化；无法对应时不采纳。

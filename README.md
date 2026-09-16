@@ -17,18 +17,20 @@ A single-agent coding runtime focused on **determinism, recovery, auditability, 
 boundaries**. It demonstrates a complete `model → tool → observation → recovery` loop with
 executable evidence instead of presenting a large tool list around a chat interface.
 
-当前基线完成 M1—M4、Release/Evidence Hardening 和由真实 Eval 失败覆盖批准的 M5.1
-只读搜索。Phase 2 P2-M1 Headless Runtime IPC 已在 `0.2.0.dev0` 开发树完成；Memory、
-Skill/Profile、MCP、多 Agent 仍需分别激活后推进。
+当前基线完成 M1—M4、Release/Evidence Hardening、由真实 Eval 失败覆盖批准的 M5.1
+只读搜索，以及 Phase 2 P2-M1 Headless Runtime IPC 与 P2-M2 Layered Memory。
+P2-M2 的 Memory 仅通过显式 Python composition 使用；默认 `AgentApplication`/headless
+配置不会自动查询或注入 Memory。P2-M3 Skill/Profile、MCP、多 Agent 仍未激活。
 
-The current baseline completes M1—M4, Release/Evidence Hardening, and M5.1 read-only search,
-which was approved by live Eval failure coverage. Further capabilities remain evidence-gated.
-Phase 2 P2-M1 Headless Runtime IPC is complete in the `0.2.0.dev0` development tree. Memory,
-Skills/Profiles, MCP, and multi-agent orchestration remain deferred to separately activated milestones.
+The current baseline completes M1—M4, Release/Evidence Hardening, M5.1 read-only search approved
+by live Eval failure coverage, and Phase 2 P2-M1 Headless Runtime IPC plus P2-M2 Layered Memory.
+P2-M2 Memory is available only through explicit Python composition; the default
+`AgentApplication`/headless configuration does not automatically query or inject Memory.
+P2-M3 Skills/Profiles, MCP, and multi-agent orchestration remain inactive.
 
 ## 验证结果 / Evidence at a glance
 
-| 证据 / Evidence | v0.1.0 结果 / Result |
+| 固定发布证据 / Pinned v0.1.0 evidence | 结果 / Result |
 |---|---:|
 | 默认测试 / Default tests | **93/93 passed** |
 | 语义 golden trajectories | **4/4 passed** |
@@ -39,6 +41,10 @@ Skills/Profiles, MCP, and multi-agent orchestration remain deferred to separatel
 | 非 search DeepSeek holdout | **12/12** end-to-end |
 | 源仓库不变 / Source repository unchanged | **100%** in recorded Eval runs |
 | 托管 CI / Hosted CI | Python **3.10 + 3.11** passed |
+
+上表只描述固定的 `v0.1.0`；当前开发树的 P2-M2 验收结果和限制见
+[`docs/current-state.md`](docs/current-state.md) 与
+[`p2-m2-implementation-plan.md`](docs/p2-m2-implementation-plan.md)。
 
 这些结果来自版本化的小型 fixture、离线 oracle 和独立真实 Provider 请求，只是可复核的工程
 证据，不代表通用编码任务或生产成功率。脱敏报告位于 [`docs/evidence`](docs/evidence/)。
@@ -161,9 +167,10 @@ git diff --exit-code -- examples/todo_cli
 
 ```bash
 PYTHONWARNINGS=error PYTHONPATH=src .venv/bin/python -X dev -m unittest discover -v
-.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos
+.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
 .venv/bin/mypy
-PYTHONPATH=src .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos
+PYTHONPATH=src .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
+PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
 ```
 
 ### 4. 运行固定离线 Eval / Run the fixed offline Eval
@@ -183,14 +190,25 @@ PYTHONPATH=src .venv/bin/python -m coding_agent.cli \
 Expected: 14/14 valid runs, 10/10 normal tasks end-to-end, 4/4 negative controls observed,
 zero infrastructure failures, and a source invariant rate of 1.0.
 
+### 5. 运行 P2-M2 Memory cold/warm benchmark
+
+```bash
+PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
+```
+
+该 benchmark 使用三个确定性任务和可信 oracle，比较默认 context 与显式 Memory composition，
+分别报告 task success、relevant recall、irrelevant injection、scripted token usage、检索成本和
+端到端延迟。它不代表真实 Provider 收益，也不会修改仓库 source fixture。
+
 ## 核心能力 / Core capabilities
 
 | 模块 / Area | 已实现 / Implemented |
 |---|---|
 | Runtime | 显式 FSM；step/model/tool budgets；结构化失败；安全中断与恢复 / Explicit FSM, budgets, classified failures, safe interruption and recovery |
 | Tools | `read_file`, `search_files`, `edit_file`, `restricted_test`, `run_command` |
-| Persistence | SQLite schema v3；原子 state/event/checkpoint/call journal；lease 与 reconciliation / SQLite v3, atomic journal, leases, reconciliation |
+| Persistence | SQLite schema v4；原子 Runtime journal + Memory record/lifecycle/retrieval audit / SQLite v4, atomic Runtime journal and Memory audit |
 | Context | 分区预算、hard retention、原子 tool-call 组裁剪、带 lineage 的压缩 / Section budgets, hard retention, atomic tool-call groups, lineage-aware compression |
+| Memory | 受控 episodic/semantic proposal/approval/stale/delete；有界 lexical retrieval；scope/revision/provenance 隔离；仅显式 Python composition / Governed lifecycle, bounded lexical retrieval, scoped provenance; explicit Python composition only |
 | Sandbox | Rootless Linux namespaces、只读 rootfs、默认禁网、资源限制、进程清理 / Rootless namespaces, read-only rootfs, no network, limits, cleanup |
 | Evaluation | 版本化 suite、可信 oracle、正常任务/负控制分离、paired A/B、Provider override / Versioned suites, trusted oracles, separated controls, paired A/B, Provider override |
 | Models | Deterministic ScriptedBackend, OpenAI-compatible, Anthropic, retry/backoff, explicit fallback |
@@ -248,8 +266,10 @@ the compression A/B did not save tokens and remains a small local benchmark.
   Production-grade strong multi-tenant isolation, OCI image lifecycle, SBOM, or vulnerability scanning.
 - 通用 Shell、任意 executable、默认网络或模型驱动依赖安装。<br>
   General Shell, arbitrary executables, default network, or model-directed dependency installation.
-- Git inspection 工具、多 Agent、UI、RAG、Skills 或长期用户记忆。<br>
-  Git inspection tools, multi-agent orchestration, UI, RAG, Skills, or long-term user memory.
+- Git inspection 工具、多 Agent、UI、RAG、Skills、procedural memory，以及默认入口的自动 Memory
+  注入；Memory CLI/UI 也未实现。<br>
+  Git inspection tools, multi-agent orchestration, UI, RAG, Skills, procedural memory, automatic
+  Memory injection in default entrypoints, or a Memory CLI/UI.
 - Windows/macOS 等价 sandbox 保证或通用生产成功率声明。<br>
   Windows/macOS-equivalent sandbox guarantees or a general production success-rate claim.
 
@@ -266,7 +286,8 @@ the compression A/B did not save tokens and remains a small local benchmark.
 | [M5.1 决策 / M5.1 decision](docs/decisions/m5-1-search-files.md) | 为什么增加最小只读搜索 / Why minimal read-only search was added |
 | [v0.1.0 发布说明 / Release notes](docs/releases/v0.1.0.md) | 固定复现步骤与完整边界 / Pinned reproduction and full boundaries |
 | [Phase 2 实施计划 / Implementation plan](docs/p2-implementation-plan.md) | 已完成 P2-M1 checklist 与后续路线 / Completed P2-M1 checklist and staged roadmap |
-| [Phase 2 产品架构 / Product architecture](docs/v2-product-architecture.md) | Memory、Skill/MCP、多 Agent 与终端的分阶段设计 / Staged product design |
+| [P2-M2 Memory 计划 / P2-M2 Memory plan](docs/p2-m2-implementation-plan.md) | Memory 契约、benchmark 与退出证据 / Memory contract, benchmark, and exit evidence |
+| [Phase 2 产品架构 / Product architecture](docs/v2-product-architecture.md) | 已实现 Memory 与未来 Skill/MCP、多 Agent、终端边界 / Implemented Memory and staged future capabilities |
 | [Runtime IPC v1](docs/protocol/runtime-ipc-v1.md) | 已实现的 producer 进程契约；Platform consumer 仍外置 / Implemented producer contract; Platform consumer remains external |
 
 新接手开发请先阅读 `AGENTS.md`、[HANDOFF](docs/HANDOFF.md) 和
