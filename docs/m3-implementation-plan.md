@@ -1,8 +1,8 @@
 # M3：Context Engineering 与 Evaluation 实施计划
 
-> 状态：已完成（2026-09-05）  
-> 前置门禁：M2.1—M2.3 全部完成，恢复与 Provider contract tests 通过  
-> 实施顺序：M3.1 Context Budget → M3.2 Compression → M3.3 Eval Harness  
+> 状态：已完成（2026-09-05）
+> 前置门禁：M2.1—M2.3 全部完成，恢复与 Provider contract tests 通过
+> 实施顺序：M3.1 Context Budget → M3.2 Compression → M3.3 Eval Harness
 > 真实 Provider live smoke：未执行（环境无凭据）；M3 证据使用离线 ScriptedBackend。
 
 ## 1. 目标与非目标

@@ -1,6 +1,6 @@
 # S3 Holdout 审查与 Live Provider A/B Harness
 
-日期：2026-09-17  
+日期：2026-09-17
 审查对象：L3 提交 `d7801e2`，实现基线 `8ebc800`
 
 ## Holdout 审查结论

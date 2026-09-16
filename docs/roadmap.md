@@ -1,7 +1,7 @@
 # 开发路线图
 
 > 路线图状态基线：2026-09-16
-> 当前完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Release/Evidence Hardening  
+> 当前完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Release/Evidence Hardening
 > 当前实施项：**Phase 2 P2-M2 Layered Memory 与检索优化已完成；P2-M3 尚未激活**
 > 当前证据补充：简历 benchmark 的 scripted 校准及 `deepseek-flash` live 25-run/压缩
 > 10-pair 已完成；live 稳定性为 24/25，压缩没有节省 Token，见 `docs/resume-benchmark.md`。

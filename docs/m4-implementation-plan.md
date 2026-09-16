@@ -1,7 +1,7 @@
 # M4：OS 级 Workspace Isolation 实施计划
 
-> 状态：M4.1、M4.2 已完成（2026-09-05）  
-> 前置门禁：M3 完成，Eval Harness 能稳定运行安全回归 suite  
+> 状态：M4.1、M4.2 已完成（2026-09-05）
+> 前置门禁：M3 完成，Eval Harness 能稳定运行安全回归 suite
 > 核心原则：先写 threat model 和攻击测试，再选择/实现 executor
 
 ## 1. 为什么 M4 独立成阶段
