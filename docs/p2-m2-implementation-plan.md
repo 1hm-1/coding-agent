@@ -47,8 +47,9 @@ Builder。Working memory 继续由现有 session/messages/context 提供；Proce
 
 ### D. Eval 与质量门禁
 
-- [x] 固定三任务 cold/warm paired A/B fixture，报告 task success、relevant recall、irrelevant injection、
-  retrieval Token 和 latency；不把 retrieval recall 当作 task success。
+- [x] 固定 12-case cold/warm paired baseline，报告 task success、relevant recall、precision、
+  irrelevant injection、无关行为变化、retrieval/Memory-context Token、Token per successful task
+  和 latency；不把 retrieval recall 当作 task success。
 - [x] 跨 user、repository、session leakage、prompt injection、过期/删除/旧 revision 负例通过。
 - [x] 记录 warm-run 收益或无收益及成本，证据不足时不宣称 memory 改善能力。
 
@@ -72,11 +73,13 @@ Builder。Working memory 继续由现有 session/messages/context 提供；Proce
 - 激活前基线：2026-09-16，111/111 默认 unittest 通过。
 - 完成证据：134/134 默认 unittest；四份既有 semantic golden 不变；Ruff；33 个配置范围源码
   文件 mypy；compileall；78.3% statement coverage；wheel/sdist 与独立 wheel Memory import；
-  calculator/todo scripted smoke 与三任务 Memory cold/warm benchmark。
-- 三个确定性 user-memory case 的 trusted task oracle 为 cold 0/3 → warm 3/3，relevant recall=1.0、
-  irrelevant injection=0.5；retrieval cost 为 109 Token（均值 36.33），scripted model total
-  Token 为 691 → 1338（+647）。最近一次本地运行的 wall latency 为 cold 137.17ms total/
-  45.72ms mean，warm 146.36ms total/48.79ms mean，warm-cold mean +3.07ms；延迟受本机调度影响。
+  calculator/todo scripted smoke 与 12-case Memory cold/warm benchmark。
+- 12 个冻结 case 的 trusted task oracle 为 cold 8/12 → warm 12/12，relevant recall=1.0、
+  precision=2/3、irrelevant injection=1/3，无关行为变化率=0；retrieval cost 为 116 Token，
+  Memory context Token 为 803，scripted model total Token 为 2740 → 3543（+803）。Token per
+  successful task 为 cold 342.5、warm 295.25（仅 model），计入 retrieval 后 warm 为 304.92；
+  最近一次本地运行 wall latency mean 为 cold 44.53ms、warm 47.71ms，warm-cold mean +3.18ms。
+  延迟受本机调度影响；该 baseline 不代表真实 Provider 或生产收益。
   脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
   它证明 A/B 和指标链路，不代表真实 Provider 或生产收益。
 - SQLite schema 已迁移到 v4。P2-M3 仍未激活。

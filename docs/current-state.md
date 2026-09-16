@@ -55,10 +55,14 @@
 - 本阶段交付形态是 Python composition：调用方可将 `SQLiteMemoryStore`、`MemoryService`、
   `LexicalMemoryRetriever` 和 query factory 组装到 `BudgetedContextBuilder`；默认
   `AgentApplication` 与 `run-headless` 不创建、查询或注入 Memory，也不公布 Memory IPC capability。
-- 三任务 cold/warm Runtime benchmark 的 trusted task oracle 为 cold 0/3 → warm 3/3，relevant
-  recall=1.0，irrelevant injection=0.5；retrieval cost 为 109 Token（均值 36.33），scripted model
-  total Token 为 691 → 1338（+647）。最近一次本地运行 wall latency 为 cold 137.17ms total/
-  45.72ms mean，warm 146.36ms total/48.79ms mean，warm-cold mean +3.07ms；延迟是本机测量值。
+- 已将 cold/warm Runtime benchmark 固定为 12 个 case：4 个明确相关、2 个无匹配、2 个词面相似
+  但语义无关、1 个错误 user scope、1 个错误 repository/revision、1 个 stale/deleted 和 1 个
+  诱导指令拒绝负例。trusted task oracle 为 cold 8/12 → warm 12/12，relevant recall=1.0，
+  precision=2/3，irrelevant injection=1/3；无关 case 的行为变化率为 0。retrieval cost 为
+  116 Token，Memory context Token 为 803，scripted model total Token 为 2740 → 3543（+803），
+  Token per successful task 为 cold 342.5、warm 295.25（仅 model），计入 retrieval 后 warm
+  为 304.92。最近一次本地运行 wall latency mean 为 cold 44.53ms、warm 47.71ms，warm-cold
+  mean +3.18ms；延迟是本机测量值。该基线没有修改检索算法，不是 Provider 收益证据。
   脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
 - P2-M2 验收通过 134/134 默认 unittest、四份既有 semantic golden、Ruff、33 个配置范围源码文件
   mypy、compileall、78.3% coverage、wheel/sdist、独立 wheel Memory import、calculator/todo smoke
@@ -366,9 +370,11 @@ PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
 16. 简历 benchmark 的 scripted 校准不是模型能力证据；live 数字只适用于记录的五个小型
     fixture、`deepseek-flash` 和 worktree content snapshot。压缩 A/B 没有产生 Token 节省，
     不得将 10% 的小样本 Runtime completion 差异外推成一般收益。
-17. P2-M2 Memory benchmark 使用确定性 trusted oracle 和 scripted Token 估算；warm 组的
-    irrelevant injection=0.5 且 scripted model total Token 增加 647，说明当前 lexical baseline
-    的召回收益伴随上下文成本和噪声，不能据此启用默认 Application/headless Memory。
+17. P2-M2 Memory benchmark 现在使用 12 个冻结 case 的确定性 trusted oracle 和 scripted Token
+    估算；relevant recall=1.0、precision=2/3、irrelevant injection=1/3，且无关 case 行为变化率
+    为 0，但 warm 的 scripted model total Token 仍增加 803、wall latency mean 增加约 3.18ms。
+    这只是不可挑题的 lexical baseline，不能据此宣称真实模型净收益或启用默认
+    Application/headless Memory。
 
 ## 6. 不允许虚构的项目事实
 

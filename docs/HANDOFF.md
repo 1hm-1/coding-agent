@@ -115,9 +115,11 @@ provenance、scope/revision/content policy、proposal/explicit approval/stale/su
 bounded lexical retrieval、Context manifest 与 multi-task cold/warm calibration 均有测试。删除 tombstone
 清空原文；unbounded Context preview 不重复写 retrieval audit。134 个默认测试、Ruff、33 文件 mypy、
 compileall、78.3% coverage、wheel/sdist、独立 wheel Memory import、calculator/todo smoke 和多任务
-Memory benchmark 均通过。三任务 trusted oracle 为 cold 0/3 → warm 3/3，relevant recall=1.0、
-irrelevant injection=0.5，scripted model total Token 691 → 1338（+647）；这只证明链路和成本可观测，
-不外推真实 Provider 收益。
+Memory benchmark 均通过。当前 benchmark 已冻结 12 个 case，覆盖相关/无匹配/词面 distractor/
+scope-revision 隔离/stale-deleted/诱导指令拒绝；trusted oracle 为 cold 8/12 → warm 12/12，
+relevant recall=1.0、precision=2/3、irrelevant injection=1/3，无关行为变化率=0，retrieval
+Token=116，Memory context Token=803，scripted model total Token 2740 → 3543（+803）。该结果仍
+只是不可挑题的合成 baseline，不代表真实 Provider 收益，默认入口与 IPC Memory 继续保持关闭。
 Memory 的交付形态明确为显式 Python composition：默认 `AgentApplication` 与 `run-headless` 不创建、
 查询或注入 Memory，也不把它加入 Runtime IPC capability。
 

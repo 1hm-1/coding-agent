@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "evidence_kind": "deterministic_memory_cold_warm_benchmark",
   "recorded_at": "2026-09-16",
   "benchmark": "examples/memory_cold_warm_benchmark.py",
@@ -9,45 +9,89 @@
     "default_application_enabled": false,
     "headless_enabled": false
   },
+  "frozen_case_count": 12,
+  "case_categories": {
+    "relevant": 4,
+    "no_match": 2,
+    "lexical_distractor": 2,
+    "wrong_user_scope": 1,
+    "wrong_repository_revision": 1,
+    "stale_or_deleted": 1,
+    "instruction_injection_negative": 1
+  },
   "cases": [
     "deployment-color",
     "invoice-rounding",
-    "parser-blank-input"
+    "parser-blank-input",
+    "cache-key-inputs",
+    "logging-format-no-match",
+    "auth-retry-no-match",
+    "deploy-region-distractor",
+    "invoice-label-distractor",
+    "wrong-user-scope",
+    "wrong-repository-revision",
+    "stale-deleted-memory",
+    "instruction-injection-negative"
   ],
+  "seed_controls": {
+    "active": 8,
+    "stale": 1,
+    "deleted": 1,
+    "policy_rejected": 1
+  },
   "results": {
-    "paired_cases": 3,
+    "paired_cases": 12,
     "task_success": {
-      "cold": 0.0,
+      "cold": 0.6666666666666666,
       "warm": 1.0,
-      "delta": 1.0
+      "delta": 0.33333333333333337
     },
     "relevant_recall": 1.0,
-    "irrelevant_injection_rate": 0.5,
+    "precision": 0.6666666666666666,
+    "irrelevant_injection_rate": 0.3333333333333333,
+    "unrelated_behavior_change_rate": 0.0,
+    "unrelated_memory_behavior_change_rate": 0.0,
     "retrieval_tokens": {
-      "total": 109,
-      "mean": 36.333333333333336
+      "total": 116,
+      "mean": 9.666666666666666
+    },
+    "memory_context_tokens": {
+      "total": 803,
+      "mean": 66.91666666666667,
+      "max": 136
     },
     "model_tokens": {
-      "cold_total": 691,
-      "warm_total": 1338,
-      "warm_minus_cold_total": 647
+      "cold_total": 2740,
+      "warm_total": 3543,
+      "warm_minus_cold_total": 803
+    },
+    "tokens_per_successful_task": {
+      "model": {
+        "cold": 342.5,
+        "warm": 295.25
+      },
+      "model_plus_retrieval": {
+        "cold": 342.5,
+        "warm": 304.9166666666667
+      }
     },
     "wall_latency_ms": {
-      "cold_total": 137.16525900053966,
-      "cold_mean": 45.72175300017989,
-      "cold_p50": 42.21326900005806,
-      "cold_p95": 53.07366499982891,
-      "warm_total": 146.36399600112782,
-      "warm_mean": 48.78799866704261,
-      "warm_p50": 48.560918000475795,
-      "warm_p95": 50.06636600046477,
-      "warm_minus_cold_mean": 3.06624566686272
+      "cold_total": 534.398544990836,
+      "cold_mean": 44.53321208256966,
+      "cold_p50": 43.4965700005705,
+      "cold_p95": 52.26890699850628,
+      "warm_total": 572.5383649987634,
+      "warm_mean": 47.71153041656362,
+      "warm_p50": 46.98744100096519,
+      "warm_p95": 53.389360997243784,
+      "warm_minus_cold_mean": 3.178318333993957
     }
   },
   "limitations": [
     "The oracle and model usage are deterministic synthetic fixtures, not Provider quality evidence.",
+    "Each pair uses an isolated memory pool so no-match and isolation controls are not cross-case contaminated.",
     "Latency is one local run and is sensitive to host scheduling.",
-    "The lexical baseline deliberately exposes irrelevant selection; no default Memory enablement is inferred."
+    "This baseline does not change retrieval scoring and does not justify default Application/headless or IPC Memory integration."
   ],
   "contains_credentials": false
 }

@@ -111,9 +111,12 @@ crash matrix 和 M2.3 的 adapter/retry contract 分别由 `test_m2_recovery.py`
 `test_models.py` 覆盖。默认测试完全离线；真实 Provider live smoke 仅在有凭据时人工触发，
 本次因无凭据未执行。
 
-P2-M2 的 Memory calibration 使用三个确定性 Runtime cold/warm pair。它同时报告 trusted task
-oracle、relevant recall、irrelevant injection、retrieval Token/latency、scripted model Token 和
-端到端 wall latency；只验证评测链路，不作为真实 Provider 或生产收益证据。
+P2-M2 的 Memory calibration 使用 12 个冻结的确定性 Runtime cold/warm pair：4 个明确相关、2 个
+无匹配、2 个词面相似但语义无关，以及 user scope、repository/revision、stale/deleted 和诱导
+指令拒绝控制。它报告 trusted task oracle、relevant recall、precision、irrelevant injection、
+无关 Memory 导致的行为变化、retrieval/Memory-context Token、scripted model Token、Token per
+successful task 和端到端 wall latency；只验证当前 lexical baseline 的评测链路，不作为真实
+Provider 或生产收益证据。
 
 ## 7. M3 Context、Compression 与 Evaluation 矩阵
 

@@ -196,9 +196,12 @@ zero infrastructure failures, and a source invariant rate of 1.0.
 PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
 ```
 
-该 benchmark 使用三个确定性任务和可信 oracle，比较默认 context 与显式 Memory composition，
-分别报告 task success、relevant recall、irrelevant injection、scripted token usage、检索成本和
-端到端延迟。它不代表真实 Provider 收益，也不会修改仓库 source fixture。
+该 benchmark 使用 12 个冻结 case 和可信 oracle，比较默认 context 与显式 Memory composition，
+覆盖明确相关、无匹配、词面相似但语义无关、错误 user scope、错误 repository/revision、
+stale/deleted 以及诱导指令拒绝。它报告 task success、relevant recall、precision/irrelevant
+injection、无关 Memory 导致的行为变化、scripted model Token、retrieval Token、Memory context
+Token、Token per successful task 和端到端延迟。它不代表真实 Provider 收益，也不会修改仓库
+source fixture。
 
 ## 核心能力 / Core capabilities
 

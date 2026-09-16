@@ -37,7 +37,7 @@
 | retry/fallback | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §5 | 已实现 | 只对分类基础设施错误；质量差不自动 fallback |
 | 重复工具调用/幂等 | [`contracts.md`](./contracts.md)、M2.2 recovery rules | 部分实现 | 已确认结果不重复；未知写操作需 resolution，不能宣称 exactly-once |
 | 上下文压缩与信息丢失 | [`architecture.md`](./architecture.md) §13、[`roadmap.md`](./roadmap.md) §7 | M3 已实现 | 不编造 Token 降幅；用 lineage、required-fact retention 和 task success A/B |
-| 短期/长期记忆 | Context M3 与 P2-M2 episodic/semantic 已实现 | 已实现（procedural 未来设计） | 可讲受控 lifecycle、provenance、scope、bounded retrieval 和三任务 cold/warm benchmark；当前只支持显式 Python composition，procedural memory/Skill 到 P2-M3 |
+| 短期/长期记忆 | Context M3 与 P2-M2 episodic/semantic 已实现 | 已实现（procedural 未来设计） | 可讲受控 lifecycle、provenance、scope、bounded retrieval 和 12-case 冻结 cold/warm baseline；当前只支持显式 Python composition，procedural memory/Skill 到 P2-M3 |
 | Eval 体系和 Badcase 定位 | [`testing-strategy.md`](./testing-strategy.md)、[`roadmap.md`](./roadmap.md) §7 | M3 离线 eval + M5.1 live A/B + capability holdout 已实现 | 能区分 oracle/runtime/e2e 和无效调用；小样本不外推生产成功率 |
 | A/B 与上线迭代 | [`roadmap.md`](./roadmap.md) M3 | 离线 paired A/B 已实现 | 只做固定 suite 的描述性比较；真实流量实验不在当前项目证据内 |
 | 安全、权限、Prompt Injection | [`architecture.md`](./architecture.md) §10、M4.1/M4.2 | 应用层 + Linux namespace 部分实现 | capability fail-closed、structured argv allowlist、secret/network/escape/resource/approval tests；不宣称抵御内核漏洞或跨平台等价 |
@@ -59,7 +59,7 @@
 - JSONL replay 与四份 semantic golden；
 - SQLite schema v4、session/message/checkpoint/call journal/summary 与 Memory record/audit round-trip、atomic mutation 和删除 JSONL 后重建 Runtime projection；
 - episodic/semantic proposal→approval、scope/provenance/revision 隔离、delete tombstone、bounded
-  lexical retrieval、Context manifest 和三任务 cold/warm calibration；默认 Application/headless
+  lexical retrieval、Context manifest 和 12-case 冻结 cold/warm calibration；默认 Application/headless
   保持 Memory-disabled；
 - 状态边界 resume、工具 crash/reconciliation、lease takeover、retry/fallback 和两个 adapter 的离线 contract；
 - context section budget、token counter fallback、summary lineage/stale/rejection 和 eval oracle/report/A-B；

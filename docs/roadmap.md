@@ -333,8 +333,11 @@ M5.1 代码、文档与脱敏证据已推送，Python 3.10/3.11 托管 CI 成功
 `protocol-info`、严格 request validator、`run-headless`、脱敏连续 JSONL、稳定退出码、取消/恢复
 边界、Schema/golden/vector 与发布构建均通过。内部 SQLite/JSONL 没有暴露为 Platform API。
 用户于 2026-09-16 激活并完成 P2-M2 分层 Memory；schema v4、受控生命周期、有界检索、
-Context manifest、泄漏/注入负例和三任务 cold/warm benchmark 均通过。Memory 只通过显式
-Python composition 提供，默认 Application/headless 不启用；P2-M3 尚未激活。
+Context manifest、泄漏/注入负例和三任务 cold/warm 验收均通过。随后补充了不改变检索算法的
+12-case 冻结 baseline，覆盖相关性、无匹配、词面 distractor、scope/revision 隔离、
+stale/deleted 和诱导指令拒绝，并补齐 precision、行为变化、Memory context Token 与
+Token-per-successful-task 指标。Memory 只通过显式 Python composition 提供，默认
+Application/headless 不启用；P2-M3 尚未激活，也没有真实 Provider 净收益结论。
 
 ## 14. Phase 2 分阶段路线
 
@@ -342,7 +345,7 @@ Python composition 提供，默认 Application/headless 不启用；P2-M3 尚未
 |---|---|---|---|
 | P2-D0 架构与契约设计 | 已完成 | `v2-product-architecture.md`、Runtime IPC v1 文档和 JSON Schema、兼容规则 | producer/consumer 权责、版本、取消、错误、secret/workspace 规则无歧义；明确尚未实现 |
 | P2-M1 Headless Runtime IPC | 已完成（2026-09-16） | `protocol-info`、`run-headless`、stdout JSONL、cooperative cancellation | v1 schema、golden、退出码、v0.1/v0.2 adapter contract vectors 全部通过 |
-| P2-M2 分层记忆 | 已完成（2026-09-16） | episodic/semantic memory ports、SQLite authority 与策略；显式 Python composition | provenance、隔离、遗忘、注入防护和三任务 cold/warm benchmark 已通过；默认入口关闭，不外推真实 Provider 收益 |
+| P2-M2 分层记忆 | 已完成（2026-09-16） | episodic/semantic memory ports、SQLite authority 与策略；显式 Python composition | provenance、隔离、遗忘、注入防护和 12-case 冻结 cold/warm baseline 已通过；默认入口关闭，不外推真实 Provider 收益 |
 | P2-M3 Profiles 与 Skill Runtime | 未启动 | immutable profile、Skill registry/loader/selector、能力策略 | skill provenance/permission/budget/replay 测试通过，不绕过 ToolHarness |
 | P2-M4 MCP 能力网关 | 未启动 | MCP adapter 经 CapabilityGateway 映射到 Harness | discovery、schema、secret、timeout、审计和恶意 server 负例通过 |
 | P2-M5 可恢复多 Agent 编排 | 未启动 | coordinator FSM、角色 mailboxes、hierarchical budgets、single-writer workspace | crash/replay/cancel/冲突/预算和相对单 Agent eval 通过 |

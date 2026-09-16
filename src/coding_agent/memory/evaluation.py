@@ -24,6 +24,10 @@ class MemoryPairResult:
     warm_output_tokens: int = 0
     cold_latency_ms: float = 0.0
     warm_latency_ms: float = 0.0
+    memory_context_tokens: int = 0
+    cold_answer: str | None = None
+    warm_answer: str | None = None
+    unrelated_case: bool = False
 
     def __post_init__(self) -> None:
         if not self.case_id:
@@ -34,6 +38,7 @@ class MemoryPairResult:
             "cold_output_tokens",
             "warm_input_tokens",
             "warm_output_tokens",
+            "memory_context_tokens",
         ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
@@ -91,6 +96,10 @@ def summarize_memory_pairs(results: tuple[MemoryPairResult, ...]) -> JsonObject:
         len(result.relevant_memory_ids.intersection(result.selected_memory_ids))
         for result in results
     )
+    relevant_selected_total = sum(
+        len(result.relevant_memory_ids.intersection(result.selected_memory_ids))
+        for result in results
+    )
     selected_total = sum(len(result.selected_memory_ids) for result in results)
     irrelevant_total = sum(
         len(set(result.selected_memory_ids) - result.relevant_memory_ids)
@@ -99,6 +108,40 @@ def summarize_memory_pairs(results: tuple[MemoryPairResult, ...]) -> JsonObject:
     count = len(results)
     cold_rate = cold_successes / count
     warm_rate = warm_successes / count
+    unrelated_results = tuple(result for result in results if result.unrelated_case)
+    comparable_unrelated = tuple(
+        result
+        for result in unrelated_results
+        if result.cold_answer is not None and result.warm_answer is not None
+    )
+    unrelated_changes = sum(
+        result.cold_answer != result.warm_answer for result in comparable_unrelated
+    )
+    injected_unrelated = tuple(
+        result
+        for result in comparable_unrelated
+        if result.selected_memory_ids and not result.relevant_memory_ids
+    )
+    injected_unrelated_changes = sum(
+        result.cold_answer != result.warm_answer for result in injected_unrelated
+    )
+    cold_model_total = sum(
+        result.cold_input_tokens + result.cold_output_tokens for result in results
+    )
+    warm_model_total = sum(
+        result.warm_input_tokens + result.warm_output_tokens for result in results
+    )
+    warm_end_to_end_total = warm_model_total + sum(
+        result.retrieval_tokens for result in results
+    )
+    cold_success_tokens = cold_model_total / cold_successes if cold_successes else None
+    warm_success_tokens = (
+        warm_model_total / warm_successes if warm_successes else None
+    )
+    cold_end_to_end_success_tokens = cold_success_tokens
+    warm_end_to_end_success_tokens = (
+        warm_end_to_end_total / warm_successes if warm_successes else None
+    )
     return {
         "schema_version": 1,
         "paired_cases": count,
@@ -108,8 +151,21 @@ def summarize_memory_pairs(results: tuple[MemoryPairResult, ...]) -> JsonObject:
             "delta": warm_rate - cold_rate,
         },
         "relevant_recall": recalled_total / relevant_total if relevant_total else 1.0,
+        "precision": (
+            relevant_selected_total / selected_total if selected_total else 1.0
+        ),
         "irrelevant_injection_rate": (
             irrelevant_total / selected_total if selected_total else 0.0
+        ),
+        "unrelated_behavior_change_rate": (
+            unrelated_changes / len(comparable_unrelated)
+            if comparable_unrelated
+            else 0.0
+        ),
+        "unrelated_memory_behavior_change_rate": (
+            injected_unrelated_changes / len(injected_unrelated)
+            if injected_unrelated
+            else 0.0
         ),
         "retrieval_tokens": {
             "total": sum(result.retrieval_tokens for result in results),
@@ -126,6 +182,21 @@ def summarize_memory_pairs(results: tuple[MemoryPairResult, ...]) -> JsonObject:
                 sum(result.warm_input_tokens + result.warm_output_tokens for result in results)
                 - sum(result.cold_input_tokens + result.cold_output_tokens for result in results)
             ),
+        },
+        "tokens_per_successful_task": {
+            "model": {
+                "cold": cold_success_tokens,
+                "warm": warm_success_tokens,
+            },
+            "model_plus_retrieval": {
+                "cold": cold_end_to_end_success_tokens,
+                "warm": warm_end_to_end_success_tokens,
+            },
+        },
+        "memory_context_tokens": {
+            "total": sum(result.memory_context_tokens for result in results),
+            "mean": sum(result.memory_context_tokens for result in results) / count,
+            "max": max(result.memory_context_tokens for result in results),
         },
         "wall_latency_ms": {
             "cold": _stats([result.cold_latency_ms for result in results]),
@@ -150,6 +221,15 @@ def summarize_memory_pairs(results: tuple[MemoryPairResult, ...]) -> JsonObject:
                 "warm_output_tokens": result.warm_output_tokens,
                 "cold_latency_ms": result.cold_latency_ms,
                 "warm_latency_ms": result.warm_latency_ms,
+                "memory_context_tokens": result.memory_context_tokens,
+                "cold_answer": result.cold_answer,
+                "warm_answer": result.warm_answer,
+                "behavior_changed": (
+                    result.cold_answer != result.warm_answer
+                    if result.cold_answer is not None and result.warm_answer is not None
+                    else None
+                ),
+                "unrelated_case": result.unrelated_case,
             }
             for result in results
         ],

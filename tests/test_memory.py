@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 
 from coding_agent.memory.domain import (
@@ -515,17 +516,69 @@ class MemoryContextAndEvaluationTest(MemoryFixture):
         )
         report = json.loads(completed.stdout)
         self.assertEqual(report["benchmark"], "p2-m2-memory-cold-warm")
+        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["frozen_case_count"], 12)
         self.assertEqual(report["implementation"]["default_application_enabled"], False)
         self.assertEqual(report["implementation"]["headless_enabled"], False)
+        self.assertEqual(
+            Counter(case["category"] for case in report["case_plan"]),
+            Counter(
+                {
+                    "relevant": 4,
+                    "no_match": 2,
+                    "lexical_distractor": 2,
+                    "wrong_user_scope": 1,
+                    "wrong_repository_revision": 1,
+                    "stale_or_deleted": 1,
+                    "instruction_injection_negative": 1,
+                }
+            ),
+        )
+        self.assertEqual(
+            [seed["outcome"] for case in report["case_plan"] for seed in case["seeds"]
+             if case["category"] == "instruction_injection_negative"],
+            ["policy_rejected"],
+        )
         summary = report["summary"]
-        self.assertEqual(summary["paired_cases"], 3)
-        self.assertEqual(summary["task_success"], {"cold": 0.0, "warm": 1.0, "delta": 1.0})
+        self.assertEqual(summary["paired_cases"], 12)
+        self.assertEqual(
+            summary["task_success"],
+            {"cold": 2 / 3, "warm": 1.0, "delta": 1.0 - 2 / 3},
+        )
         self.assertEqual(summary["relevant_recall"], 1.0)
-        self.assertEqual(summary["irrelevant_injection_rate"], 0.5)
-        self.assertEqual(summary["retrieval_tokens"]["total"], 109)
-        self.assertEqual(summary["model_tokens"]["cold"]["total"]["total"], 691)
-        self.assertEqual(summary["model_tokens"]["warm"]["total"]["total"], 1338)
-        self.assertEqual(summary["model_tokens"]["delta_total"], 647)
+        self.assertEqual(summary["precision"], 2 / 3)
+        self.assertEqual(summary["irrelevant_injection_rate"], 1 / 3)
+        self.assertEqual(summary["unrelated_behavior_change_rate"], 0.0)
+        self.assertEqual(summary["unrelated_memory_behavior_change_rate"], 0.0)
+        self.assertEqual(summary["retrieval_tokens"], {"total": 116, "mean": 116 / 12})
+        self.assertEqual(summary["memory_context_tokens"], {"total": 803, "mean": 803 / 12, "max": 136})
+        self.assertEqual(summary["model_tokens"]["cold"]["total"]["total"], 2740)
+        self.assertEqual(summary["model_tokens"]["warm"]["total"]["total"], 3543)
+        self.assertEqual(summary["model_tokens"]["delta_total"], 803)
+        self.assertEqual(
+            summary["tokens_per_successful_task"],
+            {
+                "model": {"cold": 342.5, "warm": 295.25},
+                "model_plus_retrieval": {
+                    "cold": 342.5,
+                    "warm": 304.9166666666667,
+                },
+            },
+        )
+        by_case = {case["case_id"]: case for case in summary["cases"]}
+        for case_id in ("logging-format-no-match", "auth-retry-no-match"):
+            self.assertEqual(by_case[case_id]["selected_memory_ids"], [])
+        for case_id in ("deploy-region-distractor", "invoice-label-distractor"):
+            self.assertEqual(len(by_case[case_id]["selected_memory_ids"]), 1)
+            self.assertFalse(by_case[case_id]["behavior_changed"])
+        for case_id in (
+            "wrong-user-scope",
+            "wrong-repository-revision",
+            "stale-deleted-memory",
+            "instruction-injection-negative",
+        ):
+            self.assertEqual(by_case[case_id]["selected_memory_ids"], [])
+            self.assertFalse(by_case[case_id]["behavior_changed"])
         self.assertGreater(summary["wall_latency_ms"]["warm"]["total"], 0.0)
 
     def test_fixed_cold_warm_runtime_pair_reports_task_oracle_delta(self) -> None:
