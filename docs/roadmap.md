@@ -344,9 +344,17 @@ before cold/warm mean 为 `45.834164333731074ms`/`47.033260334198225ms`，after 
 `45.834164333731074ms`/`45.95990916732262ms`；检索 mean 为
 `0.056614917411934584ms`→`0.06059541647118749ms`，增加 `0.003980499059252907ms`，该
 回退保留在 evidence。S2 复核修复了 before 自定义 renderer 下 record 级 Token 归因不一致，
-并给出有条件通过：Memory 继续显式 opt-in，待非同源 holdout 与真实 Provider A/B 后才考虑默认
-启用。Memory 只通过显式 Python composition 提供，默认 Application/headless
+并给出有条件通过：Memory 继续显式 opt-in；L3 非同源 holdout 后续已补齐但未达到 recall/injection
+门槛，仍待真实 Provider A/B 后才考虑默认启用。Memory 只通过显式 Python composition 提供，默认 Application/headless
 与 Runtime IPC 不启用；本次未运行真实 Provider，也没有真实 Provider 净收益结论。P2-M3 尚未激活。
+
+随后完成 L3 非同源冻结 holdout，基线固定为 `8ebc800`，manifest SHA-256 为
+`3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f7e2ed1`。18 个新 case 分布在三个
+共享 pool（6/7/5），首轮 warm task success 为 `13/18`，relevant recall
+`0.6666666666666666`，irrelevant injection `0.16666666666666666`；scope/revision/stale-deleted
+泄漏为 0、无相关 Memory 行为变化为 0、manifest Token 一致，`5298ba0` 三任务兼容 arm warm 3/3。
+因此 L3 的 recall/injection 门槛未通过，首轮结果已冻结并原样保存；真实 Provider cold/warm A/B
+与净收益证明仍是默认入口或 IPC 集成的前置条件，P2-M3 保持未激活。
 
 ## 14. Phase 2 分阶段路线
 
@@ -354,7 +362,7 @@ before cold/warm mean 为 `45.834164333731074ms`/`47.033260334198225ms`，after 
 |---|---|---|---|
 | P2-D0 架构与契约设计 | 已完成 | `v2-product-architecture.md`、Runtime IPC v1 文档和 JSON Schema、兼容规则 | producer/consumer 权责、版本、取消、错误、secret/workspace 规则无歧义；明确尚未实现 |
 | P2-M1 Headless Runtime IPC | 已完成（2026-09-16） | `protocol-info`、`run-headless`、stdout JSONL、cooperative cancellation | v1 schema、golden、退出码、v0.1/v0.2 adapter contract vectors 全部通过 |
-| P2-M2 分层记忆 | 已完成（2026-09-16，检索优化已验收） | episodic/semantic memory ports、SQLite authority、确定性加权检索与紧凑 Context；显式 Python composition | provenance、隔离、遗忘、注入防护和冻结 A/B 已通过；默认入口关闭，不外推真实 Provider 收益 |
+| P2-M2 分层记忆 | 已完成（2026-09-16，检索优化已验收；L3 holdout 已记录） | episodic/semantic memory ports、SQLite authority、确定性加权检索与紧凑 Context；显式 Python composition | 原有冻结 A/B 通过；L3 非同源首轮 recall/injection 未过门槛，默认入口关闭，真实 Provider A/B 待完成 |
 | P2-M3 Profiles 与 Skill Runtime | 未启动 | immutable profile、Skill registry/loader/selector、能力策略 | skill provenance/permission/budget/replay 测试通过，不绕过 ToolHarness |
 | P2-M4 MCP 能力网关 | 未启动 | MCP adapter 经 CapabilityGateway 映射到 Harness | discovery、schema、secret、timeout、审计和恶意 server 负例通过 |
 | P2-M5 可恢复多 Agent 编排 | 未启动 | coordinator FSM、角色 mailboxes、hierarchical budgets、single-writer workspace | crash/replay/cancel/冲突/预算和相对单 Agent eval 通过 |

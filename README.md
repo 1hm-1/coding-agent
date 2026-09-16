@@ -167,10 +167,11 @@ git diff --exit-code -- examples/todo_cli
 
 ```bash
 PYTHONWARNINGS=error PYTHONPATH=src .venv/bin/python -X dev -m unittest discover -v
-.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
+.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py examples/memory_retrieval_holdout.py
 .venv/bin/mypy
-PYTHONPATH=src .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
+PYTHONPATH=src .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py examples/memory_retrieval_holdout.py
 PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
+PYTHONPATH=src .venv/bin/python examples/memory_retrieval_holdout.py
 ```
 
 ### 4. 运行固定离线 Eval / Run the fixed offline Eval
@@ -203,6 +204,13 @@ stale/deleted 以及诱导指令拒绝。它报告 task success、relevant recal
 injection、无关 Memory 导致的行为变化、scripted model Token、retrieval Token、Memory context
 Token、Token per successful task 和端到端延迟。它不代表真实 Provider 收益，也不会修改仓库
 source fixture。
+
+L3 独立 holdout 使用 [`memory_retrieval_holdout.py`](examples/memory_retrieval_holdout.py) 的 18 个
+非同源冻结 case 和三个共享 pool，并复跑 `5298ba0` 的三任务兼容 arm。基线 `8ebc800` 的首轮
+结果与 manifest hash 保存在 [`memory-retrieval-holdout-2026-09-16.summary.json`](docs/evidence/memory-retrieval-holdout-2026-09-16.summary.json)。
+该基线首轮 relevant recall 为 `0.6666666666666666`、irrelevant injection 为
+`0.16666666666666666`，未达到 L3 门槛；命令因此以非零状态报告门禁未通过。结果没有被题目调整
+或宣称为真实 Provider 收益。
 
 ## 核心能力 / Core capabilities
 
@@ -262,9 +270,11 @@ the compression A/B did not save tokens and remains a small local benchmark.
 - 确定性和显式启用的真实模型后端、单 Agent session、恢复、回放与小型 Eval。<br>
   Deterministic and opt-in live backends, single-agent sessions, recovery, replay, and small Eval suites.
 - P2-M2 episodic/semantic Memory 的显式 Python composition、有界 lexical retrieval 和 SQLite 审计；
-  当前 12-case 证据使用 trusted synthetic oracle，不代表真实 Provider 净收益。<br>
+  当前 12-case 与 L3 18-case 证据均使用 trusted synthetic oracle，不代表真实 Provider 净收益；
+  L3 基线未通过 recall/injection 门槛。<br>
   Explicit Python composition, bounded lexical retrieval, and SQLite audit for P2-M2 episodic/semantic
-  Memory; its current 12-case evidence uses a trusted synthetic oracle and is not live-Provider net-benefit evidence.
+  Memory; the 12-case and L3 18-case evidence use trusted synthetic oracles and are not live-Provider
+  net-benefit evidence; the L3 baseline did not meet its recall/injection thresholds.
 - 仅在 capability probe 成功时使用原生 Linux namespace sandbox。<br>
   Native Linux namespace sandbox only when its capability probe succeeds.
 

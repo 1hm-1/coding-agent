@@ -100,3 +100,26 @@ calculator/todo smoke 和冻结 Memory A/B 均通过。A/B 的 cold/warm wall la
 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
 本轮未运行真实 Provider，因此不宣称真实模型净收益；Memory 仍只提供显式 Python composition，
 默认 Application/headless 与 Runtime IPC 入口保持关闭，P2-M3 仍未激活。
+
+### L3 非同源冻结 Holdout
+
+为审查同源开发集外的行为，新增 `examples/memory_retrieval_holdout.py` 与对应 contract test，
+并把 case manifest 固定在 `8ebc800` 的实现基线。18 个 case 使用三个共享 Memory pool（6/7/5），
+包含 6/4/2/2/1/1/1/1 的 semantic relevant、hard negative、shared-pool competition、scope
+isolation、repository revision、stale/deleted、无相关 Memory、prompt-injection 负例；另有最初
+`5298ba0` 三任务共享池兼容 arm。首轮 hash 为
+`3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f7e2ed1`，不再修改 case 或根据结果
+重跑宣称首轮。
+
+首轮实际结果：warm task success `13/18`，relevant recall `0.6666666666666666`，precision
+`0.8333333333333334`，irrelevant injection `0.16666666666666666`；scope/revision/stale-deleted
+泄漏为 `0`，无相关 Memory 行为变化为 `0`，Memory context Token 总计 `381`、retrieval Token
+总计 `274`、scripted model Token cold/warm 为 `4274/4655`，manifest Token 与 renderer 一致，
+兼容 arm warm `3/3`。因此 L3 的 recall/injection 门槛在该固定基线下未通过；这是一项阻断性证据，
+不是失败后修改题目的理由。补采 latency 的重复运行 cold/warm mean 为
+`41.255672772725426ms`/`42.08423031700982ms`，retrieval mean 为 `0.18361411154425392ms`。
+脱敏摘要见 [`memory-retrieval-holdout-2026-09-16.summary.json`](./evidence/memory-retrieval-holdout-2026-09-16.summary.json)。
+
+该 holdout 仍是 deterministic trusted oracle 与 synthetic usage，不能证明真实 Provider 或真实
+任务净收益；因此默认 Application/headless/IPC Memory 入口保持关闭，真实 Provider A/B 仍是后续
+独立门禁，P2-M3 仍未激活。

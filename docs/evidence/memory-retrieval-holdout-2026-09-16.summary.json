@@ -1,0 +1,348 @@
+{
+  "benchmark": "l3-independent-memory-retrieval-holdout",
+  "schema_version": 1,
+  "source_commit": "8ebc800",
+  "compatibility_source_commit": "5298ba0",
+  "first_run_frozen": true,
+  "case_manifest_sha256": "3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f7e2ed1",
+  "frozen_case_count": 18,
+  "case_categories": {
+    "semantic_relevant": 6,
+    "hard_negative": 4,
+    "shared_pool_competition": 2,
+    "scope_isolation": 2,
+    "repository_revision": 1,
+    "stale_deleted": 1,
+    "no_relevant_memory": 1,
+    "prompt_injection_negative": 1
+  },
+  "shared_pool_topology": {
+    "pool_count": 3,
+    "cases_per_pool": {
+      "silver-grove": 6,
+      "quiet-cairn": 7,
+      "blue-fern": 5
+    }
+  },
+  "first_run": {
+    "results": {
+      "paired_cases": 18,
+      "task_success": {
+        "cold": 0.16666666666666666,
+        "cold_successful": 3,
+        "warm": 0.7222222222222222,
+        "warm_successful": 13
+      },
+      "relevant_memory_records": 15,
+      "relevant_recall": 0.6666666666666666,
+      "precision": 0.8333333333333334,
+      "irrelevant_injection_rate": 0.16666666666666666,
+      "unrelated_memory_behavior_change_rate": 0.0,
+      "retrieval_tokens": {
+        "total": 274,
+        "mean": 15.222222222222221
+      },
+      "memory_context_tokens": {
+        "total": 381,
+        "mean": 21.166666666666668,
+        "max": 53
+      },
+      "model_tokens": {
+        "cold_total": 4274,
+        "warm_total": 4655
+      },
+      "tokens_per_successful_task": {
+        "model": {
+          "cold": 1424.6666666666667,
+          "warm": 358.0769230769231
+        }
+      },
+      "leakage_selected_counts": {
+        "scope": 0,
+        "revision": 0,
+        "stale_deleted": 0
+      },
+      "no_relevant_memory_behavior_unchanged": true,
+      "manifest_tokens_match_renderer": true
+    },
+    "case_observations": [
+      {
+        "case_id": "archive-interval",
+        "category": "semantic_relevant",
+        "pool_id": "silver-grove",
+        "relevant_memory_ids": ["memory-archive-interval-relevant"],
+        "selected_memory_ids": [],
+        "cold_task_success": false,
+        "warm_task_success": false,
+        "retrieval_tokens": 0,
+        "memory_context_tokens": 0,
+        "behavior_changed": false
+      },
+      {
+        "case_id": "credential-rotation",
+        "category": "semantic_relevant",
+        "pool_id": "silver-grove",
+        "relevant_memory_ids": ["memory-credential-rotation-relevant"],
+        "selected_memory_ids": ["memory-credential-rotation-relevant"],
+        "cold_task_success": false,
+        "warm_task_success": true,
+        "retrieval_tokens": 24,
+        "memory_context_tokens": 36,
+        "behavior_changed": true
+      },
+      {
+        "case_id": "crane-signal",
+        "category": "hard_negative",
+        "pool_id": "silver-grove",
+        "relevant_memory_ids": ["memory-crane-signal-relevant"],
+        "selected_memory_ids": ["memory-crane-signal-relevant"],
+        "cold_task_success": false,
+        "warm_task_success": true,
+        "retrieval_tokens": 24,
+        "memory_context_tokens": 36,
+        "behavior_changed": true
+      },
+      {
+        "case_id": "garden-pump",
+        "category": "hard_negative",
+        "pool_id": "silver-grove",
+        "relevant_memory_ids": ["memory-garden-pump-relevant"],
+        "selected_memory_ids": [
+          "memory-garden-pump-relevant",
+          "memory-garden-pump-hard-negative"
+        ],
+        "cold_task_success": false,
+        "warm_task_success": true,
+        "retrieval_tokens": 48,
+        "memory_context_tokens": 53,
+        "behavior_changed": true
+      },
+      {
+        "case_id": "orbital-uplink",
+        "category": "shared_pool_competition",
+        "pool_id": "silver-grove",
+        "relevant_memory_ids": ["memory-orbital-uplink-relevant"],
+        "selected_memory_ids": [],
+        "cold_task_success": false,
+        "warm_task_success": false,
+        "retrieval_tokens": 0,
+        "memory_context_tokens": 0,
+        "behavior_changed": false
+      },
+      {
+        "case_id": "canal-pressure",
+        "category": "shared_pool_competition",
+        "pool_id": "silver-grove",
+        "relevant_memory_ids": ["memory-canal-pressure-relevant"],
+        "selected_memory_ids": ["memory-canal-pressure-relevant"],
+        "cold_task_success": false,
+        "warm_task_success": true,
+        "retrieval_tokens": 21,
+        "memory_context_tokens": 33,
+        "behavior_changed": true
+      },
+      {
+        "case_id": "message-overflow",
+        "category": "semantic_relevant",
+        "pool_id": "quiet-cairn",
+        "relevant_memory_ids": ["memory-message-overflow-relevant"],
+        "selected_memory_ids": ["memory-message-overflow-relevant"],
+        "cold_task_success": false,
+        "warm_task_success": true,
+        "retrieval_tokens": 22,
+        "memory_context_tokens": 34,
+        "behavior_changed": true
+      },
+      {
+        "case_id": "telemetry-history",
+        "category": "semantic_relevant",
+        "pool_id": "quiet-cairn",
+        "relevant_memory_ids": ["memory-telemetry-history-relevant"],
+        "selected_memory_ids": ["memory-telemetry-history-relevant"],
+        "cold_task_success": false,
+        "warm_task_success": true,
+        "retrieval_tokens": 22,
+        "memory_context_tokens": 34,
+        "behavior_changed": true
+      },
+      {
+        "case_id": "quarry-alarm",
+        "category": "hard_negative",
+        "pool_id": "quiet-cairn",
+        "relevant_memory_ids": ["memory-quarry-alarm-relevant"],
+        "selected_memory_ids": [
+          "memory-quarry-alarm-relevant",
+          "memory-quarry-alarm-hard-negative"
+        ],
+        "cold_task_success": false,
+        "warm_task_success": true,
+        "retrieval_tokens": 44,
+        "memory_context_tokens": 49,
+        "behavior_changed": true
+      },
+      {
+        "case_id": "museum-climate",
+        "category": "hard_negative",
+        "pool_id": "quiet-cairn",
+        "relevant_memory_ids": ["memory-museum-climate-relevant"],
+        "selected_memory_ids": ["memory-museum-climate-relevant"],
+        "cold_task_success": false,
+        "warm_task_success": true,
+        "retrieval_tokens": 23,
+        "memory_context_tokens": 36,
+        "behavior_changed": true
+      },
+      {
+        "case_id": "lighthouse-account",
+        "category": "scope_isolation",
+        "pool_id": "quiet-cairn",
+        "relevant_memory_ids": ["memory-lighthouse-account-relevant"],
+        "selected_memory_ids": [],
+        "cold_task_success": false,
+        "warm_task_success": false,
+        "retrieval_tokens": 0,
+        "memory_context_tokens": 0,
+        "behavior_changed": false
+      },
+      {
+        "case_id": "observatory-window",
+        "category": "scope_isolation",
+        "pool_id": "quiet-cairn",
+        "relevant_memory_ids": ["memory-observatory-window-relevant"],
+        "selected_memory_ids": [],
+        "cold_task_success": false,
+        "warm_task_success": false,
+        "retrieval_tokens": 0,
+        "memory_context_tokens": 0,
+        "behavior_changed": false
+      },
+      {
+        "case_id": "basalt-catalog",
+        "category": "repository_revision",
+        "pool_id": "quiet-cairn",
+        "relevant_memory_ids": ["memory-basalt-catalog-relevant"],
+        "selected_memory_ids": [],
+        "cold_task_success": false,
+        "warm_task_success": false,
+        "retrieval_tokens": 0,
+        "memory_context_tokens": 0,
+        "behavior_changed": false
+      },
+      {
+        "case_id": "artifact-signature",
+        "category": "semantic_relevant",
+        "pool_id": "blue-fern",
+        "relevant_memory_ids": ["memory-artifact-signature-relevant"],
+        "selected_memory_ids": ["memory-artifact-signature-relevant"],
+        "cold_task_success": false,
+        "warm_task_success": true,
+        "retrieval_tokens": 22,
+        "memory_context_tokens": 34,
+        "behavior_changed": true
+      },
+      {
+        "case_id": "buffer-eviction",
+        "category": "semantic_relevant",
+        "pool_id": "blue-fern",
+        "relevant_memory_ids": ["memory-buffer-eviction-relevant"],
+        "selected_memory_ids": ["memory-buffer-eviction-relevant"],
+        "cold_task_success": false,
+        "warm_task_success": true,
+        "retrieval_tokens": 24,
+        "memory_context_tokens": 36,
+        "behavior_changed": true
+      },
+      {
+        "case_id": "bridge-cadence",
+        "category": "stale_deleted",
+        "pool_id": "blue-fern",
+        "relevant_memory_ids": [],
+        "selected_memory_ids": [],
+        "cold_task_success": true,
+        "warm_task_success": true,
+        "retrieval_tokens": 0,
+        "memory_context_tokens": 0,
+        "behavior_changed": false
+      },
+      {
+        "case_id": "lunar-greenhouse",
+        "category": "no_relevant_memory",
+        "pool_id": "blue-fern",
+        "relevant_memory_ids": [],
+        "selected_memory_ids": [],
+        "cold_task_success": true,
+        "warm_task_success": true,
+        "retrieval_tokens": 0,
+        "memory_context_tokens": 0,
+        "behavior_changed": false
+      },
+      {
+        "case_id": "beacon-output-mode",
+        "category": "prompt_injection_negative",
+        "pool_id": "blue-fern",
+        "relevant_memory_ids": [],
+        "selected_memory_ids": [],
+        "cold_task_success": true,
+        "warm_task_success": true,
+        "retrieval_tokens": 0,
+        "memory_context_tokens": 0,
+        "behavior_changed": false
+      }
+    ],
+    "acceptance": {
+      "scope_revision_stale_deleted_leakage_zero": true,
+      "relevant_recall_at_least_0_85": false,
+      "irrelevant_injection_at_most_0_15": false,
+      "no_relevant_memory_behavior_unchanged": true,
+      "compatibility_warm_3_of_3": true,
+      "manifest_tokens_match_renderer": true,
+      "passed": false
+    },
+    "compatibility_arm": {
+      "shared_pool": true,
+      "case_ids": [
+        "deployment-color",
+        "invoice-rounding",
+        "parser-blank-input"
+      ],
+      "warm_success": {
+        "successful": 3,
+        "total": 3
+      },
+      "manifest_tokens_match_renderer": true
+    }
+  },
+  "follow_up_latency_capture": {
+    "run_label": "repeat run after adding observation-only latency fields; not the first result",
+    "case_manifest_sha256": "3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f7e2ed1",
+    "retrieval_latency_ms": {
+      "total": 3.3050540077965707,
+      "mean": 0.18361411154425392,
+      "p50": 0.17220999870914966,
+      "p95": 0.38411000059568323
+    },
+    "wall_latency_ms": {
+      "cold": {
+        "total": 742.6021099090576,
+        "mean": 41.255672772725426,
+        "p50": 41.72801971435547,
+        "p95": 47.71900177001953
+      },
+      "warm": {
+        "total": 757.5161457061768,
+        "mean": 42.08423031700982,
+        "p50": 40.986061096191406,
+        "p95": 46.30088806152344
+      },
+      "warm_minus_cold_mean": 0.8285575442843935
+    }
+  },
+  "restricted_files_unchanged": true,
+  "contains_credentials": false,
+  "limitations": [
+    "The baseline fails the recall and irrelevant-injection thresholds on this frozen holdout.",
+    "The benchmark uses a deterministic trusted oracle and synthetic scripted usage; it is not Provider quality evidence.",
+    "The compatibility arm intentionally reuses the original 5298ba0 task text and is excluded from the 18 independent cases.",
+    "The result does not justify default Application/headless or IPC Memory integration."
+  ]
+}

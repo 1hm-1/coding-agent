@@ -30,7 +30,7 @@ jobs:
           uv venv .venv
           uv sync --locked --extra dev
       - name: Ruff
-        run: .venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
+        run: .venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py examples/memory_retrieval_holdout.py
       - name: Expanded mypy source-surface check
         run: .venv/bin/mypy
       - name: Report native sandbox capability
@@ -52,7 +52,7 @@ jobs:
           .venv/bin/coverage combine
           .venv/bin/coverage report
       - name: Compile check
-        run: .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
+        run: .venv/bin/python -m compileall -q src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py examples/memory_retrieval_holdout.py
       - name: Package build
         run: uv build --out-dir "${RUNNER_TEMP}/dist-${{ matrix.python-version }}"
       - name: Calculator and todo scripted smoke

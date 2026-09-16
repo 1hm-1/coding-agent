@@ -63,6 +63,7 @@ coding-agent/
 │   ├── todo_cli/                     # 真实小仓库 fixture
 │   ├── todo_cli_scripted_run.json    # 失败后修复的确定性脚本
 │   ├── memory_cold_warm_benchmark.py # P2-M2 冻结 cold/warm + retrieval/Context A/B
+│   ├── memory_retrieval_holdout.py   # L3 非同源 18-case 冻结 holdout + 5298ba0 兼容 arm
 │   ├── mini_repos/                    # M5 多仓库评测 fixture（含三个 search benchmark 仓库）
 │   └── eval_scripts/                  # M5 scripted backend/compression 输入
 ├── src/coding_agent/

@@ -74,5 +74,25 @@ status 过滤测试通过，Token 降低没有伴随 scripted task success 下�
 扩展集合的前三个 case，并不重建最初共享 memory pool 的拓扑；S2 另用 `5298ba0` 原始脚本配合当前
 实现复跑得到 warm 3/3，但 checked-in benchmark 应在后续证据工作中显式补上该兼容 arm。
 
-因此结论为：**有条件通过**。Memory 必须保持显式 opt-in；继续补非同源 holdout 与真实 Provider
-A/B，在这些证据完成前不得据此默认启用 Memory。P2-M3 仍需用户另行明确激活。
+因此结论为：**有条件通过**。Memory 必须保持显式 opt-in；L3 非同源 holdout 已补齐但未达到
+recall/injection 门槛，仍需真实 Provider A/B，在这些证据完成前不得据此默认启用 Memory。
+P2-M3 仍需用户另行明确激活。
+
+## 7. L3 非同源冻结 Holdout
+
+L3 在不修改 `memory/retrieval.py`、Memory scoring/alias/threshold、Context renderer 或 Token
+归因逻辑的前提下，固定了 18 个新领域 case。case manifest SHA-256 为
+`3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f7e2ed1`，使用三个共享 pool（6/7/5），
+并单独加入 `5298ba0` 三任务共享池兼容 arm。首轮结果必须按原样解释：warm task success `13/18`、
+relevant recall `0.6666666666666666`、precision `0.8333333333333334`、irrelevant injection
+`0.16666666666666666`；scope/revision/stale-deleted leakage `0`，无相关 Memory 行为变化 `0`，
+manifest Token 与 renderer 一致，兼容 arm warm `3/3`。因此 L3 recall 与 injection 门槛均未通过，
+不能用后续实现或挑题改写该首轮结论。
+
+首轮后仅为补齐成本观测而重复运行一次：cold/warm wall latency mean 为
+`41.255672772725426ms`/`42.08423031700982ms`，retrieval mean 为 `0.18361411154425392ms`；
+这些延迟是独立重复观测，不冒充首轮结果。完整脱敏摘要见
+[`memory-retrieval-holdout-2026-09-16.summary.json`](./evidence/memory-retrieval-holdout-2026-09-16.summary.json)。
+
+该结果继续支持 Memory 仅作显式 Python composition；默认 Application/headless/IPC 不接入，
+真实 Provider cold/warm A/B 与净收益证明仍未完成，P2-M3 不因本 holdout 自动激活。

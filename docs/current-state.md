@@ -73,13 +73,26 @@
   （`+0.003980499059252907ms`）；延迟受本机调度影响，但回退没有从证据中删除。这不是
   Provider 收益证据。
   脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
-- 当前收口门禁通过 136/136 默认 unittest（原 134 个无回退，新增 2 个检索测试）、四份既有
+- 当前收口门禁通过 137/137 默认 unittest（既有 136 个无回退，新增 1 个 L3 holdout contract test）、四份既有
   semantic golden、Ruff、33 个配置范围源码文件 mypy、compileall、78.5% statement coverage、
   wheel/sdist、独立 wheel Memory import、calculator/todo smoke 与多任务 benchmark；本轮未运行
   真实 Provider。
 - S2 复核发现并修复了 benchmark before renderer 下 record 级 Context Token 归因不一致；总 section
-  Token、模型输入和既有 A/B 数字未受影响。复核结论为有条件通过：Memory 继续显式 opt-in，扩大
-  非同源 holdout 与真实 Provider A/B 后才评估默认启用；P2-M3 仍未激活。
+  Token、模型输入和既有 A/B 数字未受影响。复核结论为有条件通过：Memory 继续显式 opt-in，L3
+  非同源 holdout 已完成但未达到 recall/injection 门槛；真实 Provider A/B 后才评估默认启用，
+  P2-M3 仍未激活。
+- L3 非同源 holdout 已固定在提交 `8ebc800` 的实现上，manifest SHA-256 为
+  `3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f7e2ed1`。18 个 case 分布为
+  6 个 semantic relevant、4 个 hard negative、2 个 shared-pool competition、2 个 scope isolation、
+  1 个 repository revision、1 个 stale/deleted、1 个无相关 Memory 和 1 个 prompt-injection 负例；
+  三个共享池规模为 6/7/5，并额外复跑最初 `5298ba0` 的三任务共享池兼容 arm。首轮冻结结果为
+  warm task success 13/18、relevant recall `0.6666666666666666`、precision
+  `0.8333333333333334`、irrelevant injection `0.16666666666666666`；scope/revision/stale-deleted
+  泄漏均为 0，无相关 Memory 行为变化为 0，manifest Token 与 renderer 一致，兼容 arm warm 3/3。
+  因此本基线未达到 recall >= 0.85 和 irrelevant injection <= 0.15，不能把 L3 结果写成质量门禁通过。
+  后续重复运行仅补采观测 latency：cold/warm mean 为 `41.255672772725426ms`/`42.08423031700982ms`，
+  warm-cold mean `+0.8285575442843935ms`；retrieval mean `0.18361411154425392ms`。完整脱敏摘要见
+  [`memory-retrieval-holdout-2026-09-16.summary.json`](./evidence/memory-retrieval-holdout-2026-09-16.summary.json)。
 
 ### Model
 
@@ -177,12 +190,12 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后当前开发树为 136 个，在当前
+- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后当前开发树为 137 个，在当前
   capability probe 成功的环境中全部通过。`tests/live_provider_smoke.py` 为凭据门控的显式测试，
   不计入默认 discovery；能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。
 - calculator smoke 产生 48 条连续事件；todo fixture 产生 72 条连续事件并保持 `false → true`。
-- Ruff 强制基线 `E4/E7/E9/F` 仍显式写入 `pyproject.toml`；已使用 `uv` 安装 Ruff 0.16.6，`ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py` 通过。
+- Ruff 强制基线 `E4/E7/E9/F` 仍显式写入 `pyproject.toml`；已使用 `uv` 安装 Ruff 0.16.6，`ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py examples/memory_retrieval_holdout.py` 通过。
 - M2.2 recovery tests 覆盖 interrupt 后复用已保存模型响应、四个工具 crash window、edit hash reconciliation、三种人工 resolution、lease takeover 和 source/workspace resume rejection。
 - M2.3 adapter tests 覆盖 OpenAI-compatible/Anthropic text、tool call、usage、Unicode、HTTP error、protocol error、retry/fallback 和 secret 不落盘；用户已用 DeepSeek 完成 opt-in live API smoke，并在上下文修复后完成 3 次探索性 live Eval。
 - M3.1/M3.2 tests 覆盖 exact/fallback counter、unknown model、section boundary/hard retention、tool-call group preservation、deterministic manifest、summary round-trip、stale invalidation、required-fact rejection、compression fallback 和 raw-event preservation。
@@ -297,7 +310,7 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 ```
 
 ```bash
-.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
+.venv/bin/ruff check src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py examples/memory_retrieval_holdout.py
 ```
 
 ```bash
@@ -311,11 +324,15 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 ```
 
 ```bash
-PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py
+PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli examples/mini_repos examples/memory_cold_warm_benchmark.py examples/memory_retrieval_holdout.py
 ```
 
 ```bash
 PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
+```
+
+```bash
+PYTHONPATH=src .venv/bin/python examples/memory_retrieval_holdout.py
 ```
 
 可用的恢复命令包括 `sessions`、`show`、`interrupt`、`resume` 和
@@ -388,8 +405,10 @@ PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
 17. P2-M2 Memory benchmark 使用 12 个冻结 case 的确定性 trusted oracle 和 scripted Token
     估算；检索/Context A/B 达到 recall=1.0、precision=1.0、irrelevant injection=0，额外模型
     Token 从 803 降到 130。当前实测检索 mean 从 `0.056614917411934584ms` 增至
-    `0.06059541647118749ms`，该回退已保留。它仍是不可挑题的小型合成 benchmark，不能据此宣称
-    真实模型净收益或启用默认 Application/headless Memory。
+    `0.06059541647118749ms`，该回退已保留。随后新增的 L3 非同源 18-case holdout 固定在
+    `8ebc800`，首轮 relevant recall=`0.6666666666666666`、irrelevant injection=
+    `0.16666666666666666`，未达到门槛；该失败结果已冻结，不能据此宣称真实模型净收益或启用
+    默认 Application/headless Memory。
 
 ## 6. 不允许虚构的项目事实
 

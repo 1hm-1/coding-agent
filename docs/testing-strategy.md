@@ -30,7 +30,7 @@ PYTHONPATH=src python3 -m unittest discover -v
 ```
 
 固定 `v0.1.0` 验收基线为 93 个测试；P2-M1 完成后为 111 个，P2-M2 冻结 benchmark 后为
-134 个，检索优化后当前开发树为 136 个。具备 native sandbox capability 的环境中全部通过，能力受限
+134 个，检索优化后为 136 个，加入 L3 holdout contract test 后当前开发树为 137 个。具备 native sandbox capability 的环境中全部通过，能力受限
 环境中 native-only case 会显式 skip。live provider smoke 需显式凭据和手动触发。
 
 `examples/capability_holdout_suite.json` 是 M5 的非 search 能力门禁：只包含正常任务，覆盖
@@ -119,6 +119,10 @@ successful task 和端到端 wall latency。runner 在同一 case/seed/cold 结�
 算法，报告 precision/recall、误注入与 Memory 额外模型 Token 的 before/after；它仍不作为真实
 Provider 或生产收益证据。
 
+L3 另有 18 个非同源冻结 case，使用三个共享 Memory pool 并保留 `5298ba0` 三任务兼容 arm；其
+`8ebc800` 首轮 recall/injection 未达到门槛，结果与 manifest hash 见
+`docs/evidence/memory-retrieval-holdout-2026-09-16.summary.json`，不能通过改题重写。
+
 ## 7. M3 Context、Compression 与 Evaluation 矩阵
 
 | 能力 | 正常路径 | 必须故障/恢复路径 |
@@ -203,6 +207,7 @@ golden-smoke
   ├─ compileall + wheel/sdist build
   ├─ calculator/todo scripted smoke (native capability available时)
   ├─ P2-M2 multi-task Memory cold/warm benchmark
+  ├─ L3 independent Memory retrieval holdout contract test
   └─ offline eval suite (native capability available时)
 ```
 

@@ -15,7 +15,7 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前开发树应为 136 个默认测试通过（冻结 benchmark 提交时为 134，检索优化新增 2 个）。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
+当前开发树应为 137 个默认测试通过（既有 136 个，新增 1 个 L3 holdout contract test）。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
 
 ## 2. 工作区事实
 
@@ -114,8 +114,9 @@ checkpoint-before-result 和子进程清理均有 producer contract tests。111 
 Phase 2 P2-M2 已完成：SQLite schema v4、versioned episodic/semantic record、committed journal
 provenance、scope/revision/content policy、proposal/explicit approval/stale/supersede/delete、原子审计、
 bounded lexical retrieval、Context manifest 与 multi-task cold/warm calibration 均有测试。删除 tombstone
-清空原文；unbounded Context preview 不重复写 retrieval audit。P2-M2.1 当前收口门禁为 136/136
-默认测试、Ruff、33 文件 mypy、compileall、78.5% statement coverage、wheel/sdist、独立 wheel
+清空原文；unbounded Context preview 不重复写 retrieval audit。P2-M2.1 原收口门禁为 136/136；
+加入 L3 holdout contract test 后当前默认测试为 137/137，Ruff、33 文件 mypy、compileall、78.5%
+statement coverage、wheel/sdist、独立 wheel
 Memory import、calculator/todo smoke 和多任务 Memory benchmark，均已通过。当前 benchmark 已冻结
 12 个 case，覆盖相关/无匹配/词面 distractor/scope-revision 隔离/stale-deleted/诱导指令拒绝；trusted
 oracle 为 cold 8/12 → warm 12/12，同进程 A/B 的 relevant recall 保持 1.0，precision 2/3→1.0、
@@ -133,8 +134,16 @@ irrelevant injection 1/3→0，retrieval Token 116→81，Memory context/额外�
 composition：默认 `AgentApplication` 与 `run-headless` 不创建、查询或注入 Memory，也不把它加入
 Runtime IPC capability；只有未来扩大真实任务/Provider A/B 并证明净收益后，才重新评估默认入口或
 IPC 集成。S2 复核结论为有条件通过，并修复了 before 自定义 renderer 下 record 级 Context Token
-归因与实际注入不一致；冻结 A/B 总 Token 和 task 指标不变。仍需非同源 holdout 与真实 Provider
-A/B，P2-M3 仍未激活。
+归因与实际注入不一致；冻结 A/B 总 Token 和 task 指标不变。仍需真实 Provider A/B，P2-M3
+仍未激活。
+
+L3 非同源 holdout 已在 `8ebc800` 基线上完成并冻结：18 个 case 使用三个共享 pool（6/7/5），
+manifest SHA-256 为 `3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f7e2ed1`，并加入
+`5298ba0` 三任务共享池兼容 arm。首轮 warm task success 为 `13/18`，relevant recall
+`0.6666666666666666`，irrelevant injection `0.16666666666666666`，所以 recall/injection 门槛
+未通过；scope/revision/stale-deleted 泄漏为 0、无相关 Memory 行为变化为 0、manifest Token 一致、
+兼容 arm warm 3/3。该结果已原样保存，未根据结果修改 case；后续重复运行只补采 latency，不重新
+宣称首轮。L3 因此是阻断默认入口的证据，而非真实 Provider 收益结论；真实 Provider A/B 仍待完成。
 
 下一候选是 P2-M3 Profiles/Skill Runtime，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入
 shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。
@@ -147,6 +156,8 @@ shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector b
 - 运行全量测试、Ruff、calculator、todo smoke 和 P2-M2 Memory cold/warm benchmark；DeepSeek live smoke、compressed 定向、
   M5.1 search A/B、budget-aware follow-up 和 capability holdout 已有脱敏证据；不必在没有
   新假设时重复消耗 Provider 配额；
+- L3 holdout 的 18-case 首轮结果已冻结并保存脱敏摘要；它在 `8ebc800` 基线上未达到 recall/injection
+  门槛，不能用改题或真实 Provider 未运行来填补该证据缺口；真实 Provider A/B 仍需独立完成；
 - 在最终说明中给出测试数量、golden 状态、迁移版本、覆盖率/类型检查/CI 状态和仍未实现项；当前 schema 为 v4，M4.1/M4.2 native backend 不等同于 OCI container；
 - 不使用“生产可用”“完全安全”等超出证据的表述。
 
@@ -157,7 +168,7 @@ shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector b
 ```text
 请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、已完成的
 docs/p2-implementation-plan.md、docs/p2-m2-implementation-plan.md 和 Runtime IPC v1/compatibility
-权威规范。P2-M1/P2-M2 已完成，先运行 136 个默认测试确认基线；P2-M3 尚未激活，不得提前加入
+权威规范。P2-M1/P2-M2 已完成，先运行 137 个默认测试确认基线；P2-M3 尚未激活，不得提前加入
 Skill、MCP、多 Agent、UI、RAG/vector、shell 字符串或默认网络。
 ```
 
