@@ -1,8 +1,10 @@
 # 开发路线图
 
-> 路线图状态基线：2026-09-05  
+> 路线图状态基线：2026-09-16
 > 当前完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Release/Evidence Hardening  
-> 当前实施项：**M5.1 最小只读 `search_files` 已完成；其余能力继续按证据门控**
+> 当前实施项：**Phase 2 P2-M1 Headless Runtime IPC 已完成；P2-M2 尚未激活**
+> 当前证据补充：简历 benchmark 的 scripted 校准及 `deepseek-flash` live 25-run/压缩
+> 10-pair 已完成；live 稳定性为 24/25，压缩没有节省 Token，见 `docs/resume-benchmark.md`。
 
 路线图用“可验证门禁”而不是代码量定义完成。每个里程碑必须保持已有回归基线，新增能力必须同时提供成功、失败和恢复证据。
 
@@ -20,6 +22,7 @@
 | M4 OS Isolation | 已完成（M4.1/M4.2） | 不可信执行能否受 OS 强边界约束 | namespace/escape/network/resource + structured argv tests |
 | Release/Evidence Hardening | 已完成 | 交付证据、质量门禁和评测范围是否可复核 | Git/CI/coverage/mypy/live-smoke/eval evidence |
 | M5 Capability Expansion | M5.1 完成，其余条件阶段 | 哪些新工具真正提高任务覆盖率 | eval-driven decision record |
+| Phase 2 Product Runtime | P2-D0、P2-M1 完成 | 如何在保留单任务 Runtime 内核的前提下形成成熟终端产品 | v2 architecture + versioned Runtime IPC producer；后续逐阶段 contract/eval evidence |
 
 ## 2. 全局里程碑门禁
 
@@ -323,7 +326,26 @@ case 仍需用 `compressed` variant 验证。tool-call 组裁剪问题已修复�
 ## 13. 当前下一步
 
 M5.1 代码、文档与脱敏证据已推送，Python 3.10/3.11 托管 CI 成功，并已固定 `v0.1.0`
-发布基线；四类非 search capability holdout 没有形成 M5.2 failure coverage。因此冻结当前
-五工具集合。项目展示优化已完成 README 中英双语重构、首屏验证数据和 Mermaid 架构图；下一项
-可选工作是终端 Demo/GIF。只有未来新的独立失败覆盖才能重开能力扩展。保持 M4.1
-namespace/policy/harness 边界，不加入 shell 字符串、默认网络、多 Agent。
+发布基线；四类非 search capability holdout 没有形成旧路线 M5.2 的 failure coverage，因此冻结当前
+五工具集合。Phase 2 的架构和跨项目 Runtime IPC 已完成设计固化，但未改变 `v0.1.0` 行为。
+
+用户于 2026-09-15 激活 Coding Agent P2-M1，并于 2026-09-16 完成全部 producer 门禁：
+`protocol-info`、严格 request validator、`run-headless`、脱敏连续 JSONL、稳定退出码、取消/恢复
+边界、Schema/golden/vector 与发布构建均通过。内部 SQLite/JSONL 没有暴露为 Platform API。
+P2-M2 分层 Memory 是下一候选，但仍需用户明确激活。
+
+## 14. Phase 2 分阶段路线
+
+| 子阶段 | 状态 | 交付物 | 退出门禁 |
+|---|---|---|---|
+| P2-D0 架构与契约设计 | 已完成 | `v2-product-architecture.md`、Runtime IPC v1 文档和 JSON Schema、兼容规则 | producer/consumer 权责、版本、取消、错误、secret/workspace 规则无歧义；明确尚未实现 |
+| P2-M1 Headless Runtime IPC | 已完成（2026-09-16） | `protocol-info`、`run-headless`、stdout JSONL、cooperative cancellation | v1 schema、golden、退出码、v0.1/v0.2 adapter contract vectors 全部通过 |
+| P2-M2 分层记忆 | 未启动 | episodic/semantic memory ports、SQLite authority 与策略 | provenance、隔离、遗忘、注入防护和 cold/warm eval delta 可解释 |
+| P2-M3 Profiles 与 Skill Runtime | 未启动 | immutable profile、Skill registry/loader/selector、能力策略 | skill provenance/permission/budget/replay 测试通过，不绕过 ToolHarness |
+| P2-M4 MCP 能力网关 | 未启动 | MCP adapter 经 CapabilityGateway 映射到 Harness | discovery、schema、secret、timeout、审计和恶意 server 负例通过 |
+| P2-M5 可恢复多 Agent 编排 | 未启动 | coordinator FSM、角色 mailboxes、hierarchical budgets、single-writer workspace | crash/replay/cancel/冲突/预算和相对单 Agent eval 通过 |
+| P2-M6 终端产品与发布 | 未启动 | interactive terminal、approval UX、安装/升级/兼容发布 | headless/interactive 同内核，兼容矩阵、安装 smoke、文档和脱敏演示完成 |
+
+Phase 2 的详细边界以 [`v2-product-architecture.md`](./v2-product-architecture.md) 为准；公共进程
+协议以 [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md) 和仓库根目录
+`protocol/v1/*.schema.json` 为准。

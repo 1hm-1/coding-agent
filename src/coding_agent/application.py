@@ -13,6 +13,7 @@ from coding_agent.compression import CompressionEngine
 from coding_agent.context import BudgetedContextBuilder, ContextBuilder
 from coding_agent.domain import (
     EventType,
+    Event,
     InvariantViolation,
     RecoveryMode,
     RunPolicy,
@@ -101,6 +102,9 @@ class AgentApplication:
         clock: Callable[[], float] | None = None,
         sleeper: Callable[[float], None] | None = None,
         random_source: Callable[[], float] | None = None,
+        event_observer: Callable[[Event], None] | None = None,
+        external_interrupt_requested: Callable[[], bool] | None = None,
+        manage_signals: bool = True,
     ) -> RunResult:
         source_path = Path(source).resolve(strict=True)
         if not source_path.is_dir():
@@ -124,6 +128,7 @@ class AgentApplication:
             journal=self.journal,
             snapshot_provider=session.to_snapshot,
             lease_owner=owner,
+            event_observer=event_observer,
         )
         runtime = AgentRuntime(
             session=session,
@@ -140,13 +145,17 @@ class AgentApplication:
             clock=clock,
             sleeper=sleeper,
             random_source=random_source,
+            external_interrupt_requested=external_interrupt_requested,
         )
         runtime.initialize()
         owner = runtime.lease_owner
         if self.journal is not None and owner is not None:
             self.journal.acquire_lease(session.id, owner, lease_seconds=runtime.lease_seconds)
         try:
-            with self._interrupt_signal_handler(session.id):
+            if manage_signals:
+                with self._interrupt_signal_handler(session.id):
+                    result = runtime.run()
+            else:
                 result = runtime.run()
             self._export_after_run(result)
             return result

@@ -1,8 +1,8 @@
-# Coding Agent 架构设计
+# Coding Agent Runtime Kernel 架构设计
 
-> 文档类型：目标架构与不变量  
+> 文档类型：v0.1 Runtime Kernel 架构与不变量
 > 当前实现：M5.1，见 [`current-state.md`](./current-state.md)
-> 下一实施阶段：后续 M5 能力继续由 failure coverage 决定，见 [`roadmap.md`](./roadmap.md)
+> Phase 2 产品架构：P2-M1 producer 已完成，见 [`v2-product-architecture.md`](./v2-product-architecture.md) 与 [`p2-implementation-plan.md`](./p2-implementation-plan.md)
 
 ## 1. 状态标记
 
@@ -19,7 +19,7 @@
 
 ## 2. 系统目标
 
-本项目实现一个面向本地代码任务的单 Agent Coding System。模型是不可靠的决策组件；真实副作用、状态、权限、恢复和评测由确定性工程组件控制。
+当前 Runtime Kernel 实现一个面向本地代码任务的单 Agent Coding System。模型是不可靠的决策组件；真实副作用、状态、权限、恢复和评测由确定性工程组件控制。Phase 2 在本内核之上组合产品层，不把协调器、Memory 或 MCP 塞回 Runtime FSM。
 
 它要证明的不是“模型能写代码”，而是：
 
@@ -323,9 +323,9 @@ Agent 失败 run 留在有效分母并保留 trace；manifest/fixture/oracle 配
 
 ## 17. 决策门禁
 
-以下变更必须先更新设计再编码：
+以下变更必须先更新设计并激活对应里程碑再编码：
 
-- 增加多 Agent；
+- 实现多 Agent、Memory、Skill/MCP 或终端产品层；
 - 增加通用 Shell 或网络访问；
 - 改变 Event/Golden schema；
 - 改变 source isolation threat model；

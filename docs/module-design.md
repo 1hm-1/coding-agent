@@ -2,9 +2,12 @@
 
 > 文档类型：代码边界与依赖规则  
 > 当前基线：M5.1
-> 下一变化：继续以 Eval failure coverage 决定后续 M5 能力
+> 当前变化：Phase 2 P2-M1 producer 已完成；P2-M2 尚未激活
 
-本文回答三个问题：功能应该放在哪个模块、模块之间允许传递什么、错误由谁处理。当前可执行契约见 [`contracts.md`](./contracts.md)，目标架构与安全边界见 [`architecture.md`](./architecture.md)。
+本文回答当前 v0.1 Runtime 的三个问题：功能应该放在哪个模块、模块之间允许传递什么、错误由谁处理。
+当前可执行契约见 [`contracts.md`](./contracts.md)，Runtime 架构与安全边界见
+[`architecture.md`](./architecture.md)。未来产品层、Memory、Skill/MCP 与多 Agent 模块边界单独见
+[`v2-product-architecture.md`](./v2-product-architecture.md)，不得把未来目录误当成已实现模块。
 
 ## 1. 设计原则
 
@@ -21,6 +24,7 @@
 
 ```text
 cli
+ ├── protocol.headless ─── protocol/v1 Schema files
  └── application
       ├── runtime ──────── domain
       │    ├── context ─── domain
@@ -68,7 +72,9 @@ tests → public modules above
 | `export.py` | 已提交 DB events 到 JSONL 的原子 projection 导出 | 状态决策、replay 规则 |
 | `compression.py` | 摘要模型调用边界、event lineage、schema/required-fact 验证、stale 判定 | 权限判定、Runtime 状态迁移、覆盖原始事件 |
 | `evaluation.py` | versioned suite、containment、trusted oracle、fresh run、metrics、A/B report | 改变 Runtime 完成语义、绕过 Harness、生产流量实验 |
-| `cli.py` | 参数解析、run/resume/interrupt/resolve/inspect/evaluate、打印结构化结果 | 创建隐藏的运行时全局状态 |
+| `protocol/headless.py` | P2-M1 discovery、request validation、public projection、terminal result、headless producer composition | Runtime 状态迁移、私有 SQLite schema、Provider payload、Tool 副作用 |
+| `protocol/schema.py` | 校验 producer-authority Schema bundle 与四类公共 document | 通用第三方 Schema framework、私有持久化 schema |
+| `cli.py` | 参数解析、run/resume/interrupt/resolve/inspect/evaluate/protocol-info、打印结构化结果 | 创建隐藏的运行时全局状态 |
 
 ## 4. 核心接口边界
 

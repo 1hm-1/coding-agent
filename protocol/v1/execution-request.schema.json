@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:coding-agent:runtime-ipc:v1:execution-request",
+  "title": "Coding Agent Runtime IPC v1 Execution Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "kind",
+    "execution_id",
+    "correlation",
+    "task",
+    "source",
+    "runtime",
+    "backend",
+    "policy",
+    "required_capabilities",
+    "metadata",
+    "extensions"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "execution_request"
+    },
+    "execution_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "correlation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "attempt_id"],
+      "properties": {
+        "run_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "attempt_id": {
+          "$ref": "#/$defs/identifier"
+        }
+      }
+    },
+    "task": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100000
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "expected_revision", "read_only"],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/private_absolute_path"
+        },
+        "expected_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "read_only": {
+          "const": true
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_home", "timeout_seconds"],
+      "properties": {
+        "agent_home": {
+          "$ref": "#/$defs/private_absolute_path"
+        },
+        "timeout_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 86400
+        }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z][a-z0-9.-]*$"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048
+        },
+        "api_key_env": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+        },
+        "thinking": {
+          "enum": ["disabled"]
+        },
+        "script_path": {
+          "$ref": "#/$defs/private_absolute_path"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "scripted"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["script_path"],
+            "not": {
+              "anyOf": [
+                {"required": ["model"]},
+                {"required": ["base_url"]},
+                {"required": ["api_key_env"]},
+                {"required": ["thinking"]}
+              ]
+            }
+          },
+          "else": {
+            "required": ["model", "api_key_env"],
+            "not": {
+              "required": ["script_path"]
+            }
+          }
+        }
+      ]
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_steps",
+        "max_model_calls",
+        "max_tool_calls",
+        "max_output_tokens",
+        "allowed_permissions"
+      ],
+      "properties": {
+        "max_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "max_model_calls": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "max_tool_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "allowed_permissions": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["read", "write", "execute_test", "execute_command"]
+          }
+        }
+      }
+    },
+    "required_capabilities": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/capability_identifier"
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "maxProperties": 32,
+      "additionalProperties": {
+        "type": ["string", "number", "integer", "boolean", "null"]
+      },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "maxProperties": 32,
+      "additionalProperties": {
+        "$ref": "#/$defs/extension_value"
+      },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "capability_identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9_.-]*$"
+    },
+    "private_absolute_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^/"
+    },
+    "extension_value": {
+      "oneOf": [
+        {"type": ["string", "number", "integer", "boolean", "null"]},
+        {
+          "type": "array",
+          "maxItems": 128,
+          "items": {"type": ["string", "number", "integer", "boolean", "null"]}
+        },
+        {
+          "type": "object",
+          "maxProperties": 64,
+          "additionalProperties": {
+            "oneOf": [
+              {"type": ["string", "number", "integer", "boolean", "null"]},
+              {
+                "type": "array",
+                "maxItems": 128,
+                "items": {"type": ["string", "number", "integer", "boolean", "null"]}
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

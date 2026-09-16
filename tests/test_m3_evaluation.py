@@ -240,6 +240,8 @@ class EvaluationHarnessTest(unittest.TestCase):
             self.assertTrue(all("session_id" not in run for run in report_json["runs"]))
             self.assertTrue(all("trace_path" not in run for run in report_json["runs"]))
             self.assertIn("test_latency_ms", report_json["metrics"])
+            self.assertIn("end_to_end_latency_ms", report_json["task_metrics"])
+            self.assertIn("total_tokens", report_json["task_metrics"])
             by_case = {(run.case_id, run.repetition): run for run in report.runs}
             self.assertTrue(by_case[("success", 1)].task_success)
             self.assertTrue(by_case[("success", 1)].oracle_success)
@@ -410,6 +412,11 @@ class EvaluationHarnessTest(unittest.TestCase):
             self.assertEqual(
                 compressed.report["metrics"]["compression_output_tokens"]["mean"],
                 7.0,
+            )
+            self.assertEqual(result["paired_diff"]["task_pair_count"], 1)
+            self.assertIn(
+                "total_tokens_delta",
+                result["paired_diff"]["task_summary"],
             )
             self.assertTrue((Path(temporary) / "ab" / "paired_diff.json").exists())
 

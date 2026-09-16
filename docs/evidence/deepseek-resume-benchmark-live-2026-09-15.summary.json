@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "sanitized_live_resume_and_context_ab_summary",
+  "recorded_at": "2026-09-15",
+  "provider": "openai-compatible",
+  "model": "deepseek-flash",
+  "base_url": "https://api.deepseek.com",
+  "thinking": "disabled",
+  "provider_timeout_seconds": 120,
+  "model_selection": {
+    "planned_model": "deepseek-v4-flash",
+    "available_models_at_execution": [
+      "deepseek-flash",
+      "deepseek-v4-pro"
+    ],
+    "reason": "The planned model was no longer returned by the authenticated Provider models endpoint; deepseek-flash was selected as the closest current replacement."
+  },
+  "adapter_smoke": {
+    "passed": true,
+    "tests": 1,
+    "elapsed_seconds": 0.691
+  },
+  "code_snapshot": {
+    "git_head": "63237adcb8d1bbd88f0481c297fb1ee28b9a41ec",
+    "worktree_clean": false,
+    "tracked_diff_sha256": "acd56b454c98ab7be9370f6e8e461f2004bf64897aab7edd9292df2ded56c58f",
+    "tracked_src_tests_examples_content_sha256": "d4bff1767ffcc204634100e1b3c1f7c44f832093e707341dafe5ad392f828d77"
+  },
+  "stability": {
+    "suite": "examples/eval_suite.json",
+    "variant": "budgeted",
+    "case_count": 5,
+    "repetitions_per_case": 5,
+    "runs": 25,
+    "valid_runs": 25,
+    "infrastructure_failures": 0,
+    "oracle_success": 24,
+    "runtime_completed": 24,
+    "end_to_end_success": 24,
+    "end_to_end_success_rate": 0.96,
+    "source_invariant_rate": 1.0,
+    "invalid_tool_calls": 0,
+    "repeated_failure_batches": 0,
+    "permission_violations": 0,
+    "end_to_end_latency_ms": {
+      "mean": 5814.666768920724,
+      "p50": 5343.734433001373,
+      "p95": 9039.72231700027
+    },
+    "input_tokens": 331472,
+    "output_tokens": 14079,
+    "total_tokens": 345551,
+    "agent_model_calls": 114,
+    "compression_calls": 0,
+    "tool_attempts": 156,
+    "failure": {
+      "case_id": "search-lab-content-location",
+      "repetition": 1,
+      "reason": "tool_budget_exhausted"
+    }
+  },
+  "context_ab": {
+    "suite": "examples/eval_suite.json",
+    "case_id": "long-history-compression",
+    "pairs": 10,
+    "execution_order": "alternating_arm_first_within_each_pair",
+    "baseline": {
+      "variant": "budgeted",
+      "valid_runs": 10,
+      "infrastructure_failures": 0,
+      "oracle_success": 10,
+      "runtime_completed": 9,
+      "end_to_end_success": 9,
+      "source_invariant_rate": 1.0,
+      "end_to_end_latency_ms": {
+        "mean": 4759.754408599838,
+        "p50": 4953.6333569994895,
+        "p95": 5748.5144730017055
+      },
+      "input_tokens": 98506,
+      "output_tokens": 4270,
+      "total_tokens": 102776,
+      "agent_model_calls": 31,
+      "compression_calls": 0,
+      "total_model_calls": 31,
+      "tool_attempts": 43
+    },
+    "candidate": {
+      "variant": "compressed",
+      "valid_runs": 10,
+      "infrastructure_failures": 0,
+      "oracle_success": 10,
+      "runtime_completed": 10,
+      "end_to_end_success": 10,
+      "source_invariant_rate": 1.0,
+      "end_to_end_latency_ms": {
+        "mean": 11247.586856799899,
+        "p50": 10129.442391000339,
+        "p95": 15042.213724002067
+      },
+      "agent_input_tokens": 130437,
+      "agent_output_tokens": 6718,
+      "compression_input_tokens": 302326,
+      "compression_output_tokens": 3159,
+      "total_tokens": 442640,
+      "agent_model_calls": 48,
+      "compression_calls": 20,
+      "total_model_calls": 68,
+      "tool_attempts": 90,
+      "compression_rejections": {
+        "compression_budget_exhausted": 18,
+        "compression_schema_invalid": 4
+      }
+    },
+    "paired_mean_delta_candidate_minus_baseline": {
+      "end_to_end_success_rate": 0.1,
+      "oracle_success_rate": 0.0,
+      "end_to_end_latency_ms": 6487.832448200061,
+      "total_tokens": 33986.4,
+      "agent_model_calls": 1.7,
+      "compression_calls": 2.0,
+      "total_model_calls": 3.7,
+      "tool_attempts": 4.7
+    }
+  },
+  "interpretation": [
+    "The 25-run stability result is 24/25 end-to-end on five checked-in tasks; the single failure exhausted the fixed search-task tool budget.",
+    "Compression improved Runtime completion from 9/10 to 10/10 in this paired sample, while oracle success was 10/10 in both arms.",
+    "The compressed arm used 339864 more total tokens across ten pairs and added 6487.8 ms mean end-to-end latency per pair, so this experiment does not support a token-savings claim.",
+    "Compression produced repeated budget/schema rejection observations and substantially more model/tool activity; those costs are included rather than discarded."
+  ],
+  "raw_artifact_sha256": {
+    "stability_report.json": "58e7e5bc3080a535ee1f8bcc19271c4e5cecab2adc9ed88c8e1cffbfbc64cfa9",
+    "stability_runs.jsonl": "209fdac9180021933c6d38b9c705ad4d73a22736cfbd3b15f0138470d17cddf4",
+    "stability_manifest.snapshot.json": "bc4d5366c41b2be6c5a3aa7838c5e830862bc53ed7fdab8764b11ccd79144a72",
+    "ab_paired_diff.json": "45531d8bfb022dfc725f5c56486426489c3c4e13864d9b0ef8f52d089046ac7c",
+    "ab_budgeted_report.json": "6016fd61155984053a85858971308bbea1b729137c1c37a6701313d2ee2aa02c",
+    "ab_budgeted_runs.jsonl": "9815e0517cb482de93fbd873694c43cc3094401d76f74b0beb66cc74982ee139",
+    "ab_budgeted_manifest.snapshot.json": "ee63faefbe286c3060f355c8bf17f9ab0658be3fab0c4ce77df4d6dfa47224dc",
+    "ab_compressed_report.json": "1ccf8cf3b8f50dd6f676e46b2329ca3f2e95ea40e104b181631a357978d685e2",
+    "ab_compressed_runs.jsonl": "8a595c4d12bf23b53ce192e28b99e4c9d05cffffc0b7b198b710e68573d73402",
+    "ab_compressed_manifest.snapshot.json": "ee63faefbe286c3060f355c8bf17f9ab0658be3fab0c4ce77df4d6dfa47224dc"
+  },
+  "limitations": [
+    "The model changed from the planned deepseek-v4-flash identifier because that identifier was unavailable at execution time; results are not directly comparable to historical deepseek-v4-flash runs.",
+    "The worktree was dirty, so the content snapshot hashes, Git HEAD, manifests, and artifact hashes jointly identify the run rather than Git HEAD alone.",
+    "The benchmark uses five small checked-in Python fixtures and one compression-sensitive task; it is not an external repository benchmark or a production success-rate estimate.",
+    "Raw artifacts remain under /tmp and are not checked in."
+  ],
+  "contains_credentials": false
+}

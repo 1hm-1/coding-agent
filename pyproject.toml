@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "production-coding-agent"
-version = "0.1.0"
+version = "0.2.0.dev0"
 description = "A small, explicit, deterministic coding-agent runtime"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -24,6 +24,12 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.data-files]
+"share/production-coding-agent/protocol/v1" = [
+    "protocol/v1/*.schema.json",
+    "protocol/v1/*.vector.json",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -46,6 +52,7 @@ files = [
     "src/coding_agent/domain.py",
     "src/coding_agent/evaluation.py",
     "src/coding_agent/models",
+    "src/coding_agent/protocol",
     "src/coding_agent/sandbox",
     "src/coding_agent/tools",
     "src/coding_agent/workspace.py",

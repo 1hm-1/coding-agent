@@ -87,6 +87,7 @@ class TrajectoryRecorder:
         journal: RunJournal | None = None,
         snapshot_provider: Callable[[], RuntimeSnapshot] | None = None,
         lease_owner: str | None = None,
+        event_observer: Callable[[Event], None] | None = None,
     ):
         self.store = store
         self.session_id = session_id
@@ -98,6 +99,7 @@ class TrajectoryRecorder:
         self.journal = journal
         self.snapshot_provider = snapshot_provider
         self.lease_owner = lease_owner
+        self.event_observer = event_observer
         self._version = 0
         self._state: RuntimeState | None = None
         if journal is not None:
@@ -136,6 +138,9 @@ class TrajectoryRecorder:
         self._sequence = events[-1].sequence if events else 0
         self._version = snapshot.version
         self._state = snapshot.state
+        if self.event_observer is not None:
+            for event in events:
+                self.event_observer(event)
         return events
 
     def emit(
@@ -183,6 +188,8 @@ class TrajectoryRecorder:
             self._sequence = result.event.sequence
             self._version = result.committed_version
             self._state = snapshot_after.state
+            if self.event_observer is not None:
+                self.event_observer(result.event)
             return result.event
 
         self._sequence += 1
@@ -201,6 +208,8 @@ class TrajectoryRecorder:
         except Exception:
             self._sequence -= 1
             raise
+        if self.event_observer is not None:
+            self.event_observer(event)
         return event
 
 

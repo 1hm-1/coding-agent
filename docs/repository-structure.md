@@ -2,7 +2,7 @@
 
 > 当前结构与未来结构必须分开阅读。本文件中未标记为“计划”的路径应能在当前仓库找到。
 
-## 1. 当前 M5.1 + Release/Evidence Hardening 结构
+## 1. 当前 M5.1 + Release/Evidence Hardening + P2-M1 完成结构
 
 ```text
 coding-agent/
@@ -19,6 +19,8 @@ coding-agent/
 │   ├── README.md                     # 文档导航和权威性说明
 │   ├── HANDOFF.md                    # 新窗口开发交接
 │   ├── architecture.md               # 目标架构、当前边界和不变量
+│   ├── v2-product-architecture.md    # Phase 2 产品化架构与阶段边界
+│   ├── p2-implementation-plan.md     # 当前 P2-M1 实施清单
 │   ├── contracts.md                  # 当前 M5.1 精确契约
 │   ├── current-state.md              # 已实现、未实现、已知限制
 │   ├── decisions/                    # Eval-backed capability decision records
@@ -27,6 +29,9 @@ coding-agent/
 │   ├── development-guide.md          # 从零上手和变更流程
 │   ├── module-design.md              # 模块职责、依赖和扩展边界
 │   ├── requirements-traceability.md  # 原始需求和面试能力证据映射
+│   ├── protocol/
+│   │   ├── runtime-ipc-v1.md         # 已实现 Runtime producer IPC 权威规范
+│   │   └── compatibility.md          # IPC 兼容与发布规则
 │   ├── repository-structure.md       # 本文件
 │   ├── roadmap.md                    # 里程碑、门禁和完成定义
 │   ├── testing-strategy.md           # 测试层次、golden 和 CI 门禁
@@ -35,7 +40,18 @@ coding-agent/
 │   ├── m2-implementation-plan.md      # M2.1—M2.3 实施与验收记录
 │   ├── m3-implementation-plan.md      # M3.1—M3.3 实施与验收记录
 │   ├── m4-implementation-plan.md      # M4.1/M4.2 验收与 M5 门禁
-│   └── m5-eval-expansion.md           # M5 评测扩展和能力门禁证据
+│   ├── m5-eval-expansion.md           # M5 评测扩展和能力门禁证据
+│   └── resume-benchmark.md            # 简历稳定性与压缩 A/B 冻结口径
+├── protocol/
+│   └── v1/                            # IPC producer Schema 与 contract vectors；v0.1.0 尚未实现
+│       ├── README.md                   # Schema 职责、修改和 digest 规则
+│       ├── capabilities.schema.json
+│       ├── event-envelope.schema.json
+│       ├── execution-request.schema.json
+│       ├── terminal-result.schema.json
+│       ├── execution-request.vector.json
+│       ├── v0.1-kernel.vector.json
+│       └── v0.2-bridge.vector.json
 ├── examples/
 │   ├── fixture/                      # calculator 最小源仓库
 │   ├── scripted_run.json             # calculator 确定性模型脚本
@@ -49,7 +65,7 @@ coding-agent/
 ├── src/coding_agent/
 │   ├── __init__.py
 │   ├── application.py                # composition root / start use case
-│   ├── cli.py                        # run/resume/interrupt/inspect/replay/export/evaluate CLI
+│   ├── cli.py                        # 现有 CLI + P2-M1 discovery/headless 入口
 │   ├── context.py                    # token counter、capability、section/budget builders
 │   ├── compression.py                # summary schema、lineage、stale/fact verification
 │   ├── domain.py                     # 核心值对象、enum 和错误
@@ -62,6 +78,10 @@ coding-agent/
 │   ├── trajectory.py                 # 兼容 JSONL、replay、semantic projection
 │   ├── workspace.py                  # workspace 生命周期、路径守卫和 repo snapshot
 │   ├── evaluation.py                 # versioned suite、oracle、runner、metrics、A/B
+│   ├── protocol/
+│   │   ├── __init__.py               # Runtime IPC public exports
+│   │   ├── headless.py               # discovery、validation、projection、headless execution
+│   │   └── schema.py                 # 权威 Schema bundle validator
 │   ├── sandbox/
 │   │   ├── __init__.py                # SandboxExecutor public exports
 │   │   ├── base.py                    # ExecutionSpec/Result/limits/capabilities
@@ -101,11 +121,16 @@ coding-agent/
     ├── test_m4_execution.py             # structured argv/profile/approval/recovery tests
     ├── live_provider_smoke.py           # opt-in provider adapter smoke, not default discovery
     ├── test_persistence.py
+    ├── test_protocol.py               # Runtime IPC producer contract/fault/cancel tests
     ├── test_state_machine.py
     ├── test_tools.py
     ├── test_vertical_slice.py
     └── test_workspace.py
 ```
+
+`protocol/v1/` 是跨项目 producer authority。`src/coding_agent/protocol/` 实现 discovery、严格
+request validation、headless runner、公共 event projection、terminal result 与 cooperative
+cancellation；Agent Platform consumer 不在本仓库实现。
 
 `__pycache__/`、`.pytest_cache/`、`.ruff_cache/`、虚拟环境和运行时 agent home 都是生成物，不属于设计结构，不应提交或依赖。
 

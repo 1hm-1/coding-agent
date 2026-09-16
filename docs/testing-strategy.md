@@ -28,7 +28,7 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前验收基线为 93 个测试；在具备 native sandbox capability 的环境中全部通过，能力受限
+固定 `v0.1.0` 验收基线为 93 个测试；P2-M1 完成后当前开发树为 111 个。具备 native sandbox capability 的环境中全部通过，能力受限
 环境中 native-only case 会显式 skip。live provider smoke 需显式凭据和手动触发。
 
 `examples/capability_holdout_suite.json` 是 M5 的非 search 能力门禁：只包含正常任务，覆盖
@@ -186,7 +186,7 @@ keys，同时明确 Provider 请求是独立随机样本，不把它描述为确
 lint
   └─ ruff check
 typed-release-surface
-  └─ mypy (23/33 source files: models/tools/context/domain/workspace/command_profiles/evaluation/sandbox)
+  └─ mypy (26/36 source files: models/tools/context/domain/workspace/command_profiles/evaluation/sandbox/protocol)
 unit-contract
   └─ capability report + coverage run unittest discover + combine + report (fail-under=70)
 golden-smoke

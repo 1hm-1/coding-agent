@@ -31,7 +31,7 @@ git --version
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-预期：当前应发现 93 个默认测试；在 native sandbox capability 可用时全部通过，能力受限环境中 7 个 native-only case 会显式 skip。`tests/live_provider_smoke.py` 不以 `test_` 命名，不属于默认 discovery；它只在显式配置凭据后运行。若输出 `Ran 0 tests`，检查 `tests/__init__.py` 是否存在，以及命令是否从项目根执行。
+预期：当前开发树应发现 111 个默认测试；在 native sandbox capability 可用时全部通过，能力受限环境中 native-only case 会显式 skip。`tests/live_provider_smoke.py` 不以 `test_` 命名，不属于默认 discovery；它只在显式配置凭据后运行。若输出 `Ran 0 tests`，检查 `tests/__init__.py` 是否存在，以及命令是否从项目根执行。
 
 可以使用 `uv` 创建虚拟环境并安装项目及开发工具：
 
@@ -68,6 +68,11 @@ PYTHONPATH=src python3 -m coding_agent.cli \
   --agent-home /tmp/coding-agent-m5-ab \
   evaluate --suite examples/eval_suite.json --ab --repetitions 1
 ```
+
+`evaluate` 可重复传入 `--case-id` 来冻结任务子集；`--ab-variants budgeted compressed`
+用于上下文压缩开/关配对。A/B 会在每个 case/repetition pair 内交替先运行的 arm，报告中的
+`task_metrics` 排除负控制并提供 total/mean/P50/P95。简历指标的固定命令和口径见
+[`resume-benchmark.md`](./resume-benchmark.md)。
 
 评测的 fixture、程序化 oracle、结果和 M5 工具门禁解释见 [`m5-eval-expansion.md`](./m5-eval-expansion.md)。
 独立搜索回归使用 `examples/search_eval_suite.json`；它覆盖三个结构不同的内容定位仓库，固定
@@ -137,7 +142,7 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 7. `persistence.py`、`migrations.py`、`export.py`：理解 SQLite authority 和 DB→JSONL projection；
 8. `compression.py`、`evaluation.py`：理解 summary lineage、oracle、metrics 和 A/B；
 9. `command_profiles.py`、`sandbox/base.py`、`sandbox/policy.py`、`sandbox/local_container.py`、`sandbox/runner.py`：理解 M4.2 structured argv/profile 与 M4.1 OS boundary、capability probe 和 fail-closed cleanup；
-10. `application.py`、`cli.py`：最后看组装和入口；
+10. `application.py`、`cli.py` 和 `protocol/headless.py`：最后看组装、入口与公共进程边界；
 11. `tests/test_vertical_slice.py`、`tests/test_hardening.py`、`tests/test_persistence.py`、`tests/test_m2_recovery.py`、`tests/test_models.py`、`tests/test_m3_context.py`、`tests/test_m3_evaluation.py`、`tests/test_m4_sandbox.py` 与 `tests/test_m4_execution.py`：用测试验证理解。
 
 ## 5. 标准开发流程
@@ -145,7 +150,7 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 每个变更按以下顺序进行：
 
 1. 在 `roadmap.md` 找到当前里程碑和明确退出条件。
-2. 阅读对应实施文档；M3 使用 `m3-implementation-plan.md`，M4.1/M4.2 使用 `m4-implementation-plan.md`；下一阶段是 M5 条件评估。
+2. 阅读对应实施文档；当前唯一活跃文档是 `p2-implementation-plan.md`。
 3. 运行全量基线并保存结果，确认不是在已有红灯上开发。
 4. 先写失败用例或 fault scenario，再修改生产代码。
 5. 只改当前里程碑需要的最小模块，不顺手扩展工具/UI/multi-agent。
@@ -174,7 +179,7 @@ PYTHONPATH=src .venv/bin/coverage run -m unittest discover -q
 
 ```bash
 export CODING_AGENT_LIVE_PROVIDER=openai-compatible
-export CODING_AGENT_LIVE_MODEL=deepseek-v4-flash
+export CODING_AGENT_LIVE_MODEL=deepseek-flash
 export CODING_AGENT_LIVE_BASE_URL=https://api.deepseek.com
 export CODING_AGENT_LIVE_THINKING=disabled
 # DeepSeek key 使用这个变量名，因为它走 OpenAI-compatible adapter
@@ -204,7 +209,7 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 PYTHONPATH=src .venv/bin/python -m coding_agent.cli \
   --agent-home /tmp/coding-agent-deepseek-eval \
   evaluate --suite examples/eval_suite.json \
-  --provider openai-compatible --model deepseek-v4-flash \
+  --provider openai-compatible --model deepseek-flash \
   --base-url https://api.deepseek.com --thinking disabled \
   --repetitions 3 --variant budgeted \
   --output /tmp/coding-agent-deepseek-eval/report

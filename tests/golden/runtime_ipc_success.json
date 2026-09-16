@@ -1,0 +1,16 @@
+{
+  "event_types": [
+    "runtime.started",
+    "runtime.state_changed",
+    "runtime.state_changed",
+    "runtime.state_changed",
+    "model.call_started",
+    "model.call_finished",
+    "runtime.state_changed",
+    "runtime.finished"
+  ],
+  "result_status": "succeeded",
+  "failure_code": null,
+  "agent_count": 1,
+  "delegation_count": 0
+}

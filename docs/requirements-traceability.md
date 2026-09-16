@@ -20,6 +20,8 @@
 | success/tool/token/latency/failure/recovery 指标 | M3 已完成离线聚合 | `evaluation.py` + committed events | report schema、失败分母和 recovery tests |
 | replayable structured trajectory | 已实现，M2.1 已将 SQLite 设为 authority | `trajectory.py` / SQLite export | sequence/replay/golden/export equivalence |
 | Release/Evidence hardening | 已完成 | Git/CI、coverage、扩大的 mypy 门禁、recovery metrics、multi-repository eval、opt-in provider smoke | `.github/workflows/`、`pyproject.toml`、`evaluation.py`、`examples/eval_suite.json`、默认测试与手动 smoke；提交 `cf82f3c` 的 Python 3.10/3.11 hosted CI 成功；不宣称生产成功率 |
+| 成熟终端 Agent 产品扩展 | 已设计未实现 | [`v2-product-architecture.md`](./v2-product-architecture.md) | 分层记忆、Skill/MCP 网关、多 Agent 协调器和终端层有明确边界；逐阶段实现后才能升级证据成熟度 |
+| Runtime 与 Agent Platform 集成 | P2-M1 producer 已完成；Platform consumer 待外部验证 | [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md)、`protocol/v1/*.schema.json`、[`p2-implementation-plan.md`](./p2-implementation-plan.md)、`tests/test_protocol.py` | discovery/headless、golden、取消/退出码、v0.1/v0.2 vectors 已通过；consumer suite 尚未执行 |
 
 ## 2. 面试高频主题映射
 
@@ -35,12 +37,13 @@
 | retry/fallback | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §5 | 已实现 | 只对分类基础设施错误；质量差不自动 fallback |
 | 重复工具调用/幂等 | [`contracts.md`](./contracts.md)、M2.2 recovery rules | 部分实现 | 已确认结果不重复；未知写操作需 resolution，不能宣称 exactly-once |
 | 上下文压缩与信息丢失 | [`architecture.md`](./architecture.md) §13、[`roadmap.md`](./roadmap.md) §7 | M3 已实现 | 不编造 Token 降幅；用 lineage、required-fact retention 和 task success A/B |
-| 短期/长期记忆 | Context M3；跨会话用户偏好不在当前范围 | 目标边界明确 | Coding task state 不等于用户长期偏好；不要混称 |
+| 短期/长期记忆 | Context M3 已实现；Phase 2 分层记忆已设计 | 部分实现/未来设计 | 当前只宣称 task context；episodic/semantic memory 要到 P2-M2 验收后才能宣称，procedural memory/Skill 到 P2-M3 |
 | Eval 体系和 Badcase 定位 | [`testing-strategy.md`](./testing-strategy.md)、[`roadmap.md`](./roadmap.md) §7 | M3 离线 eval + M5.1 live A/B + capability holdout 已实现 | 能区分 oracle/runtime/e2e 和无效调用；小样本不外推生产成功率 |
 | A/B 与上线迭代 | [`roadmap.md`](./roadmap.md) M3 | 离线 paired A/B 已实现 | 只做固定 suite 的描述性比较；真实流量实验不在当前项目证据内 |
 | 安全、权限、Prompt Injection | [`architecture.md`](./architecture.md) §10、M4.1/M4.2 | 应用层 + Linux namespace 部分实现 | capability fail-closed、structured argv allowlist、secret/network/escape/resource/approval tests；不宣称抵御内核漏洞或跨平台等价 |
-| 单 Agent vs 多 Agent | [`architecture.md`](./architecture.md) §3/§16 | 明确采用单 Agent | 原因是可归因、低成本；只有 eval 证明并行瓶颈才考虑多 Agent |
-| Skill/RAG/Memory 关系 | 非当前实现 | 明确不采用/条件扩展 | 不为面试题强行加入 Skill、RAG 或长期记忆 |
+| 单 Agent vs 多 Agent | [`v2-product-architecture.md`](./v2-product-architecture.md) | 当前单 Agent；协调层已设计 | `AgentRuntime` 保持单任务内核；P2-M5 才能宣称可恢复多 Agent，并需对比单 Agent eval |
+| Skill/RAG/Memory 关系 | [`v2-product-architecture.md`](./v2-product-architecture.md) | 已设计未实现 | Skill 是受版本治理的流程包，Memory 是带来源的数据，RAG 只是检索手段；不能把设计写成现成功能 |
+| MCP 能力接入 | [`v2-product-architecture.md`](./v2-product-architecture.md) | 已设计未实现 | MCP 必须经 CapabilityGateway、ToolRegistry 和 ToolHarness；P2-M4 前不宣称支持 |
 | 指标是否只看成功率 | [`architecture.md`](./architecture.md) §14 | 已设计，部分指标可 replay | 区分 runtime completion 与 task success，保留失败 run |
 | Demo 与 production 区别 | [`current-state.md`](./current-state.md)、[`roadmap.md`](./roadmap.md) | 持续演进 | 用恢复、安全、评测、观测门禁说明，不使用“生产可用”标签 |
 

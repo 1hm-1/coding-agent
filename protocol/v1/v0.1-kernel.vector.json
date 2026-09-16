@@ -1,0 +1,9 @@
+{
+  "vector_version": 1,
+  "name": "v0.1-single-agent-kernel-semantics",
+  "expected_terminal_contract": {
+    "status": "succeeded",
+    "agent_count": 1,
+    "delegation_count": 0
+  }
+}

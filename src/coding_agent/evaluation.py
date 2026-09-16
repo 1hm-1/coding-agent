@@ -6,6 +6,7 @@ import json
 import math
 from pathlib import Path
 import subprocess
+import time
 from typing import Any, Callable, Mapping, Sequence
 import uuid
 
@@ -325,6 +326,7 @@ def _percentile(values: Sequence[float], percentile: float) -> float | None:
 def _distribution(values: Sequence[float]) -> dict[str, float | int | None]:
     return {
         "count": len(values),
+        "total": sum(values),
         "mean": (sum(values) / len(values)) if values else None,
         "p50": _percentile(values, 0.50),
         "p95": _percentile(values, 0.95),
@@ -352,6 +354,7 @@ def collect_run_metrics(events: Sequence[Event], *, recovery_triggered: bool = F
     model_latency_ms: list[float] = []
     compression_started: dict[str, float] = {}
     compression_latency_ms: list[float] = []
+    compression_calls = 0
     permission_violations = 0
     permission_violations_by_tool: Counter[str] = Counter()
     tool_calls_by_name: Counter[str] = Counter()
@@ -423,6 +426,7 @@ def collect_run_metrics(events: Sequence[Event], *, recovery_triggered: bool = F
                     }:
                         invalid_tool_calls_by_kind[str(kind)] += 1
         elif event.event_type is EventType.COMPRESSION_STARTED:
+            compression_calls += 1
             key = f"{event.payload.get('source_event_start')}:{event.payload.get('source_event_end')}"
             timestamp = _parse_timestamp(event.timestamp)
             if timestamp is not None:
@@ -459,6 +463,8 @@ def collect_run_metrics(events: Sequence[Event], *, recovery_triggered: bool = F
             run_latency_ms = max(0.0, (last - first) * 1000)
     return {
         "model_calls": model_calls,
+        "compression_calls": compression_calls,
+        "total_model_calls": model_calls + compression_calls,
         # tool_calls is retained as a compatibility alias for logical attempts.
         "tool_calls": tool_attempts,
         "tool_attempts": tool_attempts,
@@ -470,6 +476,12 @@ def collect_run_metrics(events: Sequence[Event], *, recovery_triggered: bool = F
         "output_tokens": output_tokens,
         "compression_input_tokens": compression_input_tokens,
         "compression_output_tokens": compression_output_tokens,
+        "total_tokens": (
+            input_tokens
+            + output_tokens
+            + compression_input_tokens
+            + compression_output_tokens
+        ),
         "latency_ms": run_latency_ms,
         "model_latency_ms": sum(model_latency_ms),
         "tool_latency_ms": tool_latency_ms,
@@ -624,14 +636,38 @@ class EvaluationRunner:
         if any(variant not in {"passthrough", "budgeted", "compressed"} for variant in chosen):
             raise ValueError("unknown A/B context variant")
         base = Path(output_dir).resolve() if output_dir is not None else self.agent_home / "evals" / str(uuid.uuid4())
+        effective_suite = _suite_with_backend_override(suite, backend_override)
+        suite_root = self.suite_root or Path.cwd().resolve()
+        arm_runs: dict[str, list[EvalRun]] = {variant: [] for variant in chosen}
+        for case_index, case in enumerate(effective_suite.cases):
+            for repetition in range(1, repetitions + 1):
+                # Alternate which arm runs first to reduce time/provider-load drift
+                # while retaining the stable case_id/repetition pairing key.
+                pair_order = (
+                    chosen
+                    if (case_index + repetition) % 2
+                    else tuple(reversed(chosen))
+                )
+                for variant in pair_order:
+                    arm_runs[variant].append(
+                        self._run_case(
+                            case,
+                            repetition=repetition,
+                            variant=variant,
+                            suite_root=suite_root,
+                            root=base / variant,
+                        )
+                    )
         reports: dict[str, EvaluationReport | dict[str, Any]] = {}
         for variant in chosen:
-            reports[variant] = self.run(
-                suite,
-                repetitions=repetitions,
-                variant=variant,
-                output_dir=base / variant,
-                backend_override=backend_override,
+            root = base / variant
+            root.mkdir(parents=True, exist_ok=True)
+            runs = arm_runs[variant]
+            self._write_outputs(effective_suite, variant, root, runs)
+            reports[variant] = EvaluationReport(
+                root,
+                self._aggregate(effective_suite, variant, runs),
+                tuple(runs),
             )
         first = reports[chosen[0]]
         second = reports[chosen[1]]
@@ -655,6 +691,7 @@ class EvaluationRunner:
         suite_root: Path,
         root: Path,
     ) -> EvalRun:
+        wall_started = time.perf_counter()
         fixture = resolve_contained(suite_root, case.fixture, description="fixture")
         if not fixture.is_dir():
             return self._infrastructure_run(case, repetition, "fixture_missing")
@@ -739,7 +776,11 @@ class EvaluationRunner:
                     infrastructure_failure=True,
                     failure_reason="eval_infrastructure_failure",
                     trace_path=str(result.trace_path),
-                    metrics=collect_run_metrics(events, recovery_triggered=bool(fault_stage)),
+                    metrics=self._metrics_with_wall_latency(
+                        events,
+                        wall_started,
+                        recovery_triggered=bool(fault_stage),
+                    ),
                     oracles=oracle_results,
                     case_type=case.case_type,
                 )
@@ -757,7 +798,11 @@ class EvaluationRunner:
                 infrastructure_failure=False,
                 failure_reason=failure_reason,
                 trace_path=str(result.trace_path),
-                metrics=collect_run_metrics(events, recovery_triggered=bool(fault_stage)),
+                metrics=self._metrics_with_wall_latency(
+                    events,
+                    wall_started,
+                    recovery_triggered=bool(fault_stage),
+                ),
                 oracles=oracle_results,
                 case_type=case.case_type,
             )
@@ -765,6 +810,23 @@ class EvaluationRunner:
             return self._infrastructure_run(case, repetition, str(exc))
         except (OSError, ValueError, KeyError, TypeError) as exc:
             return self._infrastructure_run(case, repetition, f"{type(exc).__name__}: {exc}")
+
+    @staticmethod
+    def _metrics_with_wall_latency(
+        events: Sequence[Event],
+        wall_started: float,
+        *,
+        recovery_triggered: bool,
+    ) -> dict[str, Any]:
+        metrics = collect_run_metrics(
+            events,
+            recovery_triggered=recovery_triggered,
+        )
+        metrics["end_to_end_latency_ms"] = max(
+            0.0,
+            (time.perf_counter() - wall_started) * 1000,
+        )
+        return metrics
 
     def _compression_engine(
         self,
@@ -998,26 +1060,35 @@ class EvaluationRunner:
                 if reason != run.failure_reason:
                     failure_reasons[reason] += int(count)
 
-        def values(name: str) -> list[float]:
-            return [float(run.metrics.get(name, 0.0)) for run in valid]
+        def distributions(selected: Sequence[EvalRun]) -> dict[str, Any]:
+            def values(name: str) -> list[float]:
+                return [float(run.metrics.get(name, 0.0)) for run in selected]
 
-        metrics = {
-            "tool_calls": _distribution(values("tool_calls")),
-            "tool_attempts": _distribution(values("tool_attempts")),
-            "tool_executions": _distribution(values("tool_executions")),
-            "invalid_tool_calls": _distribution(values("invalid_tool_calls")),
-            "repeated_failure_batches": _distribution(values("repeated_failure_batches")),
-            "model_calls": _distribution(values("model_calls")),
-            "input_tokens": _distribution(values("input_tokens")),
-            "output_tokens": _distribution(values("output_tokens")),
-            "compression_input_tokens": _distribution(values("compression_input_tokens")),
-            "compression_output_tokens": _distribution(values("compression_output_tokens")),
-            "latency_ms": _distribution(values("latency_ms")),
-            "model_latency_ms": _distribution(values("model_latency_ms")),
-            "tool_latency_ms": _distribution(values("tool_latency_ms")),
-            "test_latency_ms": _distribution(values("test_latency_ms")),
-            "compression_latency_ms": _distribution(values("compression_latency_ms")),
-        }
+            names = (
+                "tool_calls",
+                "tool_attempts",
+                "tool_executions",
+                "invalid_tool_calls",
+                "repeated_failure_batches",
+                "model_calls",
+                "compression_calls",
+                "total_model_calls",
+                "input_tokens",
+                "output_tokens",
+                "compression_input_tokens",
+                "compression_output_tokens",
+                "total_tokens",
+                "latency_ms",
+                "end_to_end_latency_ms",
+                "model_latency_ms",
+                "tool_latency_ms",
+                "test_latency_ms",
+                "compression_latency_ms",
+            )
+            return {name: _distribution(values(name)) for name in names}
+
+        metrics = distributions(valid)
+        task_metrics = distributions(task_runs)
         return {
             "schema_version": 1,
             "suite_schema_version": suite.schema_version,
@@ -1127,6 +1198,8 @@ class EvaluationRunner:
                 sorted(infrastructure_failure_reasons.items())
             ),
             "metrics": metrics,
+            # Resume-facing capability distributions exclude negative controls.
+            "task_metrics": task_metrics,
             "runs": [
                 _comparison_run_dict(run)
                 for run in sorted(valid + [run for run in runs if run not in valid], key=lambda item: (item.case_id, item.repetition))
@@ -1190,6 +1263,14 @@ def paired_diff(first: Sequence[EvalRun], second: Sequence[EvalRun]) -> dict[str
                 "runtime_completion_delta": int(b.runtime_completed) - int(a.runtime_completed),
                 "tool_calls_delta": b.metrics.get("tool_calls", 0) - a.metrics.get("tool_calls", 0),
                 "model_calls_delta": b.metrics.get("model_calls", 0) - a.metrics.get("model_calls", 0),
+                "compression_calls_delta": (
+                    b.metrics.get("compression_calls", 0)
+                    - a.metrics.get("compression_calls", 0)
+                ),
+                "total_model_calls_delta": (
+                    b.metrics.get("total_model_calls", 0)
+                    - a.metrics.get("total_model_calls", 0)
+                ),
                 "input_tokens_delta": b.metrics.get("input_tokens", 0) - a.metrics.get("input_tokens", 0),
                 "output_tokens_delta": b.metrics.get("output_tokens", 0) - a.metrics.get("output_tokens", 0),
                 "compression_input_tokens_delta": (
@@ -1200,14 +1281,60 @@ def paired_diff(first: Sequence[EvalRun], second: Sequence[EvalRun]) -> dict[str
                     b.metrics.get("compression_output_tokens", 0)
                     - a.metrics.get("compression_output_tokens", 0)
                 ),
+                "total_tokens_delta": (
+                    b.metrics.get("total_tokens", 0)
+                    - a.metrics.get("total_tokens", 0)
+                ),
                 "latency_ms_delta": b.metrics.get("latency_ms", 0) - a.metrics.get("latency_ms", 0),
+                "end_to_end_latency_ms_delta": (
+                    b.metrics.get("end_to_end_latency_ms", 0)
+                    - a.metrics.get("end_to_end_latency_ms", 0)
+                ),
             }
         )
+    task_pairs = [
+        pair
+        for pair in pairs
+        if left[(pair["case_id"], pair["repetition"])].case_type == "task"
+        and left[(pair["case_id"], pair["repetition"])].valid
+        and right[(pair["case_id"], pair["repetition"])].valid
+    ]
+
+    def paired_distribution(name: str) -> dict[str, float | int | None]:
+        return _distribution([float(pair[name]) for pair in task_pairs])
+
     return {
         "variable": "context_policy",
         "baseline": "first_argument",
         "candidate": "second_argument",
         "pairs": pairs,
+        "task_pair_count": len(task_pairs),
+        "task_summary": {
+            "oracle_success_rate_delta": (
+                sum(pair["oracle_success_delta"] for pair in task_pairs)
+                / len(task_pairs)
+                if task_pairs
+                else None
+            ),
+            "end_to_end_success_rate_delta": (
+                sum(pair["end_to_end_success_delta"] for pair in task_pairs)
+                / len(task_pairs)
+                if task_pairs
+                else None
+            ),
+            "model_calls_delta": paired_distribution("model_calls_delta"),
+            "compression_calls_delta": paired_distribution(
+                "compression_calls_delta"
+            ),
+            "total_model_calls_delta": paired_distribution(
+                "total_model_calls_delta"
+            ),
+            "tool_calls_delta": paired_distribution("tool_calls_delta"),
+            "total_tokens_delta": paired_distribution("total_tokens_delta"),
+            "end_to_end_latency_ms_delta": paired_distribution(
+                "end_to_end_latency_ms_delta"
+            ),
+        },
     }
 
 

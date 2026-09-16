@@ -1,11 +1,11 @@
 # 当前实现状态
 
-> 基线日期：2026-09-06
+> 基线日期：2026-09-15
 > 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2  
-> 当前阶段：M5.1 最小只读 `search_files` 已由 Eval 证据批准并实现
+> 当前阶段：Phase 2 P2-M1 Headless Runtime IPC 已完成；P2-M2 尚未激活
 > 当前附加门禁：Release/Evidence Hardening 已完成（文档、指标、Git/CI、coverage、类型检查、评测证据）。  
 > 固定发布基线：`v0.1.0`（复现命令与边界见 [`releases/v0.1.0.md`](./releases/v0.1.0.md)）。
-> 本文只描述已经存在并通过测试的行为。
+> Phase 2 P2-D0 设计与 P2-M1 producer 已完成。除“尚未实现”章节外，本文只描述已经存在并通过测试的行为。
 
 ## 1. 已实现能力
 
@@ -16,6 +16,26 @@
 - `step()` 执行一个状态动作；`run()` 只负责驱动到终态。
 - 有 step、model call、tool call 三类预算。
 - Runtime 失败会进入 `FAILED` 并尽量记录 `run_finished`；中断会先提交 `INTERRUPTED` checkpoint，未知写副作用会停在 `WAITING_APPROVAL`。
+
+### Runtime IPC（P2-M1 已完成）
+
+- 当前开发版本为 `0.2.0.dev0`；固定发布 `v0.1.0` 不包含 Runtime IPC。
+- `protocol-info --protocol-version 1 --output json` 提供无副作用 capability discovery，stdout
+  只包含一条 Schema-valid JSON record，并返回四份 producer-authority Schema 的实时 SHA-256。
+- `run-headless --protocol-version 1 --request-file <absolute-private-path>` 验证大小、UTF-8 JSON、
+  Schema、backend、capability、权限、source revision 与 attempt-root containment；Secret 值和语义未知
+  extension fail closed。
+- 内部 committed event 通过显式 allowlist/minimal-payload projector 输出连续 JSONL；绝对私有路径、
+  Secret 和完整模型/工具输出不进入 stdout。合法执行恰有一个末尾 result，`COMPLETED` 映射
+  `succeeded`，但不等同于外部 task oracle success。
+- SIGINT 与 deadline 在 Runtime 安全边界协作取消；先提交 `INTERRUPTED` checkpoint，再输出
+  `cancelled`/`timed_out` result，并验证活动 sandbox 子进程清理。SQLite 仍是恢复 authority。
+- 稳定进程退出码为 invalid request=64、unsupported protocol=65、internal/output failure=70、
+  private I/O=74；启动失败不污染协议 stdout。
+- 当前公布 `structured_events`、`cooperative_interrupt`、`checkpoint_resume`、`scripted_backend`、
+  `real_model_backend`。P2-M1 验收通过 111/111 默认 unittest、Runtime IPC goldens/vectors、Ruff、
+  26 个配置范围源码文件 mypy、compileall、76.8% coverage、wheel/sdist、独立 wheel discovery 与
+  calculator/todo smoke。
 
 ### Model
 
@@ -103,13 +123,19 @@
 - Eval 报告区分 `tool_attempts`、通过准入边界的 `tool_executions`、
   `invalid_tool_calls` 和 `repeated_failure_batches`，并继续记录 Token、延迟、failure taxonomy、
   recovery、permission 和 source invariant；比较投影排除随机 session ID/trace path。
+- Eval 可用重复 `--case-id` 固定正常任务子集，并用 `--ab-variants` 选择压缩开/关配对；
+  `task_metrics` 单独给出正常任务的 total/mean/P50/P95，`total_tokens` 包含摘要器 Token，
+  `end_to_end_latency_ms` 包含 workspace、Agent 和 oracle。A/B 在每个 pair 内交替先运行的 arm，
+  并给出正常任务配对汇总。
 
 ### Hardening evidence
 
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 当前测试数量：93；在当前 capability probe 成功的环境中全部通过；`tests/live_provider_smoke.py` 为凭据门控的显式测试，不计入默认 discovery。能力受限 runner 会对 7 个 native-only case 显式 skip。
+- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 完成后当前开发树为 111 个，在当前
+  capability probe 成功的环境中全部通过。`tests/live_provider_smoke.py` 为凭据门控的显式测试，
+  不计入默认 discovery；能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。
 - calculator smoke 产生 48 条连续事件；todo fixture 产生 72 条连续事件并保持 `false → true`。
 - Ruff 强制基线 `E4/E7/E9/F` 仍显式写入 `pyproject.toml`；已使用 `uv` 安装 Ruff 0.16.6，`ruff check src tests examples/todo_cli` 通过。
@@ -166,6 +192,13 @@
   已改为原子组裁剪和 fail-closed，修复后不再出现 Provider `invalid_request`。`budgeted` 长历史
   case 仍因没有 summarizer 且硬保留内容略超预算而安全失败；后续 compressed 定向运行已经
   消除该 context failure，并为 `search_files` 形成独立 A/B 证据。Git 工具仍无对应证据。
+- 简历指标实验先完成无凭据的确定性校准，随后以当前 Provider 可用的 `deepseek-flash` 完成
+  live 25-run 和 10-pair compression A/B。稳定性实验 25/25 valid、基础设施失败 0、端到端
+  24/25（96%），唯一失败是固定 search task 的 `tool_budget_exhausted`；P50/P95 端到端延迟为
+  5.34/9.04 秒，总 Token 345,551。A/B 两臂均 10/10 valid，budgeted/compressed 端到端为
+  9/10→10/10，但 compressed 总 Token 增加 339,864、每对平均延迟增加 6.49 秒，因此不能宣称
+  compression 节省 Token。计划模型 `deepseek-v4-flash` 已不在 Provider model list 中，且运行时
+  worktree 非 clean；精确 content/artifact hash 与限制见 [`resume-benchmark.md`](./resume-benchmark.md)。
 - Release/Evidence Hardening 已加入 `RESUME_STARTED` recovery event、70% coverage 门槛（M5.1
   的 93 个默认测试启用 subprocess/multiprocessing 合并后实测 75.6%）、23/33 源码文件的 mypy
   检查、`uv.lock`、GitHub Actions CI、wheel/sdist build、calculator/todo
@@ -249,7 +282,19 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 - 已完成 DeepSeek budgeted 探索、compressed 定向、search A/B、budget-aware follow-up 和
   capability holdout，并保存脱敏摘要；这些仍是小型本地 fixture 证据，不是外部真实仓库基准、
   托管 CI 历史或生产成功率。
-- 多 Agent、UI、消息平台、Skill 或 RAG。
+- 多 Agent、终端交互层、Skill/MCP、分层长期记忆或 RAG；这些能力已有 Phase 2 设计，但代码未实现；
+- Agent Platform consumer adapter；本仓库只交付 producer contract、Schema、golden 与可复用
+  vectors。`v0.1.0` 不支持 IPC；P2-M1 实现只存在于 `0.2.0.dev0` 开发树。
+
+### Phase 2 当前边界
+
+- [`v2-product-architecture.md`](./v2-product-architecture.md) 固定未来模块边界：当前 `AgentRuntime` 保持单任务执行内核，其上再增加产品层、协调器、记忆、Skill 和能力网关；
+- [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md) 固定 Platform 只能通过版本化 headless IPC 使用 Runtime，不能读取内部 SQLite 或私有 trajectory；
+- `protocol/v1/*.schema.json` 是 request、capabilities、event envelope 和 terminal result 的
+  producer authority；四类 document 均由自动测试验证，vectors 随 wheel/sdist 发布；
+- 初始多 Agent 拓扑计划采用 Manager/Explorer/Implementer/Reviewer，并坚持单写者 workspace 规则；
+- P2-M1—P2-M6 必须逐阶段实现和验收，不允许一次性把设计目录全部脚手架化；
+- P2-M1 已冻结；P2-M2 Memory 是下一候选里程碑，但在用户明确激活前不实现。
 
 ## 5. 已知限制与技术债
 
@@ -272,9 +317,9 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 11. 当前 coverage 是 statement coverage，发布门槛为 70%；coverage 不等同于安全或任务成功率证明。
     CLI 通过 subprocess smoke 纳入合并数据；namespace runner 为保持 sandbox 环境 allowlist 不注入
     宿主 coverage hook，当前仍显示 0%，其行为证据来自 native integration/security tests。
-12. mypy 当前覆盖 models、tools、context、domain、workspace、command profiles、evaluation 和
-    sandbox，共 23/33 个源码文件；其余 Runtime/Application/Persistence/CLI/Compression 历史代码
-    尚未达到全仓类型检查标准（当前全仓扫描剩余 76 个错误，集中在 6 个文件）。
+12. mypy 当前覆盖 models、tools、context、domain、workspace、command profiles、evaluation、
+    sandbox 和 P2-M1 protocol，共 26/36 个源码文件；其余 Runtime/Application/Persistence/CLI/Compression 历史代码
+    尚未达到全仓类型检查标准（本次全仓扫描剩余 75 个错误，集中在 6 个文件）。
 13. live provider smoke 已提供手动 workflow；本地首次 DeepSeek 尝试已到达 Provider，但因
    smoke 原先只有 16 个输出 token，最终 `content` 为空而失败。现已增加输出预算，并支持
    DeepSeek `thinking: disabled` 配置；adapter smoke 已成功，修复上下文组裁剪后也已完成 3 次
@@ -286,6 +331,9 @@ PYTHONPATH=src python3 -m compileall -q src tests examples/todo_cli
 15. 当前固定 14-case/7-fixture suite 与独立 3-repository search suite 比单 calculator 更有
     覆盖，但仍是小型 scripted/live synthetic 数据集；不能代表真实 Coding 任务，也不能证明
     不需要 Git 或其他能力。
+16. 简历 benchmark 的 scripted 校准不是模型能力证据；live 数字只适用于记录的五个小型
+    fixture、`deepseek-flash` 和 worktree content snapshot。压缩 A/B 没有产生 Token 节省，
+    不得将 10% 的小样本 Runtime completion 差异外推成一般收益。
 
 ## 6. 不允许虚构的项目事实
 

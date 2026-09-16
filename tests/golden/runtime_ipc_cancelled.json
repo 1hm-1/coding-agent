@@ -1,0 +1,10 @@
+{
+  "event_types": [
+    "runtime.started",
+    "runtime.interrupt_acknowledged"
+  ],
+  "result_status": "cancelled",
+  "failure_code": "cancelled",
+  "agent_count": 1,
+  "delegation_count": 0
+}

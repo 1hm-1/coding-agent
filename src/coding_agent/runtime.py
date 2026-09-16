@@ -112,6 +112,7 @@ class AgentRuntime:
         random_source: Callable[[], float] | None = None,
         lease_seconds: float = 60.0,
         fault_injector: Callable[[str], None] | None = None,
+        external_interrupt_requested: Callable[[], bool] | None = None,
     ):
         self.session = session
         self.backend = backend
@@ -130,6 +131,7 @@ class AgentRuntime:
         self.random_source = random_source or random.random
         self.lease_seconds = lease_seconds
         self.fault_injector = fault_injector
+        self.external_interrupt_requested = external_interrupt_requested
         self._resumed = False
         self.machine = StateMachine(recorder)
         self._model_input: tuple[Message, ...] = ()
@@ -294,6 +296,8 @@ class AgentRuntime:
         )
 
     def _interrupt_requested(self) -> bool:
+        if self.external_interrupt_requested is not None and self.external_interrupt_requested():
+            return True
         if self.recorder.journal is not None:
             requested = self.recorder.journal.interrupt_requested_at(self.session.id)
             self.session.interrupt_requested_at = requested

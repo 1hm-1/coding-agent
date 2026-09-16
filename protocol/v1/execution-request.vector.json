@@ -1,0 +1,35 @@
+{
+  "protocol_version": 1,
+  "kind": "execution_request",
+  "execution_id": "exec-contract-vector",
+  "correlation": {
+    "run_id": "run-contract-vector",
+    "attempt_id": "attempt-contract-vector"
+  },
+  "task": "Complete one deterministic single-agent task.",
+  "source": {
+    "path": "/private/attempt/source",
+    "expected_revision": "fixture-v1",
+    "read_only": true
+  },
+  "runtime": {
+    "agent_home": "/private/attempt/runtime-home",
+    "timeout_seconds": 900
+  },
+  "backend": {
+    "kind": "scripted",
+    "script_path": "/private/attempt/input/script.json"
+  },
+  "policy": {
+    "max_steps": 32,
+    "max_model_calls": 8,
+    "max_tool_calls": 12,
+    "max_output_tokens": 2048,
+    "allowed_permissions": ["read", "write", "execute_test"]
+  },
+  "required_capabilities": ["structured_events", "cooperative_interrupt"],
+  "metadata": {
+    "request_origin": "contract-vector"
+  },
+  "extensions": {}
+}

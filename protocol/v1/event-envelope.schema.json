@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:coding-agent:runtime-ipc:v1:event-envelope",
+  "title": "Coding Agent Runtime IPC v1 Event Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "kind",
+    "execution_id",
+    "runtime_session_id",
+    "sequence",
+    "timestamp",
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "event"
+    },
+    "execution_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "runtime_session_id": {
+      "type": ["string", "null"],
+      "maxLength": 128
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "type": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+    },
+    "payload": {
+      "type": "object",
+      "maxProperties": 128
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    }
+  }
+}

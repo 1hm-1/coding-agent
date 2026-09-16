@@ -1,20 +1,20 @@
 # 新窗口开发交接
 
-> 交接基线：2026-09-06，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1 已完成。下一项仍须由 Eval failure coverage 决定，不是重写 M1/M1.5。
+> 交接基线：2026-09-16，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1 与 Phase 2 P2-M1 Headless Runtime IPC 已完成；P2-M2 尚未激活。
 > 固定版本：`v0.1.0`；安装、测试、离线 Eval、Demo 和支持边界见 `docs/releases/v0.1.0.md`。
 
 ## 1. 开始前必须做
 
 1. 将工作目录切换到 `/home/hmli/code/coding-agent`。
 2. 完整阅读 `AGENTS.md`、`docs/README.md`、`docs/current-state.md`。
-3. 阅读 `docs/m4-implementation-plan.md` 的 M4.2 范围和 `docs/m5-eval-expansion.md`；M2/M3/M4.1 的实施记录分别在 `docs/m2-implementation-plan.md`、`docs/m3-implementation-plan.md` 和该文档中。
+3. 阅读已完成的 `docs/p2-implementation-plan.md` 与 Runtime IPC 权威规范；开始后续能力前等待用户明确激活对应里程碑。
 4. 运行：
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前基线应为 93 个默认测试通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化，不要直接扩展 M5。
+当前开发树应为 111 个默认测试通过。`tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
 
 ## 2. 工作区事实
 
@@ -36,7 +36,8 @@ PYTHONPATH=src python3 -m unittest discover -v
 - 四份 semantic golden 必须持续通过。
 - JSONL 只能从当前 SQLite committed events 重建；不能反过来把 JSONL 当恢复事实来源。
 - Provider 分支只能存在于 adapter，不进入 Runtime。
-- 不引入多 Agent、UI、RAG、Skill 或 Agent framework。
+- Phase 2 P2-M1 producer 已实现；多 Agent、终端、Memory、Skill/MCP 仍未激活，没有明确里程碑不得加入代码或依赖。
+- `v0.1.0` 没有 `protocol-info`、`run-headless` 或 Runtime IPC v1；这些能力只属于当前 `0.2.0.dev0` 开发树。
 
 ## 4. M2/M3/M4/M5.1 完成事实与下一步推荐入口
 
@@ -92,14 +93,24 @@ M2.1 已完成 SQLite persistence foundation，M2.2/M2.3 也已严格完成：
 - 四类未参与三仓库提示 A/B 的 capability holdout 已通过 scripted 4/4 和 DeepSeek 12/12；
   live 运行没有基础设施失败、无效调用、权限违规、预算耗尽，也没有暴露 Git、patch/edit 或
   依赖能力缺口。证据见 `docs/evidence/deepseek-m5-capability-holdout-2026-09-06.summary.json`。
+- 简历 benchmark 已补正常任务专属 total/mean/P50/P95、端到端 wall latency、摘要 Token/调用
+  归集、固定 case 选择和 pair 内交替 A/B。scripted 校准及 `deepseek-flash` live 25-run/
+  10-pair 均已完成：稳定性端到端 24/25，压缩 A/B 为 9/10→10/10，但 compressed 总 Token
+  增加 339,864，不能宣称节省 Token。计划的 `deepseek-v4-flash` 已从 Provider model list 消失，
+  且 live worktree 非 clean；精确 snapshot/artifact hash 与限制见 `docs/resume-benchmark.md`。
 
-当前不启动 M5.2，冻结五工具能力集合。实现提交 `0ccd434`、证据提交 `cf82f3c` 已推送；后者
+当前不启动旧路线 M5.2，冻结五工具能力集合。实现提交 `0ccd434`、证据提交 `cf82f3c` 已推送；后者
 触发的 GitHub Actions run `34035706601` 在 Python 3.10/3.11 两个 quality job 上成功。
 `v0.1.0` 已固定为发布基线；只有未来新的、可重复的 failure coverage 才能批准 Git
 inspection、patch/edit 增强或依赖准备。
-项目展示优化已完成 README 中英双语重构、首屏验证数据和 Mermaid 架构图；后续可选工作是
-录制 2—3 分钟终端 Demo/GIF，不因此改变 Runtime 能力边界。
-保持 M4.1/M4.2 的 OS isolation foundation；不要加入 shell 字符串、默认网络或多 Agent。
+Phase 2 P2-M1 已完成：`protocol-info`、严格 request validator、scripted/real backend headless
+composition、提交后公共事件投影、唯一 terminal result、稳定退出码、cooperative SIGINT/deadline、
+checkpoint-before-result 和子进程清理均有 producer contract tests。111 个默认测试、Ruff、26 个
+配置范围源码文件 mypy、compileall、76.8% coverage、wheel/sdist、独立 wheel discovery 与两个
+既有 smoke 均通过。Agent Platform consumer 不在本仓库实现。
+
+下一候选是 P2-M2 Memory，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入 shell 字符串、
+默认网络、Skill、MCP、多 Agent、UI 或 RAG。
 
 ## 5. 完成一次开发后的交接动作
 
@@ -117,14 +128,10 @@ inspection、patch/edit 增强或依赖准备。
 在 `/home/hmli/code/coding-agent` 作为工作目录打开新窗口，然后使用：
 
 ```text
-请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、
-docs/contracts.md、docs/requirements-traceability.md、docs/roadmap.md 和
-docs/m4-implementation-plan.md、docs/m5-eval-expansion.md。运行 93 个默认测试的基线后，
-当前 M2.1—M2.3、M3.1—M3.3、M4.1/M4.2/M5.1 已完成，固定 eval 为 14-case/7-fixture；只评估
-后续 M5 能力是否被真实 failure coverage 证明需要，
-保持现有 OS isolation、structured argv 和 ToolHarness 边界，不增加 shell 字符串、
-默认网络或多 Agent。若确有能力扩展，先写 decision record 和验收测试，再同步
-current-state、roadmap、repository-structure、HANDOFF 和测试证据。
+请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、已完成的
+docs/p2-implementation-plan.md 和 Runtime IPC v1/compatibility 权威规范。P2-M1 已完成，先运行
+111 个默认测试确认基线；P2-M2 尚未激活，不得提前加入 Memory、Skill、MCP、多 Agent、UI、
+RAG、shell 字符串或默认网络。
 ```
 
 若新 Agent 建议扩大范围，先要求它指出当前 roadmap 门禁或 acceptance criteria 需要该变化；无法对应时不采纳。

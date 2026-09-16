@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:coding-agent:runtime-ipc:v1:terminal-result",
+  "title": "Coding Agent Runtime IPC v1 Terminal Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "kind",
+    "execution_id",
+    "runtime_session_id",
+    "sequence",
+    "timestamp",
+    "status",
+    "final_output",
+    "failure",
+    "metrics",
+    "artifacts"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "result"
+    },
+    "execution_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "runtime_session_id": {
+      "type": ["string", "null"],
+      "maxLength": 128
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "enum": ["succeeded", "failed", "timed_out", "cancelled"]
+    },
+    "final_output": {
+      "type": ["string", "null"],
+      "maxLength": 200000
+    },
+    "failure": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/failure"
+        }
+      ]
+    },
+    "metrics": {
+      "$ref": "#/$defs/metrics"
+    },
+    "artifacts": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "succeeded"
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "final_output": {
+            "type": "string",
+            "minLength": 1
+          },
+          "failure": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "failure": {
+            "$ref": "#/$defs/failure"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "code", "safe_message", "retryable", "details"],
+      "properties": {
+        "category": {
+          "enum": [
+            "task",
+            "model",
+            "tool",
+            "policy",
+            "context",
+            "workspace",
+            "runtime",
+            "cancel",
+            "timeout"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z][a-z0-9_.-]*$"
+        },
+        "safe_message": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "details": {
+          "type": "object",
+          "maxProperties": 32
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_calls",
+        "tool_calls",
+        "input_tokens",
+        "output_tokens",
+        "duration_ms",
+        "agent_count",
+        "delegation_count",
+        "extensions"
+      ],
+      "properties": {
+        "model_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tool_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "input_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "agent_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "delegation_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "extensions": {
+          "type": "object",
+          "maxProperties": 64,
+          "additionalProperties": {
+            "type": ["number", "integer", "boolean", "string", "null"]
+          }
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "relative_path", "media_type", "sha256", "size_bytes"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9_.-]*$"
+        },
+        "relative_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

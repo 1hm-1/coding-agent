@@ -18,10 +18,13 @@ boundaries**. It demonstrates a complete `model → tool → observation → rec
 executable evidence instead of presenting a large tool list around a chat interface.
 
 当前基线完成 M1—M4、Release/Evidence Hardening 和由真实 Eval 失败覆盖批准的 M5.1
-只读搜索。后续能力继续由评测证据决定。
+只读搜索。Phase 2 P2-M1 Headless Runtime IPC 已在 `0.2.0.dev0` 开发树完成；Memory、
+Skill/Profile、MCP、多 Agent 仍需分别激活后推进。
 
 The current baseline completes M1—M4, Release/Evidence Hardening, and M5.1 read-only search,
 which was approved by live Eval failure coverage. Further capabilities remain evidence-gated.
+Phase 2 P2-M1 Headless Runtime IPC is complete in the `0.2.0.dev0` development tree. Memory,
+Skills/Profiles, MCP, and multi-agent orchestration remain deferred to separately activated milestones.
 
 ## 验证结果 / Evidence at a glance
 
@@ -103,6 +106,18 @@ Python 3.10 and 3.11 are the validated release targets. See the
 [v0.1.0 release notes](docs/releases/v0.1.0.md) for the complete pinned reproduction commands.
 
 ### 2. 运行确定性 Demo / Run the deterministic demo
+
+当前开发树同时提供 capability discovery 和严格的 `run-headless` producer：
+
+```bash
+PYTHONPATH=src python3 -m coding_agent.cli \
+  protocol-info --protocol-version 1 --output json
+
+# request 必须位于私有 attempt/input 目录、权限至多 0600，并符合权威 Schema
+PYTHONPATH=src python3 -m coding_agent.cli \
+  run-headless --protocol-version 1 \
+  --request-file /private/attempt/input/request.json
+```
 
 需要原生 Linux namespace 能力；能力不足时 sandbox 会 fail closed。
 
@@ -205,10 +220,16 @@ PYTHONPATH=src .venv/bin/python -m coding_agent.cli \
 真实 Provider 的脱敏 smoke 与 Eval 证据见
 [`docs/evidence`](docs/evidence/) 和
 [M5 Eval 记录](docs/m5-eval-expansion.md)。
+简历稳定性与上下文压缩实验的冻结口径及 live 结果见
+[Resume benchmark](docs/resume-benchmark.md)：`deepseek-flash` 稳定性为 24/25；压缩 A/B
+没有节省 Token，且只作为小型本地 benchmark 解读。
 
 Sanitized live smoke and Eval evidence is available under
 [`docs/evidence`](docs/evidence/) and in the
 [M5 Eval record](docs/m5-eval-expansion.md).
+The frozen resume-stability and context-compression protocol and live result are in the
+[resume benchmark](docs/resume-benchmark.md): `deepseek-flash` reached 24/25 stability runs, while
+the compression A/B did not save tokens and remains a small local benchmark.
 
 ## 支持边界 / Supported boundaries
 
@@ -244,6 +265,9 @@ Sanitized live smoke and Eval evidence is available under
 | [路线图 / Roadmap](docs/roadmap.md) | 证据门控的里程碑 / Evidence-gated milestones |
 | [M5.1 决策 / M5.1 decision](docs/decisions/m5-1-search-files.md) | 为什么增加最小只读搜索 / Why minimal read-only search was added |
 | [v0.1.0 发布说明 / Release notes](docs/releases/v0.1.0.md) | 固定复现步骤与完整边界 / Pinned reproduction and full boundaries |
+| [Phase 2 实施计划 / Implementation plan](docs/p2-implementation-plan.md) | 已完成 P2-M1 checklist 与后续路线 / Completed P2-M1 checklist and staged roadmap |
+| [Phase 2 产品架构 / Product architecture](docs/v2-product-architecture.md) | Memory、Skill/MCP、多 Agent 与终端的分阶段设计 / Staged product design |
+| [Runtime IPC v1](docs/protocol/runtime-ipc-v1.md) | 已实现的 producer 进程契约；Platform consumer 仍外置 / Implemented producer contract; Platform consumer remains external |
 
 新接手开发请先阅读 `AGENTS.md`、[HANDOFF](docs/HANDOFF.md) 和
 [current-state](docs/current-state.md)。不要根据目标架构假设能力已经实现。

@@ -513,3 +513,16 @@ search 或 run_command，且每次都执行并通过测试。
 - [x] 建立四类非 search 能力 holdout，完成 4/4 scripted 门禁和 12/12 live 验证；未发现
   M5.2 failure coverage，保持当前工具集合。
 - [ ] Git、patch/edit 或依赖能力仍需各自独立 failure coverage 和 decision record。
+
+## 10. 简历稳定性与上下文压缩实验（2026-09-15）
+
+新增 [`resume-benchmark.md`](./resume-benchmark.md) 固定两个实验：5 个正常任务各 5 次（25
+个 fresh runs）的稳定性指标，以及 long-history 同任务 `budgeted`/`compressed` 各 10 次的
+压缩开关配对。Eval 报告现在提供正常任务专属 total/mean/P50/P95、包含摘要器的总 Token、
+摘要调用数和完整端到端耗时；A/B pair 内交替 arm 顺序，减少时段漂移。
+
+- [x] 25-run scripted 校准通过，验证 success/latency/Token/call 统计链路；
+- [x] 10-pair scripted compression A/B 通过，验证配对和摘要成本归集；
+- [x] 使用同一 Provider/model/worktree snapshot 完成 live 25-run，保存脱敏汇总与 artifact hash；
+- [x] 使用相同 Provider/model/worktree snapshot 完成 live 10-pair compression A/B；
+- [x] 基于 live 结果提炼可写入简历的数字和边界说明；不宣称 compression 节省 Token。

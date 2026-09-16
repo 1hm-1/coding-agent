@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "deterministic_resume_benchmark_calibration",
+  "recorded_at": "2026-09-15",
+  "backend": "scripted",
+  "capability_claim": false,
+  "stability": {
+    "suite": "examples/eval_suite.json",
+    "case_count": 5,
+    "repetitions_per_case": 5,
+    "runs": 25,
+    "valid_runs": 25,
+    "infrastructure_failures": 0,
+    "oracle_success_rate": 1.0,
+    "end_to_end_success_rate": 1.0,
+    "end_to_end_latency_ms": {"p50": 548.8928419981676, "p95": 743.3860929995717},
+    "total_tokens": 24815,
+    "agent_model_calls": 145,
+    "compression_calls": 0,
+    "tool_attempts": 120
+  },
+  "context_ab": {
+    "case_id": "long-history-compression",
+    "pairs": 10,
+    "execution_order": "alternating_arm_first_within_each_pair",
+    "baseline": {
+      "variant": "budgeted",
+      "valid_runs": 10,
+      "end_to_end_success_rate": 1.0,
+      "end_to_end_latency_ms": {"p50": 183.14251000265358, "p95": 200.30502299778163},
+      "total_tokens": 5080,
+      "agent_model_calls": 40,
+      "compression_calls": 0,
+      "total_model_calls": 40,
+      "tool_attempts": 30
+    },
+    "candidate": {
+      "variant": "compressed",
+      "valid_runs": 10,
+      "end_to_end_success_rate": 1.0,
+      "end_to_end_latency_ms": {"p50": 181.82360499849892, "p95": 250.6006690018694},
+      "total_tokens": 7980,
+      "agent_model_calls": 40,
+      "compression_calls": 10,
+      "total_model_calls": 50,
+      "tool_attempts": 30
+    },
+    "paired_mean_delta_candidate_minus_baseline": {
+      "end_to_end_success_rate": 0.0,
+      "end_to_end_latency_ms": 8.390756699736812,
+      "total_tokens": 290.0,
+      "agent_model_calls": 0.0,
+      "compression_calls": 1.0,
+      "total_model_calls": 1.0,
+      "tool_attempts": 0.0
+    }
+  },
+  "raw_artifact_sha256": {
+    "stability_report.json": "49a98da572a55e50b125608481c4488aa2487a7c8c0e2b9690f6c607ce1fc382",
+    "stability_manifest.snapshot.json": "9e8a150f4371a9495eacbff5dd9174fc25ab401c58106f80ec00aa01c8dc74d5",
+    "ab_budgeted_report.json": "524a8cf3ef3091084d926bb693cd9f1cd72c9316e80538b5d4d881dbf4aabbe8",
+    "ab_compressed_report.json": "caf9a8be1017d0cbb7ea9de86b6ff218a29618f6c3c0b5858e6e1fb180201545",
+    "ab_paired_diff.json": "82b0c24f3286c46e8e1bac4c4c6aeec6f1df1716c34448db40165d90c6fead9e"
+  },
+  "limitations": [
+    "Scripted usage and decisions are deterministic fixture data and cannot establish real-model success or compression savings.",
+    "Raw artifacts remain under /tmp and are not checked in.",
+    "A live Provider credential was not available in the execution environment."
+  ],
+  "contains_credentials": false
+}

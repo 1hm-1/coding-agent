@@ -3,15 +3,17 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 from typing import Sequence
 
 from coding_agent.application import AgentApplication
 from coding_agent.domain import RunResult, RuntimeState
-from coding_agent.evaluation import EvaluationReport, EvaluationRunner, load_eval_suite
+from coding_agent.evaluation import EvalSuite, EvaluationReport, EvaluationRunner, load_eval_suite
 from coding_agent.models.anthropic import AnthropicBackend
 from coding_agent.models.base import ModelBackend
 from coding_agent.models.openai_compatible import OpenAICompatibleBackend
 from coding_agent.models.scripted import ScriptedBackend
+from coding_agent.protocol.headless import ProtocolError, run_headless, write_protocol_info
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,6 +27,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory for isolated workspaces and trajectories.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    protocol_parser = subparsers.add_parser(
+        "protocol-info", help="Print Runtime IPC capabilities as one JSON record."
+    )
+    protocol_parser.add_argument("--protocol-version", required=True, type=int)
+    protocol_parser.add_argument("--output", required=True, choices=("json",))
+
+    headless_parser = subparsers.add_parser(
+        "run-headless", help="Run one Runtime IPC request and emit stdout JSONL."
+    )
+    headless_parser.add_argument("--protocol-version", required=True, type=int)
+    headless_parser.add_argument("--request-file", required=True)
 
     run_parser = subparsers.add_parser("run-scripted", help="Run a scripted coding task.")
     run_parser.add_argument("--source", required=True, help="Read-only source repository path.")
@@ -104,6 +118,11 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--output", help="Evaluation output directory.")
     eval_parser.add_argument("--repetitions", type=int, default=1)
     eval_parser.add_argument(
+        "--case-id",
+        action="append",
+        help="Run only the named case; repeat this option to select a fixed task set.",
+    )
+    eval_parser.add_argument(
         "--provider",
         choices=("openai-compatible", "anthropic"),
         help="Override each case backend with a real provider for live baseline runs.",
@@ -125,15 +144,49 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument(
         "--ab",
         action="store_true",
-        help="Run paired passthrough/budgeted variants.",
+        help="Run two paired context variants.",
+    )
+    eval_parser.add_argument(
+        "--ab-variants",
+        nargs=2,
+        choices=("passthrough", "budgeted", "compressed"),
+        metavar=("BASELINE", "CANDIDATE"),
+        default=("passthrough", "budgeted"),
+        help="Context variants used with --ab (default: passthrough budgeted).",
     )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = build_parser().parse_args(argv)
+    if arguments.command == "protocol-info":
+        try:
+            write_protocol_info(arguments.protocol_version)
+        except ProtocolError as exc:
+            print(str(exc), file=sys.stderr)
+            return exc.exit_code
+        return 0
+    if arguments.command == "run-headless":
+        try:
+            return run_headless(arguments.protocol_version, arguments.request_file)
+        except ProtocolError as exc:
+            print(str(exc), file=sys.stderr)
+            return exc.exit_code
+        except Exception:
+            print("headless runner failed before producing a terminal result", file=sys.stderr)
+            return 70
     if arguments.command == "evaluate":
         suite, manifest_root = load_eval_suite(arguments.suite)
+        if arguments.case_id:
+            requested = set(arguments.case_id)
+            available = {case.case_id for case in suite.cases}
+            unknown = sorted(requested - available)
+            if unknown:
+                raise ValueError(f"unknown eval case ids: {', '.join(unknown)}")
+            suite = EvalSuite(
+                suite.schema_version,
+                tuple(case for case in suite.cases if case.case_id in requested),
+            )
         runner = EvaluationRunner(
             arguments.agent_home,
             suite_root=arguments.suite_root or manifest_root,
@@ -143,6 +196,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = runner.run_ab(
                 suite,
                 repetitions=arguments.repetitions,
+                variants=arguments.ab_variants,
                 output_dir=arguments.output,
                 backend_override=backend_override,
             )
