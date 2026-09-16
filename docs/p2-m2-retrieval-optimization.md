@@ -57,3 +57,22 @@ Python composition：调用方自行组装 `SQLiteMemoryStore`、`MemoryService`
 `AgentApplication`、`run-headless` 和 Runtime IPC capability 不创建、查询或注入 Memory；
 P2-M3 Profiles/Skill Runtime 仍未激活。后续只有扩大真实任务/Provider 的 A/B 并证明净收益后，
 才重新评估默认入口或 IPC 集成。
+
+## 6. S2 独立复核
+
+S2 对 `80dba4c`（冻结 12-case benchmark）、`6e261f9`（检索/Context 优化）和 `053482c`
+（证据收口）逐项复核。指标定义在 L2 未改动，before arm 复现 L1 的 803 Token/1/3 误注入；
+默认 Application/headless/IPC 仍没有 Memory wiring，preview 不写 retrieval audit，scope/revision/
+status 过滤测试通过，Token 降低没有伴随 scripted task success 下降。
+
+复核发现一处明确缺陷：record 级 `actual_context_token_cost` 曾固定使用基类紧凑 renderer 计算，
+导致 benchmark before arm 的旧 JSON renderer 下 record 归因与实际注入不一致；总 section Token
+始终正确。现已改为使用实际 builder renderer，并加入自定义 renderer 回归测试。
+
+仍存在证据限制：12-case 每例使用隔离 memory pool，检索别名、阈值和末尾信息词权重与冻结样本
+同源，且没有真实 Provider/非同源 retrieval holdout。`original_three_case_warm_success` 当前统计冻结
+扩展集合的前三个 case，并不重建最初共享 memory pool 的拓扑；S2 另用 `5298ba0` 原始脚本配合当前
+实现复跑得到 warm 3/3，但 checked-in benchmark 应在后续证据工作中显式补上该兼容 arm。
+
+因此结论为：**有条件通过**。Memory 必须保持显式 opt-in；继续补非同源 holdout 与真实 Provider
+A/B，在这些证据完成前不得据此默认启用 Memory。P2-M3 仍需用户另行明确激活。

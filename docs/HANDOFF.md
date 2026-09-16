@@ -132,7 +132,9 @@ irrelevant injection 1/3→0，retrieval Token 116→81，Memory context/额外�
 本次未运行真实 Provider，因此不宣称真实模型净收益。Memory 的交付形态明确为显式 Python
 composition：默认 `AgentApplication` 与 `run-headless` 不创建、查询或注入 Memory，也不把它加入
 Runtime IPC capability；只有未来扩大真实任务/Provider A/B 并证明净收益后，才重新评估默认入口或
-IPC 集成。P2-M3 仍未激活。
+IPC 集成。S2 复核结论为有条件通过，并修复了 before 自定义 renderer 下 record 级 Context Token
+归因与实际注入不一致；冻结 A/B 总 Token 和 task 指标不变。仍需非同源 holdout 与真实 Provider
+A/B，P2-M3 仍未激活。
 
 下一候选是 P2-M3 Profiles/Skill Runtime，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入
 shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。

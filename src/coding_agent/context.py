@@ -517,8 +517,8 @@ class BudgetedContextBuilder:
             ),
         )
 
-    @staticmethod
     def _memory_manifest(
+        self,
         selection: MemorySelection | None,
         sections: Sequence[ContextSection],
         *,
@@ -548,10 +548,15 @@ class BudgetedContextBuilder:
             previous = counter.count_messages(
                 provider,
                 model,
-                (Message(role="system", content=BudgetedContextBuilder.MEMORY_NOTICE),),
+                (
+                    Message(
+                        role="system",
+                        content=self._memory_content(selection, limit=0),
+                    ),
+                ),
             )
             for index, (record_manifest, hit) in enumerate(zip(records, selection.hits)):
-                content = BudgetedContextBuilder._memory_content(selection, limit=index + 1)
+                content = self._memory_content(selection, limit=index + 1)
                 current = counter.count_messages(
                     provider,
                     model,

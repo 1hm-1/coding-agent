@@ -343,7 +343,9 @@ wheel/sdist、独立 wheel import、calculator/todo smoke 与冻结 A/B，全部
 before cold/warm mean 为 `45.834164333731074ms`/`47.033260334198225ms`，after 为
 `45.834164333731074ms`/`45.95990916732262ms`；检索 mean 为
 `0.056614917411934584ms`→`0.06059541647118749ms`，增加 `0.003980499059252907ms`，该
-回退保留在 evidence。Memory 只通过显式 Python composition 提供，默认 Application/headless
+回退保留在 evidence。S2 复核修复了 before 自定义 renderer 下 record 级 Token 归因不一致，
+并给出有条件通过：Memory 继续显式 opt-in，待非同源 holdout 与真实 Provider A/B 后才考虑默认
+启用。Memory 只通过显式 Python composition 提供，默认 Application/headless
 与 Runtime IPC 不启用；本次未运行真实 Provider，也没有真实 Provider 净收益结论。P2-M3 尚未激活。
 
 ## 14. Phase 2 分阶段路线

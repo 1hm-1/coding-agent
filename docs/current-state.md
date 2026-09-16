@@ -53,7 +53,8 @@
 - `BudgetedContextBuilder` 只在显式配置 retriever/query factory 时增加 `memory` section；内容标记为
   不可信参考数据。模型只接收紧凑 notice 与内容列表；`context_built` manifest 仍记录 retrieval id、
   memory/schema/record version、score、完整 provenance、retrieval Token 估算、实际 Context Token 成本
-  和最终是否注入；unbounded preview 不重复写 retrieval audit。
+  和最终是否注入；record 级实际成本使用与注入相同的 renderer 计算，unbounded preview 不重复写
+  retrieval audit。
 - 本阶段交付形态是 Python composition：调用方可将 `SQLiteMemoryStore`、`MemoryService`、
   `LexicalMemoryRetriever` 和 query factory 组装到 `BudgetedContextBuilder`；默认
   `AgentApplication` 与 `run-headless` 不创建、查询或注入 Memory，也不公布 Memory IPC capability。
@@ -76,6 +77,9 @@
   semantic golden、Ruff、33 个配置范围源码文件 mypy、compileall、78.5% statement coverage、
   wheel/sdist、独立 wheel Memory import、calculator/todo smoke 与多任务 benchmark；本轮未运行
   真实 Provider。
+- S2 复核发现并修复了 benchmark before renderer 下 record 级 Context Token 归因不一致；总 section
+  Token、模型输入和既有 A/B 数字未受影响。复核结论为有条件通过：Memory 继续显式 opt-in，扩大
+  非同源 holdout 与真实 Provider A/B 后才评估默认启用；P2-M3 仍未激活。
 
 ### Model
 

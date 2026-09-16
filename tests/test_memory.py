@@ -755,6 +755,14 @@ class MemoryContextAndEvaluationTest(MemoryFixture):
 
         proposed = self.propose("Invoice formatter helper handles totals")
         active = self.service.activate(proposed.memory_id, context=self.context)
+
+        class PaddedMemoryContextBuilder(BudgetedContextBuilder):
+            @staticmethod
+            def _memory_content(selection, *, limit=None):  # type: ignore[no-untyped-def]
+                content = BudgetedContextBuilder._memory_content(selection, limit=limit)
+                hits = selection.hits if limit is None else selection.hits[:limit]
+                return content + ("\nrender-specific-padding" if hits else "")
+
         retriever = LexicalMemoryRetriever(
             self.store,
             clock=lambda: NOW,
@@ -785,7 +793,7 @@ class MemoryContextAndEvaluationTest(MemoryFixture):
             provider="test",
             model="memory-model",
         )
-        builder = BudgetedContextBuilder(
+        builder = PaddedMemoryContextBuilder(
             capability_registry=registry,
             memory_retriever=retriever,
             memory_query_factory=lambda value: MemoryQuery(
@@ -828,6 +836,11 @@ class MemoryContextAndEvaluationTest(MemoryFixture):
         self.assertGreater(
             built.memory["records"][0]["actual_context_token_cost"],
             0,
+        )
+        self.assertEqual(
+            len(PaddedMemoryContextBuilder.MEMORY_NOTICE)
+            + built.memory["records"][0]["actual_context_token_cost"],
+            memory_section.estimated_tokens,
         )
         round_trip = BuiltContext.from_dict(built.to_dict())
         self.assertEqual(round_trip.memory, built.memory)
