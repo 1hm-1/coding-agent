@@ -64,11 +64,18 @@
   1/3→0；scope/revision/stale-deleted 泄漏为 0，原始 3-case warm 3/3。retrieval cost 116→81，
   Memory context/额外模型 Token 803→130，下降 83.8%；after scripted model total 为
   2740→2870。Token per successful task after 为 cold 342.5、warm 239.17（仅 model），计入
-  retrieval 后 warm 245.92。延迟仍受本机调度影响，不作为优化验收指标；这不是 Provider 收益证据。
+  retrieval 后 warm 245.92。当前一轮实测 wall latency：before cold/warm mean 为
+  `45.834164333731074ms`/`47.033260334198225ms`（`+1.1990960004671507ms`），after
+  cold/warm mean 为 `45.834164333731074ms`/`45.95990916732262ms`
+  （`+0.12574483359154698ms`）。检索 latency mean 为
+  `0.056614917411934584ms`→`0.06059541647118749ms`
+  （`+0.003980499059252907ms`）；延迟受本机调度影响，但回退没有从证据中删除。这不是
+  Provider 收益证据。
   脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
-- 当前验收通过 136/136 默认 unittest（原 134 个无回退，新增 2 个检索测试）、四份既有 semantic golden、Ruff、33 个配置范围源码文件
-  mypy、compileall、78.5% coverage、wheel/sdist、独立 wheel Memory import、calculator/todo smoke
-  与多任务 benchmark。
+- 当前收口门禁通过 136/136 默认 unittest（原 134 个无回退，新增 2 个检索测试）、四份既有
+  semantic golden、Ruff、33 个配置范围源码文件 mypy、compileall、78.5% statement coverage、
+  wheel/sdist、独立 wheel Memory import、calculator/todo smoke 与多任务 benchmark；本轮未运行
+  真实 Provider。
 
 ### Model
 
@@ -332,7 +339,9 @@ PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
   producer authority；四类 document 均由自动测试验证，vectors 随 wheel/sdist 发布；
 - 初始多 Agent 拓扑计划采用 Manager/Explorer/Implementer/Reviewer，并坚持单写者 workspace 规则；
 - P2-M1—P2-M6 必须逐阶段实现和验收，不允许一次性把设计目录全部脚手架化；
-- P2-M1 与 P2-M2 已冻结；P2-M3 Profiles/Skill Runtime 是下一候选，但尚未激活。
+- P2-M1 与 P2-M2 已冻结；P2-M2 Memory 仍只通过显式 Python composition 提供，默认
+  `AgentApplication`、`run-headless` 与 Runtime IPC 不创建、查询或注入 Memory；P2-M3
+  Profiles/Skill Runtime 是下一候选，但尚未激活。
 
 ## 5. 已知限制与技术债
 
@@ -374,8 +383,9 @@ PYTHONPATH=src .venv/bin/python examples/memory_cold_warm_benchmark.py
     不得将 10% 的小样本 Runtime completion 差异外推成一般收益。
 17. P2-M2 Memory benchmark 使用 12 个冻结 case 的确定性 trusted oracle 和 scripted Token
     估算；检索/Context A/B 达到 recall=1.0、precision=1.0、irrelevant injection=0，额外模型
-    Token 从 803 降到 130。它仍是不可挑题的小型合成 benchmark，不能据此宣称真实模型净收益或启用默认
-    Application/headless Memory。
+    Token 从 803 降到 130。当前实测检索 mean 从 `0.056614917411934584ms` 增至
+    `0.06059541647118749ms`，该回退已保留。它仍是不可挑题的小型合成 benchmark，不能据此宣称
+    真实模型净收益或启用默认 Application/headless Memory。
 
 ## 6. 不允许虚构的项目事实
 

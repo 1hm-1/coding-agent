@@ -261,6 +261,10 @@ the compression A/B did not save tokens and remains a small local benchmark.
   CPython 3.10/3.11 and Linux/POSIX process semantics.
 - 确定性和显式启用的真实模型后端、单 Agent session、恢复、回放与小型 Eval。<br>
   Deterministic and opt-in live backends, single-agent sessions, recovery, replay, and small Eval suites.
+- P2-M2 episodic/semantic Memory 的显式 Python composition、有界 lexical retrieval 和 SQLite 审计；
+  当前 12-case 证据使用 trusted synthetic oracle，不代表真实 Provider 净收益。<br>
+  Explicit Python composition, bounded lexical retrieval, and SQLite audit for P2-M2 episodic/semantic
+  Memory; its current 12-case evidence uses a trusted synthetic oracle and is not live-Provider net-benefit evidence.
 - 仅在 capability probe 成功时使用原生 Linux namespace sandbox。<br>
   Native Linux namespace sandbox only when its capability probe succeeds.
 
@@ -271,9 +275,11 @@ the compression A/B did not save tokens and remains a small local benchmark.
 - 通用 Shell、任意 executable、默认网络或模型驱动依赖安装。<br>
   General Shell, arbitrary executables, default network, or model-directed dependency installation.
 - Git inspection 工具、多 Agent、UI、RAG、Skills、procedural memory，以及默认入口的自动 Memory
-  注入；Memory CLI/UI 也未实现。<br>
+  注入；Memory CLI/UI 也未实现。默认 `AgentApplication`、`run-headless` 和 Runtime IPC 不创建、
+  查询或注入 Memory。<br>
   Git inspection tools, multi-agent orchestration, UI, RAG, Skills, procedural memory, automatic
-  Memory injection in default entrypoints, or a Memory CLI/UI.
+  Memory injection in default entrypoints, or a Memory CLI/UI. The default `AgentApplication`,
+  `run-headless`, and Runtime IPC do not create, query, or inject Memory.
 - Windows/macOS 等价 sandbox 保证或通用生产成功率声明。<br>
   Windows/macOS-equivalent sandbox guarantees or a general production success-rate claim.
 

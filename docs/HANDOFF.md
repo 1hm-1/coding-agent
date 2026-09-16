@@ -114,16 +114,25 @@ checkpoint-before-result 和子进程清理均有 producer contract tests。111 
 Phase 2 P2-M2 已完成：SQLite schema v4、versioned episodic/semantic record、committed journal
 provenance、scope/revision/content policy、proposal/explicit approval/stale/supersede/delete、原子审计、
 bounded lexical retrieval、Context manifest 与 multi-task cold/warm calibration 均有测试。删除 tombstone
-清空原文；unbounded Context preview 不重复写 retrieval audit。检索优化后为 136 个默认测试、Ruff、33 文件 mypy、
-compileall、78.5% coverage、wheel/sdist、独立 wheel Memory import、calculator/todo smoke 和多任务
-Memory benchmark 均通过。当前 benchmark 已冻结 12 个 case，覆盖相关/无匹配/词面 distractor/
-scope-revision 隔离/stale-deleted/诱导指令拒绝；trusted oracle 为 cold 8/12 → warm 12/12，
-同进程 A/B 的 relevant recall 保持 1.0，precision 2/3→1.0、irrelevant injection 1/3→0，retrieval
-Token 116→81，Memory context/额外模型 Token 803→130（-83.8%），scripted model after total
-2740→2870。scope/revision/stale-deleted 泄漏为 0，原始 3-case warm 3/3。该结果仍
-只是不可挑题的合成 baseline，不代表真实 Provider 收益，默认入口与 IPC Memory 继续保持关闭。
-Memory 的交付形态明确为显式 Python composition：默认 `AgentApplication` 与 `run-headless` 不创建、
-查询或注入 Memory，也不把它加入 Runtime IPC capability。
+清空原文；unbounded Context preview 不重复写 retrieval audit。P2-M2.1 当前收口门禁为 136/136
+默认测试、Ruff、33 文件 mypy、compileall、78.5% statement coverage、wheel/sdist、独立 wheel
+Memory import、calculator/todo smoke 和多任务 Memory benchmark，均已通过。当前 benchmark 已冻结
+12 个 case，覆盖相关/无匹配/词面 distractor/scope-revision 隔离/stale-deleted/诱导指令拒绝；trusted
+oracle 为 cold 8/12 → warm 12/12，同进程 A/B 的 relevant recall 保持 1.0，precision 2/3→1.0、
+irrelevant injection 1/3→0，retrieval Token 116→81，Memory context/额外模型 Token 803→130
+（-83.8%），scripted model after total 2740→2870。scope/revision/stale-deleted 泄漏为 0，原始
+3-case warm 3/3。
+
+本轮实际 wall latency 为 before cold/warm mean
+`45.834164333731074ms`/`47.033260334198225ms`（`+1.1990960004671507ms`），after
+`45.834164333731074ms`/`45.95990916732262ms`（`+0.12574483359154698ms`）；检索 mean
+`0.056614917411934584ms`→`0.06059541647118749ms`（`+0.003980499059252907ms`）。延迟受
+本机调度影响，但回退原样保留，完整摘要见
+[`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
+本次未运行真实 Provider，因此不宣称真实模型净收益。Memory 的交付形态明确为显式 Python
+composition：默认 `AgentApplication` 与 `run-headless` 不创建、查询或注入 Memory，也不把它加入
+Runtime IPC capability；只有未来扩大真实任务/Provider A/B 并证明净收益后，才重新评估默认入口或
+IPC 集成。P2-M3 仍未激活。
 
 下一候选是 P2-M3 Profiles/Skill Runtime，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入
 shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。

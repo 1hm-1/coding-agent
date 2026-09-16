@@ -71,14 +71,15 @@ Builder。Working memory 继续由现有 session/messages/context 提供；Proce
 ## 5. 当前证据
 
 - 激活前基线：2026-09-16，111/111 默认 unittest 通过。
-- 完成证据：134/134 默认 unittest；四份既有 semantic golden 不变；Ruff；33 个配置范围源码
-  文件 mypy；compileall；78.3% statement coverage；wheel/sdist 与独立 wheel Memory import；
+- 冻结的未优化完成基线：134/134 默认 unittest；四份既有 semantic golden 不变；Ruff；33 个配置范围
+  源码文件 mypy；compileall；78.3% statement coverage；wheel/sdist 与独立 wheel Memory import；
   calculator/todo scripted smoke 与 12-case Memory cold/warm benchmark。
 - 12 个冻结 case 的 trusted task oracle 为 cold 8/12 → warm 12/12，relevant recall=1.0、
   precision=2/3、irrelevant injection=1/3，无关行为变化率=0；retrieval cost 为 116 Token，
   Memory context Token 为 803，scripted model total Token 为 2740 → 3543（+803）。Token per
   successful task 为 cold 342.5、warm 295.25（仅 model），计入 retrieval 后 warm 为 304.92；
-  最近一次本地运行 wall latency mean 为 cold 44.53ms、warm 47.71ms，warm-cold mean +3.18ms。
+  该未优化 baseline 运行的 wall latency mean 为 cold 44.53ms、warm 47.71ms，warm-cold mean
+  +3.18ms；这是历史冻结数据，不是本轮优化后的 latency。
   延迟受本机调度影响；该 baseline 不代表真实 Provider 或生产收益。
   脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
   它证明 A/B 和指标链路，不代表真实 Provider 或生产收益。
@@ -88,3 +89,14 @@ Builder。Working memory 继续由现有 session/messages/context 提供；Proce
 完成同一 12-case 集合的 before/after：recall 1.0→1.0、precision 2/3→1.0、irrelevant
 injection 1/3→0，Memory 额外模型 Token 803→130（-83.8%），隔离泄漏保持 0；当前默认测试
 为 136/136。原始完成证据保留在上文，避免用优化后数字重写冻结基线。
+
+本轮 P2-M2.1 evaluation evidence（2026-09-16）已重新执行全量门禁：136/136 unittest、Ruff、
+33 个源码文件 mypy、compileall、78.5% statement coverage、wheel/sdist、独立 wheel import、
+calculator/todo smoke 和冻结 Memory A/B 均通过。A/B 的 cold/warm wall latency 实测为：before
+`45.834164333731074ms`→`47.033260334198225ms`（`+1.1990960004671507ms`），after
+`45.834164333731074ms`→`45.95990916732262ms`（`+0.12574483359154698ms`）；检索 mean
+`0.056614917411934584ms`→`0.06059541647118749ms`（`+0.003980499059252907ms`）。这些延迟值
+受本机调度影响，但没有从证据中删除。完整脱敏摘要见
+[`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
+本轮未运行真实 Provider，因此不宣称真实模型净收益；Memory 仍只提供显式 Python composition，
+默认 Application/headless 与 Runtime IPC 入口保持关闭，P2-M3 仍未激活。

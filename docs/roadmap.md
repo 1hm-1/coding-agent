@@ -338,8 +338,13 @@ Context manifest、泄漏/注入负例和三任务 cold/warm 验收均通过。�
 stale/deleted 和诱导指令拒绝，并补齐 precision、行为变化、Memory context Token 与
 Token-per-successful-task 指标。其后完成同一冻结集合上的检索/Context A/B：recall 保持 1.0，
 irrelevant injection 1/3→0，Memory 额外模型 Token 803→130（-83.8%），隔离泄漏保持 0。
-Memory 只通过显式 Python composition 提供，默认
-Application/headless 不启用；P2-M3 尚未激活，也没有真实 Provider 净收益结论。
+本轮 P2-M2.1 收口重新实测 136/136 unittest、Ruff、33 文件 mypy、compileall、78.5% coverage、
+wheel/sdist、独立 wheel import、calculator/todo smoke 与冻结 A/B，全部通过。A/B wall latency
+before cold/warm mean 为 `45.834164333731074ms`/`47.033260334198225ms`，after 为
+`45.834164333731074ms`/`45.95990916732262ms`；检索 mean 为
+`0.056614917411934584ms`→`0.06059541647118749ms`，增加 `0.003980499059252907ms`，该
+回退保留在 evidence。Memory 只通过显式 Python composition 提供，默认 Application/headless
+与 Runtime IPC 不启用；本次未运行真实 Provider，也没有真实 Provider 净收益结论。P2-M3 尚未激活。
 
 ## 14. Phase 2 分阶段路线
 

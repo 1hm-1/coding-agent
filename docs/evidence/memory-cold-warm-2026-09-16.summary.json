@@ -2,12 +2,14 @@
   "schema_version": 3,
   "evidence_kind": "deterministic_memory_cold_warm_benchmark",
   "recorded_at": "2026-09-16",
+  "source_commit": "6e261f9",
   "benchmark": "examples/memory_cold_warm_benchmark.py",
   "backend": "scripted_trusted_task_oracle",
   "implementation": {
     "memory": "explicit_python_composition",
     "default_application_enabled": false,
-    "headless_enabled": false
+    "headless_enabled": false,
+    "ipc_memory_enabled": false
   },
   "frozen_case_count": 12,
   "case_categories": {
@@ -108,10 +110,179 @@
       "total": 3
     }
   },
+  "measured_run": {
+    "before": {
+      "task_success": {
+        "cold": 0.6666666666666666,
+        "warm": 1.0,
+        "delta": 0.33333333333333337
+      },
+      "relevant_recall": 1.0,
+      "precision": 0.6666666666666666,
+      "irrelevant_injection_rate": 0.3333333333333333,
+      "unrelated_behavior_change_rate": 0.0,
+      "unrelated_memory_behavior_change_rate": 0.0,
+      "retrieval_tokens": {
+        "total": 116,
+        "mean": 9.666666666666666
+      },
+      "retrieval_latency_ms": {
+        "total": 0.679379008943215,
+        "mean": 0.056614917411934584
+      },
+      "memory_context_tokens": {
+        "total": 803,
+        "mean": 66.91666666666667,
+        "max": 136
+      },
+      "model_tokens": {
+        "cold": {
+          "input_total": 2716,
+          "output_total": 24,
+          "total": 2740
+        },
+        "warm": {
+          "input_total": 3519,
+          "output_total": 24,
+          "total": 3543
+        },
+        "warm_minus_cold_total": 803
+      },
+      "tokens_per_successful_task": {
+        "model": {
+          "cold": 342.5,
+          "warm": 295.25
+        },
+        "model_plus_retrieval": {
+          "cold": 342.5,
+          "warm": 304.9166666666667
+        }
+      },
+      "wall_latency_ms": {
+        "cold": {
+          "total": 550.0099720047729,
+          "mean": 45.834164333731074,
+          "p50": 45.095910001691664,
+          "p95": 52.77756999930716
+        },
+        "warm": {
+          "total": 564.3991240103787,
+          "mean": 47.033260334198225,
+          "p50": 47.778847998415586,
+          "p95": 51.72604600011255
+        },
+        "warm_minus_cold_mean": 1.1990960004671507
+      }
+    },
+    "after": {
+      "task_success": {
+        "cold": 0.6666666666666666,
+        "warm": 1.0,
+        "delta": 0.33333333333333337
+      },
+      "relevant_recall": 1.0,
+      "precision": 1.0,
+      "irrelevant_injection_rate": 0.0,
+      "unrelated_behavior_change_rate": 0.0,
+      "unrelated_memory_behavior_change_rate": 0.0,
+      "retrieval_tokens": {
+        "total": 81,
+        "mean": 6.75
+      },
+      "retrieval_latency_ms": {
+        "total": 0.7271449976542499,
+        "mean": 0.06059541647118749
+      },
+      "memory_context_tokens": {
+        "total": 130,
+        "mean": 10.833333333333334,
+        "max": 34
+      },
+      "model_tokens": {
+        "cold": {
+          "input_total": 2716,
+          "output_total": 24,
+          "total": 2740
+        },
+        "warm": {
+          "input_total": 2846,
+          "output_total": 24,
+          "total": 2870
+        },
+        "warm_minus_cold_total": 130
+      },
+      "tokens_per_successful_task": {
+        "model": {
+          "cold": 342.5,
+          "warm": 239.16666666666666
+        },
+        "model_plus_retrieval": {
+          "cold": 342.5,
+          "warm": 245.91666666666666
+        }
+      },
+      "wall_latency_ms": {
+        "cold": {
+          "total": 550.0099720047729,
+          "mean": 45.834164333731074,
+          "p50": 45.095910001691664,
+          "p95": 52.77756999930716
+        },
+        "warm": {
+          "total": 551.5189100078715,
+          "mean": 45.95990916732262,
+          "p50": 46.18267100158846,
+          "p95": 49.109152001619805
+        },
+        "warm_minus_cold_mean": 0.12574483359154698
+      }
+    },
+    "comparison": {
+      "memory_extra_model_tokens": {
+        "before": 803,
+        "after": 130,
+        "reduction_fraction": 0.838107098381071
+      },
+      "retrieval_latency_mean_ms": {
+        "before": 0.056614917411934584,
+        "after": 0.06059541647118749,
+        "delta": 0.003980499059252907
+      },
+      "false_positive_cases_removed": [
+        "deploy-region-distractor",
+        "invoice-label-distractor"
+      ]
+    }
+  },
+  "verification": {
+    "default_unittest": "136/136 passed",
+    "ruff": "passed",
+    "mypy": "passed; 33 source files",
+    "compileall": "passed",
+    "statement_coverage": "78.5% (70% gate)",
+    "coverage_data": "22 files combined; 38 duplicate files skipped",
+    "wheel_sdist_build": "passed",
+    "independent_wheel_import": "passed from isolated temporary installation",
+    "calculator_smoke": {
+      "state": "completed",
+      "step_count": 16,
+      "model_calls": 4,
+      "tool_calls": 3
+    },
+    "todo_smoke_replay": {
+      "final_state": "completed",
+      "event_count": 72,
+      "model_calls": 6,
+      "tool_calls": 5,
+      "test_outcomes": [false, true],
+      "source_unchanged": true
+    },
+    "source_fixture_diff": "empty"
+  },
   "limitations": [
-    "The oracle and model usage are deterministic synthetic fixtures, not Provider quality evidence.",
+    "The oracle and model usage are deterministic synthetic fixtures, not Provider quality evidence; no real Provider was run for this record.",
     "Each pair uses an isolated memory pool so no-match and isolation controls are not cross-case contaminated.",
-    "Latency is emitted by the executable report but is not used for optimization acceptance because it is sensitive to host scheduling.",
+    "The measured retrieval mean increased from 0.056614917411934584 ms to 0.06059541647118749 ms (+0.003980499059252907 ms); latency is host-scheduling sensitive and is retained rather than hidden.",
     "The A/B changes deterministic retrieval and Context representation; it does not justify default Application/headless or IPC Memory integration."
   ],
   "contains_credentials": false
