@@ -118,11 +118,10 @@ S3 门禁为 139/139 unittest、四份 semantic golden、Ruff、34 文件 mypy�
 `git diff --check`；未重跑完整 coverage，因此保留最近一次 78.5% 数字，不制造新覆盖率结论。
 完整审查见 [`s3-holdout-and-live-ab-review-2026-09-17.md`](./evidence/s3-holdout-and-live-ab-review-2026-09-17.md)。
 
-## 9. L3.5 盲测 Holdout v2（只冻结，不执行）
+## 9. L3.5 盲测 Holdout v2 首轮执行
 
-为避免 development set 污染，已先建立 L3.5 Holdout v2 的正文、共享 Memory pool 和 metadata
-manifest，但本轮不调用检索器、Runtime、oracle 或 benchmark，也不生成结果。正文已转移到用户保管的
-仓库外目录；共享仓库只保留对外可审计的 case ID、预期 oracle 类型和冻结状态，位于
+S3.5 算法冻结后，按正文 SHA-256 先验校验执行了唯一一次有效首轮。正文仍在用户保管的仓库外目录；
+共享仓库只保留 case ID、预期 oracle 类型、冻结状态和执行 hash，位于
 [memory-retrieval-holdout-v2.manifest.json](./evidence/memory-retrieval-holdout-v2.manifest.json)。
 
 manifest 固定 suite SHA-256 为
@@ -132,12 +131,17 @@ negative、冲突记忆、无记忆、user scope、repository revision、stale/d
 负例；oracle 只检查测试、文件或工具行为，并为无记忆 case 保留 memory-on/off 行为等价比较。
 原始 5298ba0 三任务共享池兼容 arm 单独保留，不计入 20 个主 case。
 
-当前 manifest 标记 executed: false、results_generated: false。只有 S3.5 算法冻结后才允许
-首次执行；在此之前不得根据正文或任何未生成的结果调整 case、检索算法或宣称模型收益。
+执行身份为 algorithm `f1d03cf`、runner `e7287d2`，20/20 case 有效。脱敏执行记录见
+[`memory-retrieval-holdout-v2-2026-09-18.md`](./evidence/memory-retrieval-holdout-v2-2026-09-18.md)，
+原始结果和 summary 仍只在用户保管目录保存。主结果为 relevant recall `0.0`、precision `1.0`、
+irrelevant injection `0.0`、scope/revision/stale-deleted leakage `0`、无关行为变化 `0`、
+prompt-injection policy bypass `0`、manifest Token mismatch `0`，兼容 arm warm `3/3`。
 
-本轮收口已通过静态 manifest 契约 3/3、Ruff、全量 unittest 142/142 和 git diff --check。上述检查
-只验证仓库内的 manifest、冻结说明与现有实现，没有导入或执行用户保管的 Holdout 正文；manifest 仍
-保持 executed: false、results_generated: false。
+该 runner 是 observation-only：没有 Provider、没有 Agent 修改、没有真实模型 usage；task success
+`0/20` 和 model Token `5518` 只能记录为本次 runner 的实际观察/renderer estimator 结果，不能宣称
+真实模型收益。Token per successful task 因没有成功 task 保留为 `null`。由于 relevant recall 未达到
+`0.85`，且没有真实 Provider cold/warm A/B，Memory 仍只提供显式 Python composition；默认
+Application/headless/IPC 不接入，P2-M3 不激活。
 
 ## 10. S3.5 检索泛化修复与算法冻结
 
@@ -148,6 +152,6 @@ retrieval Token `81`、warm model Token `2870`、Memory Context Token `130`、sc
 leakage `0/0/0` 与原始三任务 `3/3` 均不变；通用 punctuation micro recall 从 `0/1` 提升为 `1/1`，
 topic-only negative 仍未注入。
 
-旧 L3 只保留冻结 evidence/hash contract，不再用候选算法重复执行已知 Holdout。未访问用户保管的
-Holdout v2，未修改任何 Holdout manifest/hash。算法在本提交冻结；完整报告见
+旧 L3 只保留冻结 evidence/hash contract，不再用候选算法重复执行已知 Holdout。Holdout v2 已按
+manifest 记录一次首轮结果，不再重跑或修改 case/algorithm。算法在本提交冻结；完整报告见
 [`s3-5-retrieval-algorithm-freeze-2026-09-17.md`](./evidence/s3-5-retrieval-algorithm-freeze-2026-09-17.md)。

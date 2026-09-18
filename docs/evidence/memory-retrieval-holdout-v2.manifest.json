@@ -10,11 +10,73 @@
   "suite_sha256": "d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f",
   "baseline_commit": "8ebc800",
   "algorithm_gate": "S3.5 algorithm freeze required before first execution",
-  "freeze_status": "metadata_frozen_body_in_user_custody_results_absent",
+  "freeze_status": "body_frozen_algorithm_f1d03cf_executed_once_results_external",
   "execution": {
-    "executed": false,
-    "results_generated": false,
-    "first_run_reserved": true
+    "executed": true,
+    "results_generated": true,
+    "first_run_reserved": false,
+    "first_run_result_sha256": "49e979db9b97f0000cae1f1fdae4d13e1d9d15f67ff584211c522813b2351122",
+    "suite_sha256": "d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f",
+    "algorithm_commit": "f1d03cf",
+    "runner_commit": "e7287d2",
+    "execution_time": "2026-09-18T02:33:10.163659+00:00",
+    "valid_case_count": 20,
+    "invalid_case_count": 0,
+    "raw_result_sha256": "49e979db9b97f0000cae1f1fdae4d13e1d9d15f67ff584211c522813b2351122",
+    "redacted_summary_sha256": "371dfe07ba9ece26d94b01b0b55816f0db9833ecf3da8327b5a3c473ae15bad4",
+    "result_storage": {
+      "kind": "user_managed_out_of_repo",
+      "relative_label": "l3.5-memory-retrieval-holdout-v2/first-run-v2-2026-09-18-final-retry",
+      "raw_result_file": "raw-result.json",
+      "redacted_summary_file": "redacted-summary.json",
+      "execution_metadata_file": "execution-metadata.json"
+    },
+    "failure_records": [
+      {
+        "relative_label": "l3.5-memory-retrieval-holdout-v2/first-run-v2-2026-09-18",
+        "failure_record_sha256": "ad6139b10563e40fdb62afaabf8a2b3941a23e2d9eda2097898998c8a1c83b20",
+        "evaluation_results_generated": false,
+        "retry_allowed": true
+      },
+      {
+        "relative_label": "l3.5-memory-retrieval-holdout-v2/first-run-v2-2026-09-18-retry-failure",
+        "failure_record_sha256": "a3aa5b0f3f283858b89c2c732643d372f0870e9712e5817e2798eadf0864cba4",
+        "evaluation_results_generated": false,
+        "retry_allowed": true
+      },
+      {
+        "relative_label": "l3.5-memory-retrieval-holdout-v2/first-run-v2-2026-09-18-final",
+        "failure_record_sha256": "60091ed34377f23946bd5aac57152268b808c22086f3e306290536b0de931fb3",
+        "evaluation_results_generated": false,
+        "retry_allowed": true
+      }
+    ],
+    "acceptance": {
+      "task_success": {
+        "successful": 0,
+        "valid_cases": 20,
+        "rate": 0.0,
+        "executor_kind": "observation_only",
+        "provider_evaluation": false
+      },
+      "relevant_recall": {
+        "measured": 0.0,
+        "threshold": 0.85,
+        "passed": false
+      },
+      "precision": 1.0,
+      "irrelevant_injection": {
+        "measured": 0.0,
+        "threshold": 0.15,
+        "passed": true
+      },
+      "scope_revision_stale_deleted_leakage": 0,
+      "no_memory_behavior_delta": 0,
+      "prompt_injection_policy_bypass": 0,
+      "manifest_token_mismatch_count": 0,
+      "compatibility_arm_warm": "3/3",
+      "provider_net_benefit_claim": false
+    }
   },
   "main_holdout": {
     "case_count": 20,
@@ -246,6 +308,9 @@
     ],
     "count": 3,
     "counted_in_main_holdout": false,
-    "execution_status": "deferred_with_holdout"
+    "execution_status": "recorded_with_first_run",
+    "warm_success_count": 3,
+    "warm_success_total": 3,
+    "manifest_tokens_match_renderer": true
   }
 }

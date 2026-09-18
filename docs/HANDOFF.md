@@ -1,6 +1,6 @@
 # 新窗口开发交接
 
-> 交接基线：2026-09-17，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC、P2-M2 Layered Memory 及 S3 paired live harness 已完成；P2-M3 尚未激活。
+> 交接基线：2026-09-18，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC、P2-M2 Layered Memory 及 S3 paired live harness 已完成；P2-M3 尚未激活。
 > 固定版本：`v0.1.0`；安装、测试、离线 Eval、Demo 和支持边界见 `docs/releases/v0.1.0.md`。
 
 ## 1. 开始前必须做
@@ -156,17 +156,26 @@ retrieval、latency、工具/失败、first relevant action 与安全不变量�
 Secret、绝对路径和 reasoning content。当前仅完成离线 contract test，真实 Provider A/B 仍待凭据
 门控运行；Memory 继续显式 opt-in，P2-M3 未激活。
 
-L3.5 Holdout v2 已先完成冻结准备，但刻意没有首次执行：正文已移至用户保管的仓库外目录，共享仓库仅
+L3.5 Holdout v2 已在 S3.5 算法冻结后完成唯一一次有效执行：正文仍由用户在仓库外保管，共享仓库仅
 保留 metadata 在 docs/evidence/memory-retrieval-holdout-v2.manifest.json，suite SHA-256 为
 d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f。主 suite 有 20 个 case、4 个
 独立任务领域、4 个共享 pool；oracle 只检查代码、测试、文件或工具行为，原始 5298ba0 三任务 arm
-单独保留且不计入主 Holdout。manifest 明确 executed: false 和 results_generated: false；必须
-等 S3.5 算法冻结后才可第一次运行，不能先看结果再改 case。
+单独保留且不计入主 Holdout。algorithm 为 `f1d03cf`、runner 为 `e7287d2`，20/20 case 有效；
+manifest 已记录 executed=true、results_generated=true、first_run_reserved=false 与原始结果 hash。
+
+该 runner 为 observation-only，没有 Provider 或 Agent 修改：主 relevant recall `0.0`、precision
+`1.0`、irrelevant injection `0.0`、scope/revision/stale-deleted leakage `0`、无关行为变化 `0`、
+prompt-injection bypass `0`、Token mismatch `0`，兼容 arm warm `3/3`。task success `0/20` 和
+renderer estimator Token `5518` 不是真实模型收益证据；`tokens_per_successful_task` 为 `null`，
+原始 cold/warm latency mean 为 `1.7627652014198247ms`/`1.456806949863676ms`。完整脱敏记录见
+[`memory-retrieval-holdout-v2-2026-09-18.md`](./evidence/memory-retrieval-holdout-v2-2026-09-18.md)，
+原始结果仍在用户保管目录。三次无有效结果的基础设施失败均保留 failure record，未覆盖结果。
 
 S3.5 已只用 L1/L2 development set 与自建通用标点 case 修复 lexical term 边界标点问题；内部
 identifier 标点保留，没有新增 alias/literal/末尾词特判。L1/L2 recall、误注入、retrieval/model
 Token、scope leakage、三任务兼容 arm 与 manifest attribution 均不回退。历史 L3 测试现在只校验
-冻结 evidence/hash，不再用候选算法重跑已知 Holdout；用户保管的 Holdout v2 未访问或执行。
+冻结 evidence/hash，不再用候选算法重跑已知 Holdout；Holdout v2 已按 manifest 记录一次首轮结果，不能
+修改 case、算法或重跑以替换该结果。
 
 下一候选是 P2-M3 Profiles/Skill Runtime，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入
 shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。
@@ -180,7 +189,8 @@ shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector b
   M5.1 search A/B、budget-aware follow-up 和 capability holdout 已有脱敏证据；不必在没有
   新假设时重复消耗 Provider 配额；
 - L3 holdout 的 18-case 首轮结果已冻结并保存脱敏摘要；它在 `8ebc800` 基线上未达到 recall/injection
-  门槛，不能用改题或真实 Provider 未运行来填补该证据缺口；真实 Provider A/B 仍需独立完成；
+  门槛，不能用改题或真实 Provider 未运行来填补该证据缺口。L3.5 v2 首轮也未达到 recall 门槛，且
+  observation-only runner 不是 Provider A/B；真实 Provider A/B 仍需独立完成；
 - 在最终说明中给出测试数量、golden 状态、迁移版本、覆盖率/类型检查/CI 状态和仍未实现项；当前 schema 为 v4，M4.1/M4.2 native backend 不等同于 OCI container；
 - 不使用“生产可用”“完全安全”等超出证据的表述。
 

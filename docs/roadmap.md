@@ -356,14 +356,16 @@ before cold/warm mean 为 `45.834164333731074ms`/`47.033260334198225ms`，after 
 因此 L3 的 recall/injection 门槛未通过，首轮结果已冻结并原样保存；真实 Provider cold/warm A/B
 与净收益证明仍是默认入口或 IPC 集成的前置条件，P2-M3 保持未激活。
 
-L3.5 Holdout v2 已完成盲测准备：20 个非近同构 case、4 个任务领域、4 个共享 Memory pool，以及
-只检查代码/测试/文件/工具行为的 oracle 已冻结；5298ba0 三任务兼容 arm 单独保留。其 manifest
-SHA-256 为 d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f，当前无执行或结果记录。
-必须等待 S3.5 算法冻结后才首次执行；在此之前不得修改 case、根据结果调参或把 Holdout 当作模型收益
-证据。
-
-本轮收口实际通过静态 manifest 契约 3/3、Ruff、全量 unittest 142/142 和 git diff --check；正文仍在
-仓库外用户保管位置，manifest 保持 executed=false，未产生 Holdout 结果。
+L3.5 Holdout v2 已完成唯一一次有效首轮：20 个非近同构 case、4 个任务领域、4 个共享 Memory pool，
+以及只检查代码/测试/文件/工具行为的 oracle；5298ba0 三任务兼容 arm 单独保留。其 manifest
+SHA-256 为 d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f，algorithm 为
+`f1d03cf`、runner 为 `e7287d2`，20/20 case 有效。主 relevant recall=`0.0`、irrelevant
+injection=`0.0`、scope/revision/stale-deleted leakage=`0`、无关行为变化=`0`、prompt-injection
+bypass=`0`、manifest Token mismatch=`0`，compatibility warm=`3/3`；observation-only task success
+为 `0/20`，不代表真实 Provider 收益。首轮结果与三次无有效结果的基础设施失败记录均在用户保管
+目录保存，完整脱敏记录见 [`memory-retrieval-holdout-v2-2026-09-18.md`](./evidence/memory-retrieval-holdout-v2-2026-09-18.md)。
+由于 recall 未达 `0.85` 且没有真实 Provider A/B，Memory 继续显式 Python composition，默认入口/IPC
+保持关闭，P2-M3 不激活。
 
 ## 14. Phase 2 分阶段路线
 
@@ -371,7 +373,7 @@ SHA-256 为 d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f，�
 |---|---|---|---|
 | P2-D0 架构与契约设计 | 已完成 | `v2-product-architecture.md`、Runtime IPC v1 文档和 JSON Schema、兼容规则 | producer/consumer 权责、版本、取消、错误、secret/workspace 规则无歧义；明确尚未实现 |
 | P2-M1 Headless Runtime IPC | 已完成（2026-09-16） | `protocol-info`、`run-headless`、stdout JSONL、cooperative cancellation | v1 schema、golden、退出码、v0.1/v0.2 adapter contract vectors 全部通过 |
-| P2-M2 分层记忆 | 已完成（2026-09-17，S3.5 泛化修复后算法冻结） | episodic/semantic memory ports、SQLite authority、确定性加权检索、边界标点规范化、紧凑 Context 与显式 live paired harness；默认仍关闭 | L1/L2 A/B 无回退；旧 L3 仅保留历史 evidence，Holdout v2 未访问/未执行，真实 Provider A/B 待完成 |
+| P2-M2 分层记忆 | 已完成（2026-09-17，S3.5 泛化修复后算法冻结） | episodic/semantic memory ports、SQLite authority、确定性加权检索、边界标点规范化、紧凑 Context 与显式 live paired harness；默认仍关闭 | L1/L2 A/B 无回退；L3.5 v2 首轮已记录但 lexical recall 未达门槛，observation-only 不是 Provider 证据，真实 Provider A/B 待完成 |
 | P2-M3 Profiles 与 Skill Runtime | 未启动 | immutable profile、Skill registry/loader/selector、能力策略 | skill provenance/permission/budget/replay 测试通过，不绕过 ToolHarness |
 | P2-M4 MCP 能力网关 | 未启动 | MCP adapter 经 CapabilityGateway 映射到 Harness | discovery、schema、secret、timeout、审计和恶意 server 负例通过 |
 | P2-M5 可恢复多 Agent 编排 | 未启动 | coordinator FSM、角色 mailboxes、hierarchical budgets、single-writer workspace | crash/replay/cancel/冲突/预算和相对单 Agent eval 通过 |

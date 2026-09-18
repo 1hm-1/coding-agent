@@ -101,6 +101,16 @@ calculator/todo smoke 和冻结 Memory A/B 均通过。A/B 的 cold/warm wall la
 本轮未运行真实 Provider，因此不宣称真实模型净收益；Memory 仍只提供显式 Python composition，
 默认 Application/headless 与 Runtime IPC 入口保持关闭，P2-M3 仍未激活。
 
+同日对 12-case development suite 的补采结果也已保存为用户保管的脱敏 summary，路径标签为
+`p2-m2-memory-benchmark-2026-09-18/redacted-summary.json`，SHA-256 为
+`991ff28b84f708651ccb3bb4e85549f017f74cb31feffe039fcbb7f328b84889`。after 实测 task success
+为 cold `8/12`、warm `12/12`，relevant recall `1.0`，precision `1.0`，irrelevant injection
+`0`，无关行为变化率 `0`；retrieval/context/model Token 分别为 `81/130/2740→2870`，warm
+Token per successful task 为 `239.16666666666666`（计入 retrieval 为 `245.91666666666666`）。
+保存运行的 wall latency mean 为 cold/warm `48.789092167377625ms`/`48.00096650069463ms`，
+retrieval latency mean 为 `0.06890908480272628ms`。这是 deterministic scripted/renderer
+观测，不是 Provider 或真实模型收益证据。
+
 ### L3 非同源冻结 Holdout
 
 为审查同源开发集外的行为，新增 `examples/memory_retrieval_holdout.py` 与对应 contract test，
@@ -123,3 +133,22 @@ isolation、repository revision、stale/deleted、无相关 Memory、prompt-inje
 该 holdout 仍是 deterministic trusted oracle 与 synthetic usage，不能证明真实 Provider 或真实
 任务净收益；因此默认 Application/headless/IPC Memory 入口保持关闭，真实 Provider A/B 仍是后续
 独立门禁，P2-M3 仍未激活。
+
+### L3.5 Holdout v2 首轮记录（2026-09-18）
+
+S3.5 算法冻结后，按 suite SHA-256
+`d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f` 完成唯一一次有效执行。算法
+提交为 `f1d03cf`，runner 提交为 `e7287d2`；主集合 20/20 case 有效，原始结果与脱敏 summary
+保存在用户保管目录，hash 和路径标签记录在
+[`memory-retrieval-holdout-v2.manifest.json`](./evidence/memory-retrieval-holdout-v2.manifest.json)。
+三次 seed/加载基础设施失败均在产生 case 结果前发生，failure record 保留，未覆盖或删除。
+
+首轮 runner 为 observation-only：relevant recall `0.0`、precision `1.0`、irrelevant injection
+`0.0`、scope/revision/stale-deleted leakage `0`、无关行为变化 `0`、prompt-injection bypass `0`、
+manifest Token mismatch `0`、compatibility arm warm `3/3`；task success `0/20`，renderer
+estimator model Token `5518`，cold/warm latency mean 为
+`1.7627652014198247ms`/`1.456806949863676ms`，Token per successful task 为 `null`。这些是
+实际 observation/renderer 测量，不是 Provider usage 或真实模型收益；relevant recall 未达到
+`0.85`，所以 Memory 继续只通过显式 Python composition 提供，默认 Application/headless/IPC 不接入，
+P2-M3 不激活。完整脱敏说明见
+[`memory-retrieval-holdout-v2-2026-09-18.md`](./evidence/memory-retrieval-holdout-v2-2026-09-18.md)。

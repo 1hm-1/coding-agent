@@ -212,11 +212,13 @@ L3 独立 holdout 使用 [`memory_retrieval_holdout.py`](examples/memory_retriev
 `0.16666666666666666`，未达到 L3 门槛；命令因此以非零状态报告门禁未通过。结果没有被题目调整
 或宣称为真实 Provider 收益。
 
-L3.5 盲测 Holdout v2 已先冻结 metadata，正文由用户在仓库外保管；未执行且没有结果：主 suite 为 20 个 case、4 个
-独立任务领域和 4 个共享 Memory pool，oracle 只检查代码、测试、文件或工具行为；5298ba0
-三任务兼容 arm 单独保留。其 manifest 与 suite hash 见
-[memory-retrieval-holdout-v2.manifest.json](docs/evidence/memory-retrieval-holdout-v2.manifest.json)；
-必须等 S3.5 算法冻结后才首次运行，不代表真实模型收益。
+L3.5 盲测 Holdout v2 已在算法 `f1d03cf` 冻结后完成唯一一次有效首轮；正文仍由用户在仓库外保管。
+主 suite 为 20 个 case、4 个独立任务领域和 4 个共享 Memory pool，oracle 只检查代码、测试、文件或
+工具行为；5298ba0 三任务兼容 arm 单独保留。主首轮 relevant recall 为 `0.0`、irrelevant
+injection 为 `0.0`、scope/revision/stale-deleted leakage 为 `0`、无关行为变化为 `0`，兼容 arm
+warm `3/3`；runner 为 observation-only，task success `0/20` 不是 Provider 或真实模型收益证据。
+manifest 与 suite hash 见 [memory-retrieval-holdout-v2.manifest.json](docs/evidence/memory-retrieval-holdout-v2.manifest.json)，
+脱敏执行记录见 [Holdout v2 record](docs/evidence/memory-retrieval-holdout-v2-2026-09-18.md)。
 
 S3 的真实 Provider paired harness 通过 `evaluate-memory-live` 显式运行；示例 suite 仅展示 schema，
 不是 checked-in live 结果。off/on pair 只改变 validated Memory Context，并交替先后顺序：
@@ -294,11 +296,11 @@ the compression A/B did not save tokens and remains a small local benchmark.
 - 确定性和显式启用的真实模型后端、单 Agent session、恢复、回放与小型 Eval。<br>
   Deterministic and opt-in live backends, single-agent sessions, recovery, replay, and small Eval suites.
 - P2-M2 episodic/semantic Memory 的显式 Python composition、有界 lexical retrieval 和 SQLite 审计；
-  当前 12-case 与 L3 18-case 证据均使用 trusted synthetic oracle，不代表真实 Provider 净收益；
-  L3 基线未通过 recall/injection 门槛。<br>
+  当前 12-case、L3 18-case 与 L3.5 v2 证据均使用 trusted/observation-only oracle，不代表真实 Provider
+  净收益；L3 与 L3.5 v2 均未通过 relevant-recall 门槛。<br>
   Explicit Python composition, bounded lexical retrieval, and SQLite audit for P2-M2 episodic/semantic
-  Memory; the 12-case and L3 18-case evidence use trusted synthetic oracles and are not live-Provider
-  net-benefit evidence; the L3 baseline did not meet its recall/injection thresholds.
+  Memory; the 12-case, L3 18-case, and L3.5 v2 evidence use trusted/observation-only oracles and are
+  not live-Provider net-benefit evidence; L3 and L3.5 v2 did not meet their relevant-recall gates.
 - 仅在 capability probe 成功时使用原生 Linux namespace sandbox。<br>
   Native Linux namespace sandbox only when its capability probe succeeds.
 

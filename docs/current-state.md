@@ -76,6 +76,16 @@
   （`+0.003980499059252907ms`）；延迟受本机调度影响，但回退没有从证据中删除。这不是
   Provider 收益证据。
   脱敏摘要见 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
+- 2026-09-18 对同一 12-case development suite 的补采 cold/warm 结果已脱敏保存于用户保管目录
+  `p2-m2-memory-benchmark-2026-09-18/redacted-summary.json`，SHA-256 为
+  `991ff28b84f708651ccb3bb4e85549f017f74cb31feffe039fcbb7f328b84889`。after 实测 task success
+  为 cold `8/12`、warm `12/12`，relevant recall `1.0`，precision `1.0`，irrelevant injection
+  `0`，无关行为变化率 `0`；retrieval Token 总计 `81`，Memory context Token 总计 `130`，
+  scripted model total 为 cold/warm `2740/2870`，warm Token per successful task 为
+  `239.16666666666666`（计入 retrieval 为 `245.91666666666666`）。本次保存运行的 wall latency
+  mean 为 cold/warm `48.789092167377625ms`/`48.00096650069463ms`，retrieval latency mean 为
+  `0.06890908480272628ms`。该 benchmark 使用 trusted deterministic oracle 和 renderer estimator，
+  不代表真实 Provider 或模型收益，且不改变默认 Application/headless 关闭的结论。
 - 上一轮收口门禁（加入 L3.5 v2 静态契约测试前）通过 139/139 默认 unittest（L3 后 137 个无回退，新增 2 个 live Memory A/B
   harness contract test）、四份既有 semantic golden、Ruff、34 个配置范围源码文件 mypy 与 compileall；
   最近一次完整 coverage 仍为 L3 前的 78.5% statement coverage、
@@ -106,15 +116,23 @@
   报告覆盖 success/completion、Token、retrieval、P50/P95 latency、工具与失败、first relevant action
   和安全不变量，同时拒绝 Secret/绝对路径且不保存 reasoning。当前仅有离线 harness contract test，
   尚无 live Provider 净收益结果；默认 Application/headless/IPC 仍未接入 Memory。
-- L3.5 Holdout v2 已完成“先冻结元数据、后等待算法冻结”的准备：正文已移至用户保管的仓库外目录，
-  共享仓库只保留 manifest/hash/冻结说明；20 个 case 分布在 4 个新任务领域、
-  4 个共享 Memory pool，包含 paraphrase、hard negative、冲突记忆、无记忆、scope/revision、
-  stale/deleted 和 prompt-injection 负例。manifest SHA-256 为
+- L3.5 Holdout v2 已在 S3.5 算法冻结后完成唯一一次有效执行：正文仍由用户在仓库外保管，共享仓库
+  只保留 manifest/hash/冻结说明；20 个 case 分布在 4 个新任务领域、4 个共享 Memory pool，包含
+  paraphrase、hard negative、冲突记忆、无记忆、scope/revision、stale/deleted 和 prompt-injection
+  负例。manifest SHA-256 为
   d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f；主 Holdout 不含原始
-  5298ba0 三任务兼容 arm。当前只完成静态结构/哈希契约，executed: false、无任何结果；必须等
-  S3.5 算法冻结后首次执行，不能据此宣称真实模型收益。
-- 本轮 L3.5 收口实际通过静态 manifest 契约 3/3、Ruff、全量 unittest 142/142 和 git diff --check；
-  这些检查没有导入或执行 Holdout 正文，manifest 仍保持 executed: false、results_generated: false。
+  5298ba0 三任务兼容 arm。algorithm `f1d03cf` 与 runner `e7287d2` 已写入 manifest，20/20
+  case 有效；原始结果和脱敏 summary 仍在用户保管目录。
+- 首轮 observation-only 实测：task success `0/20`，relevant recall `0.0`，precision `1.0`，
+  irrelevant injection `0.0`，scope/revision/stale-deleted leakage `0`，无关 Memory 行为变化 `0`，
+  prompt-injection policy bypass `0`，manifest Token mismatch `0`，compatibility warm `3/3`；
+  retrieval Token `0`、renderer estimator model Token `5518`、cold/warm latency mean
+  `1.7627652014198247ms`/`1.456806949863676ms`，Token per successful task 为 `null`。这不是
+  真实 Provider 或模型收益证据，relevant recall 未达到 `0.85`，Memory 继续只提供显式 Python
+  composition，默认 Application/headless/IPC 保持关闭。
+- 本轮 L3.5 runner 收口实际通过 146/146 unittest、Ruff 与 git diff --check；三次无有效评价结果的
+  基础设施失败均保留 failure record。完整脱敏记录见
+  [`memory-retrieval-holdout-v2-2026-09-18.md`](./evidence/memory-retrieval-holdout-v2-2026-09-18.md)。
 - S3.5 算法冻结收口通过 143/143 unittest（含四份 semantic golden）、Ruff、34 文件 mypy、
   compileall 与 git diff --check；L1/L2 Runtime benchmark 的 recall/injection/retrieval/model Token、
   leakage、兼容 arm 和 manifest attribution 均无回退。未运行 coverage，最近一次 78.5% 证据不变。
@@ -215,7 +233,7 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后为 139 个，L3.5 manifest 后为 142 个，S3.5 算法冻结后当前开发树为 143 个，在当前
+- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后为 139 个，L3.5 manifest 后为 142 个，S3.5 算法冻结后为 143 个，加入 Holdout v2 runner 后当前开发树为 146 个，在当前
   capability probe 成功的环境中全部通过。`tests/live_provider_smoke.py` 为凭据门控的显式测试，
   不计入默认 discovery；能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。
