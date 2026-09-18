@@ -367,6 +367,12 @@ bypass=`0`、manifest Token mismatch=`0`，compatibility warm=`3/3`；observatio
 由于 recall 未达 `0.85` 且没有真实 Provider A/B，Memory 继续显式 Python composition，默认入口/IPC
 保持关闭，P2-M3 不激活。
 
+S3.6 离线根因调查确认 12 个 relevant target 均未被 scope/status/expiry/revision 错滤：2 个没有
+informative lexical overlap，10 个低于绝对相关性阈值，relative floor、Token 和 top-k 均未介入。
+runner query、relevance label、metric/harness 与三次失败隔离未发现缺陷，结论为 **Lexical ceiling**。
+停止堆 alias；v2 只保留诊断证据并另建 development set，下一算法候选比较 structured metadata/BM25/embedding
+hybrid，并须在查看结果前冻结 v3。本轮未改检索算法、未重跑 v2、未启用默认 Memory。
+
 ## 14. Phase 2 分阶段路线
 
 | 子阶段 | 状态 | 交付物 | 退出门禁 |

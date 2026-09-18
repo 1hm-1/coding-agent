@@ -156,8 +156,9 @@ retrieval、latency、工具/失败、first relevant action 与安全不变量�
 Secret、绝对路径和 reasoning content。当前仅完成离线 contract test，真实 Provider A/B 仍待凭据
 门控运行；Memory 继续显式 opt-in，P2-M3 未激活。
 
-L3.5 Holdout v2 已在 S3.5 算法冻结后完成唯一一次有效执行：正文仍由用户在仓库外保管，共享仓库仅
-保留 metadata 在 docs/evidence/memory-retrieval-holdout-v2.manifest.json，suite SHA-256 为
+L3.5 Holdout v2 已在 S3.5 算法冻结后完成唯一一次有效执行：正文仍由用户在仓库外保管，共享仓库
+保留 metadata 和 S3.6 脱敏 term-level 诊断，不保存原始 prose；manifest 位于
+docs/evidence/memory-retrieval-holdout-v2.manifest.json，suite SHA-256 为
 d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f。主 suite 有 20 个 case、4 个
 独立任务领域、4 个共享 pool；oracle 只检查代码、测试、文件或工具行为，原始 5298ba0 三任务 arm
 单独保留且不计入主 Holdout。algorithm 为 `f1d03cf`、runner 为 `e7287d2`，20/20 case 有效；
@@ -170,6 +171,13 @@ renderer estimator Token `5518` 不是真实模型收益证据；`tokens_per_suc
 原始 cold/warm latency mean 为 `1.7627652014198247ms`/`1.456806949863676ms`。完整脱敏记录见
 [`memory-retrieval-holdout-v2-2026-09-18.md`](./evidence/memory-retrieval-holdout-v2-2026-09-18.md)，
 原始结果仍在用户保管目录。三次无有效结果的基础设施失败均保留 failure record，未覆盖结果。
+
+S3.6 已离线复核全部 12 个 relevant target：scope/status/expiry/revision 均 eligible；2 个没有
+informative lexical overlap，10 个在 `0.60` 绝对阈值前失败，没有 case 到达 relative floor、Token
+或 top-k。未发现 runner query mismatch、label error、metric/harness error 或失败运行污染。结论为
+**Lexical ceiling**，不再堆 alias；v2 仅保留诊断证据，另建 development set，任何候选算法须先冻结新 v3。
+本轮没有修改或重跑 retrieval/runner/Holdout，也没有启用默认 Memory。证据见
+[`s3-6-memory-holdout-v2-zero-recall-2026-09-18.md`](./evidence/s3-6-memory-holdout-v2-zero-recall-2026-09-18.md)。
 
 S3.5 已只用 L1/L2 development set 与自建通用标点 case 修复 lexical term 边界标点问题；内部
 identifier 标点保留，没有新增 alias/literal/末尾词特判。L1/L2 recall、误注入、retrieval/model

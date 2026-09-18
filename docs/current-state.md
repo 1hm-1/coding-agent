@@ -117,7 +117,7 @@
   和安全不变量，同时拒绝 Secret/绝对路径且不保存 reasoning。当前仅有离线 harness contract test，
   尚无 live Provider 净收益结果；默认 Application/headless/IPC 仍未接入 Memory。
 - L3.5 Holdout v2 已在 S3.5 算法冻结后完成唯一一次有效执行：正文仍由用户在仓库外保管，共享仓库
-  只保留 manifest/hash/冻结说明；20 个 case 分布在 4 个新任务领域、4 个共享 Memory pool，包含
+  保留 manifest/hash/冻结说明及 S3.6 脱敏 term-level 诊断，不保存原始 prose；20 个 case 分布在 4 个新任务领域、4 个共享 Memory pool，包含
   paraphrase、hard negative、冲突记忆、无记忆、scope/revision、stale/deleted 和 prompt-injection
   负例。manifest SHA-256 为
   d1d9c45d9d06aea211780fa1d6b3d9baf4154891f1a3344ce1ae1cb658907d6f；主 Holdout 不含原始
@@ -133,6 +133,13 @@
 - 本轮 L3.5 runner 收口实际通过 146/146 unittest、Ruff 与 git diff --check；三次无有效评价结果的
   基础设施失败均保留 failure record。完整脱敏记录见
   [`memory-retrieval-holdout-v2-2026-09-18.md`](./evidence/memory-retrieval-holdout-v2-2026-09-18.md)。
+- S3.6 对已消费 v2 做离线零召回漏斗：12/12 relevant target 均通过 scope/status/expiry/revision，
+  2 个无 informative lexical overlap，10 个 raw score 为 `0.05931280`–`0.30628391` 且低于 `0.60`
+  绝对阈值；没有候选到达 relative floor、Token 或 top-k。runner task fallback、label 和 aggregate
+  metric 未发现缺陷，三次基础设施失败也未污染最终 store/audit。结论为 **Lexical ceiling**：停止
+  堆 alias，v2 只保留诊断证据、另建 development set，算法变化前冻结 v3；检索算法和默认 Memory 路径均未修改。
+  完整逐案证据见
+  [`s3-6-memory-holdout-v2-zero-recall-2026-09-18.md`](./evidence/s3-6-memory-holdout-v2-zero-recall-2026-09-18.md)。
 - S3.5 算法冻结收口通过 143/143 unittest（含四份 semantic golden）、Ruff、34 文件 mypy、
   compileall 与 git diff --check；L1/L2 Runtime benchmark 的 recall/injection/retrieval/model Token、
   leakage、兼容 arm 和 manifest attribution 均无回退。未运行 coverage，最近一次 78.5% 证据不变。

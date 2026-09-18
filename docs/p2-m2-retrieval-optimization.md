@@ -121,7 +121,8 @@ S3 门禁为 139/139 unittest、四份 semantic golden、Ruff、34 文件 mypy�
 ## 9. L3.5 盲测 Holdout v2 首轮执行
 
 S3.5 算法冻结后，按正文 SHA-256 先验校验执行了唯一一次有效首轮。正文仍在用户保管的仓库外目录；
-共享仓库只保留 case ID、预期 oracle 类型、冻结状态和执行 hash，位于
+共享仓库保留 case ID、预期 oracle 类型、冻结状态、执行 hash 和 S3.6 脱敏 term-level 诊断，不保存
+原始 prose；manifest 位于
 [memory-retrieval-holdout-v2.manifest.json](./evidence/memory-retrieval-holdout-v2.manifest.json)。
 
 manifest 固定 suite SHA-256 为
@@ -155,3 +156,15 @@ topic-only negative 仍未注入。
 旧 L3 只保留冻结 evidence/hash contract，不再用候选算法重复执行已知 Holdout。Holdout v2 已按
 manifest 记录一次首轮结果，不再重跑或修改 case/algorithm。算法在本提交冻结；完整报告见
 [`s3-5-retrieval-algorithm-freeze-2026-09-17.md`](./evidence/s3-5-retrieval-algorithm-freeze-2026-09-17.md)。
+
+## 11. S3.6 Holdout v2 零召回根因
+
+对已消费 v2 的 12 个 relevant target 做离线逐阶段复核后，全部通过 scope/status/expiry/revision；
+2 个没有 informative lexical overlap，10 个 lexical raw score 低于 `0.60`，因此 relative floor、
+Token budget 和 top-k 都没有参与拒绝。runner 使用完整 task fallback，目标 label 可由 Memory 内容
+支持，三次无 evaluation 的基础设施失败也没有污染最终临时 store 或 audit。
+
+三选一结论为 **Lexical ceiling**。不继续添加已知措辞 alias；后续只在另一组 development data 上
+比较 structured metadata、BM25 和 embedding hybrid 的质量、Token、latency、index/storage 与隐私
+成本，并在算法冻结前创建新 Holdout v3。v2 不重跑，本轮 retrieval selection 未修改。详见
+[`s3-6-memory-holdout-v2-zero-recall-2026-09-18.md`](./evidence/s3-6-memory-holdout-v2-zero-recall-2026-09-18.md)。
