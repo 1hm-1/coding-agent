@@ -357,6 +357,8 @@ def _seed_pool(store: SQLiteMemoryStore, pool: Mapping[str, Any], now: str) -> d
             )
         if scope is MemoryScope.REPOSITORY and repository_revision is None:
             repository_revision = str(pool.get("repository_revision", "holdout-revision"))
+        if scope is not MemoryScope.REPOSITORY:
+            repository_revision = None
         kind = MemoryKind(str(raw.get("kind", MemoryKind.SEMANTIC.value)))
         context = _scope_context(scope, scope_id)
         source_run_id = f"holdout-v2-seed-{index}-{memory_id}"
@@ -1031,6 +1033,57 @@ def write_result_bundle(report: Mapping[str, Any], output_dir: str | Path) -> di
     }
 
 
+def write_failure_bundle(
+    output_dir: str | Path,
+    *,
+    suite_sha256: str,
+    algorithm_commit: str,
+    runner_commit: str,
+    execution_time: str,
+    error: str,
+    evaluation_results_generated: bool = False,
+) -> str:
+    """Persist a non-result failure without making it look like an evaluation."""
+
+    output = Path(output_dir)
+    if output.exists():
+        raise HoldoutRunnerError("failure output directory already exists; refusing overwrite")
+    output.mkdir(parents=True)
+    failure = {
+        "schema_version": RUNNER_SCHEMA_VERSION,
+        "benchmark": "memory-retrieval-holdout-v2",
+        "failure": True,
+        "execution_time": execution_time,
+        "suite_sha256": suite_sha256,
+        "algorithm_commit": algorithm_commit,
+        "runner_commit": runner_commit,
+        "evaluation_results_generated": evaluation_results_generated,
+        "retry_allowed": not evaluation_results_generated,
+        "error": error,
+    }
+    failure_bytes = (
+        json.dumps(failure, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode("utf-8")
+    failure_path = output / "failure-record.json"
+    failure_path.write_bytes(failure_bytes)
+    metadata = {
+        "schema_version": RUNNER_SCHEMA_VERSION,
+        "failure_record_sha256": sha256_bytes(failure_bytes),
+        "suite_sha256": suite_sha256,
+        "algorithm_commit": algorithm_commit,
+        "runner_commit": runner_commit,
+        "execution_time": execution_time,
+        "evaluation_results_generated": evaluation_results_generated,
+        "retry_allowed": not evaluation_results_generated,
+        "failure_record_file": "failure-record.json",
+    }
+    (output / "failure-metadata.json").write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return str(metadata["failure_record_sha256"])
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", required=True, type=Path)
@@ -1052,15 +1105,43 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not bool(execution.get("first_run_reserved")):
         raise HoldoutRunnerError("manifest does not reserve the first run")
     actual_sha = sha256_file(arguments.suite)
-    if actual_sha != expected_sha:
-        raise HoldoutRunnerError(f"suite SHA-256 mismatch before reading body: {actual_sha} != {expected_sha}")
-    report = run_suite(
-        arguments.suite,
-        suite_sha256=actual_sha,
-        algorithm_commit=arguments.algorithm_commit,
-        runner_commit=arguments.runner_commit,
-    )
-    hashes = write_result_bundle(report, arguments.output)
+    execution_time = datetime.now(timezone.utc).isoformat()
+    try:
+        if actual_sha != expected_sha:
+            raise HoldoutRunnerError(
+                f"suite SHA-256 mismatch before reading body: {actual_sha} != {expected_sha}"
+            )
+        report = run_suite(
+            arguments.suite,
+            suite_sha256=actual_sha,
+            algorithm_commit=arguments.algorithm_commit,
+            runner_commit=arguments.runner_commit,
+            execution_time=execution_time,
+        )
+        hashes = write_result_bundle(report, arguments.output)
+    except Exception as exc:
+        failure_hash = write_failure_bundle(
+            arguments.output,
+            suite_sha256=actual_sha,
+            algorithm_commit=arguments.algorithm_commit,
+            runner_commit=arguments.runner_commit,
+            execution_time=execution_time,
+            error=f"{type(exc).__name__}: {exc}",
+            evaluation_results_generated=False,
+        )
+        print(
+            json.dumps(
+                {
+                    "failure": True,
+                    "failure_record_sha256": failure_hash,
+                    "result_dir": arguments.output.name,
+                    "retry_allowed": True,
+                },
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
+        return 2
     print(
         json.dumps(
             {
