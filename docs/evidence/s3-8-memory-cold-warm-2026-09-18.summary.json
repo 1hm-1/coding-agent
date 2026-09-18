@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "report_kind": "p2_m2_memory_cold_warm_s3_8_gate_summary",
+  "run_date": "2026-09-18",
+  "source": "examples/memory_cold_warm_benchmark.py",
+  "frozen_case_count": 12,
+  "before": {
+    "task_success": {"cold": 0.6666666666666666, "warm": 1.0},
+    "relevant_recall": 1.0,
+    "precision": 0.6666666666666666,
+    "irrelevant_injection_rate": 0.3333333333333333,
+    "retrieval_tokens": {"total": 116, "mean": 9.666666666666666},
+    "memory_context_tokens": {"total": 803, "mean": 66.91666666666667, "max": 136},
+    "model_total_tokens": {"cold": 2740, "warm": 3543},
+    "retrieval_latency_ms": {"mean": 0.04959008341150669, "total": 0.5950810009380803},
+    "wall_latency_ms": {
+      "cold_mean": 45.15565066685667,
+      "warm_mean": 45.941524498630315,
+      "warm_minus_cold_mean": 0.7858738317736425
+    },
+    "tokens_per_successful_task": {
+      "model": {"cold": 342.5, "warm": 295.25},
+      "model_plus_retrieval": {"cold": 342.5, "warm": 304.9166666666667}
+    },
+    "unrelated_behavior_change_rate": 0.0
+  },
+  "after": {
+    "task_success": {"cold": 0.6666666666666666, "warm": 1.0},
+    "relevant_recall": 1.0,
+    "precision": 1.0,
+    "irrelevant_injection_rate": 0.0,
+    "retrieval_tokens": {"total": 81, "mean": 6.75},
+    "memory_context_tokens": {"total": 130, "mean": 10.833333333333334, "max": 34},
+    "model_total_tokens": {"cold": 2740, "warm": 2870},
+    "retrieval_latency_ms": {"mean": 0.06020750151947141, "total": 0.7224900182336569},
+    "wall_latency_ms": {
+      "cold_mean": 45.15565066685667,
+      "warm_mean": 43.72922716599229,
+      "warm_minus_cold_mean": -1.4264235008643809
+    },
+    "tokens_per_successful_task": {
+      "model": {"cold": 342.5, "warm": 239.16666666666666},
+      "model_plus_retrieval": {"cold": 342.5, "warm": 245.91666666666666}
+    },
+    "unrelated_behavior_change_rate": 0.0
+  },
+  "acceptance": {
+    "leakage_selected_counts": {"revision": 0, "scope": 0, "stale_deleted": 0},
+    "original_three_case_warm_success": {"successful": 3, "total": 3}
+  },
+  "notes": [
+    "This is a deterministic scripted/renderer measurement, not Provider usage or model net-benefit evidence.",
+    "The after retrieval latency mean is higher by 0.01061741810796472 ms and is retained as measured.",
+    "The after warm wall latency mean is lower by 2.212297332638026 ms in this run."
+  ]
+}

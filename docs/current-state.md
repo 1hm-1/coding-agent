@@ -155,6 +155,30 @@
   [`s3-7-memory-retrieval-backend-spike-2026-09-18.md`](./evidence/s3-7-memory-retrieval-backend-spike-2026-09-18.md)。
 - S3.7 收口通过 161/161 unittest（四份 semantic golden 不变）、Ruff、36 文件 mypy、compileall
   与 `git diff --check`；未运行 coverage，最近一次 78.5% 证据不变。
+- S3.8 在 `cdea7b9` 基线上完成独立复现与离线 Pareto 审计：使用固定 40-case development suite、
+  manifest 和 candidate parameters，四臂各运行三次；三次 deterministic digest、40/40 case 的
+  selected IDs、参数 digest 与 source raw 一致，`retrieval.py` SHA-256
+  `6e64026504311e3c467f6b34b747eea296bb68104576d8d01104d50dc073d0f8` 与 `f1d03cf` 一致。独立
+  measured recall/injection 为 lexical `0.375/0`、content BM25 `0.7083333333333334/0.6530612244897959`、
+  structured BM25 `0.7083333333333334/0.6730769230769231`；selected retrieval Token 为
+  `196/1080/1140`，独立 latency mean 为 `0.05199954975978471/0.0685225004417589/0.11054457572754472ms`。
+  这些 latency 是本次复现的实际观测，不覆盖 source evidence，也不是 Provider usage。
+- S3.8 只从已产生的 raw `score_components[].score` 离线枚举全部唯一 threshold 与 `top_k=1..5`，
+  未重新调用 backend、未向 backend 传 label、未修改检索实现。全局非支配点共 20 个；
+  `max_recall_when_irrelevant_injection_lte_0.15=0.375`，
+  `min_irrelevant_injection_when_recall_gte_0.85=null`。因此当前 development score 没有同时达到
+  recall `0.85` 和 injection `0.15` 界限的可行点，未选择候选、未启用默认 Memory，也未创建 Holdout v3。
+  完整 raw/summary/manifest/Pareto 证据见
+  [`s3-8-memory-retrieval-backend-audit-2026-09-18.md`](./evidence/s3-8-memory-retrieval-backend-audit-2026-09-18.md)。
+- S3.8 收口门禁实际通过 164/164 unittest、Ruff、36 文件 mypy、compileall、coverage `79.3%`、
+  wheel/sdist、独立 wheel import、calculator/todo scripted smoke 和 Memory cold/warm benchmark。
+  本次 12-case benchmark 的 after warm model Token 为 `2870`、Memory Context Token 为 `130`、
+  retrieval Token 为 `81`；before 分别为 `3543/803/116`。after retrieval latency mean
+  `0.06020750151947141ms` 高于 before `0.04959008341150669ms`，增加
+  `0.01061741810796472ms`，原样保留；after warm wall latency mean 为
+  `43.72922716599229ms`，before 为 `45.941524498630315ms`。该 benchmark 仍是 scripted/renderer
+  观测，不是真实 Provider 收益证据；脱敏汇总见
+  [`s3-8-memory-cold-warm-2026-09-18.summary.json`](./evidence/s3-8-memory-cold-warm-2026-09-18.summary.json)。
 - S3.5 算法冻结收口通过 143/143 unittest（含四份 semantic golden）、Ruff、34 文件 mypy、
   compileall 与 git diff --check；L1/L2 Runtime benchmark 的 recall/injection/retrieval/model Token、
   leakage、兼容 arm 和 manifest attribution 均无回退。未运行 coverage，最近一次 78.5% 证据不变。
@@ -255,7 +279,7 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后为 139 个，L3.5 manifest 后为 142 个，S3.5 算法冻结后为 143 个，加入 Holdout v2 runner 后为 146 个，S3.7 development suite 后为 153 个，candidate spike 后当前开发树为 161 个，在当前
+- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后为 139 个，L3.5 manifest 后为 142 个，S3.5 算法冻结后为 143 个，加入 Holdout v2 runner 后为 146 个，S3.7 development suite 后为 153 个，candidate spike 后为 161 个，S3.8 audit 后当前开发树为 164 个，在当前
   capability probe 成功的环境中全部通过。`tests/live_provider_smoke.py` 为凭据门控的显式测试，
   不计入默认 discovery；能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。

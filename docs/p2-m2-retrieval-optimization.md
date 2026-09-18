@@ -196,3 +196,39 @@ trade-off，不选择生产后端，不修改 `retrieval.py`，不创建 Holdout
 [`s3-7-memory-retrieval-backend-spike-2026-09-18.md`](./evidence/s3-7-memory-retrieval-backend-spike-2026-09-18.md)。
 门禁为 161/161 unittest、四份 semantic golden、Ruff、36 文件 mypy、compileall 与
 `git diff --check`；未重跑 coverage。
+
+## 14. S3.8 独立复现与 Pareto 可行性审计
+
+固定基线为 `cdea7b9`。审计使用已提交的 40-case development suite、manifest 和候选参数重建四臂矩阵，
+每臂运行 3 次；不调用原有 suite 汇总器，独立计算 deterministic digest、逐 case selected IDs、
+Token/latency 和质量指标。四臂 digest 与 source raw 一致，40/40 selected IDs 一致，raw/summary/manifest
+hash、参数、repeatability、指标算术一致，`retrieval.py` 与 `f1d03cf` 的 SHA-256 均为
+`6e64026504311e3c467f6b34b747eea296bb68104576d8d01104d50dc073d0f8`。
+
+独立复现的 available candidate 指标为：lexical `recall=0.375`、`precision=1.0`、`injection=0`、
+Token `196`；content BM25 `recall=0.7083333333333334`、`precision=0.3469387755102041`、
+`injection=0.6530612244897959`、Token `1080`；structured BM25 `recall=0.7083333333333334`、
+`precision=0.3269230769230769`、`injection=0.6730769230769231`、Token `1140`。独立 latency mean
+分别为 `0.05199954975978471ms`、`0.0685225004417589ms`、`0.11054457572754472ms`；这些是本次
+实际观测，不能当作 Provider/SLA 证据。
+
+Pareto 读取 committed raw `score_components[].score`，枚举每个候选全部唯一 threshold 与 `top_k=1..5`，
+固定相对分数地板、Token budget 和 tie-break；label 只在选择完成后用于离线计算。全局 non-dominated
+points 为 20 个，强制界限为：
+
+```text
+max_recall_when_irrelevant_injection_lte_0.15 = 0.375
+min_irrelevant_injection_when_recall_gte_0.85 = null
+```
+
+当前 score 没有满足 recall `>=0.85` 的点，也没有在 injection `<=0.15` 下超过 recall `0.375` 的点，
+所以本轮没有候选切换、没有修改 retrieval、没有 Provider 运行、没有 Holdout v3，默认 Application/
+headless/IPC Memory 保持关闭。完整证据见
+[`s3-8-memory-retrieval-backend-audit-2026-09-18.md`](./evidence/s3-8-memory-retrieval-backend-audit-2026-09-18.md)。
+
+本轮收口门禁为 164/164 unittest、Ruff、36 文件 mypy、compileall、coverage `79.3%`、wheel/sdist、
+独立 wheel import、calculator/todo smoke 和 Memory cold/warm benchmark，均通过。12-case benchmark
+的 after/before warm model Token 为 `2870/3543`，Memory Context Token 为 `130/803`，retrieval Token
+为 `81/116`；retrieval latency mean 为 `0.06020750151947141/0.04959008341150669ms`，after 增加
+`0.01061741810796472ms`，按实测保留。该数据仍是 scripted/renderer 观测，不是 Provider 结果，摘要见
+[`s3-8-memory-cold-warm-2026-09-18.summary.json`](./evidence/s3-8-memory-cold-warm-2026-09-18.summary.json)。

@@ -15,8 +15,9 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前收口为 161/161 个默认测试通过（包含 S3.7 development suite 的 7 个 contract test 和 candidate
-spike 的 8 个隔离/一致性测试）。Ruff、36 文件 mypy、compileall 与 git diff --check 也通过。
+当前收口为 164/164 个默认测试通过（包含 S3.7 development suite 的 7 个 contract test、candidate
+spike 的 8 个隔离/一致性测试和 S3.8 audit 的 3 个测试）。Ruff、36 文件 mypy、compileall、coverage
+`79.3%` 与 git diff --check 也通过。
 `tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
 
 ## 2. 工作区事实
@@ -195,6 +196,26 @@ development recall 为 `0.375/0.7083/0.7083`，irrelevant injection 为 `0/0.653
 [`s3-7-memory-retrieval-backend-spike-2026-09-18.md`](./evidence/s3-7-memory-retrieval-backend-spike-2026-09-18.md)。
 本轮门禁为 161/161 unittest（四份 semantic golden 不变）、Ruff、36 文件 mypy、compileall 与
 `git diff --check`。
+
+S3.8 以 `cdea7b9` 为固定基线独立重放同一 suite、manifest 和参数矩阵；四臂各 3 次，candidate
+digest、逐 case selected IDs、参数、raw/summary/manifest 一致性和 `retrieval.py`=`f1d03cf` 均通过。
+独立实际 measured recall/injection 为 lexical `0.375/0`、content BM25 `0.7083333333333334/0.6530612244897959`、
+structured BM25 `0.7083333333333334/0.6730769230769231`；Token total 为 `196/1080/1140`，独立
+latency mean 为 `0.05199954975978471/0.0685225004417589/0.11054457572754472ms`。Pareto 仅使用
+committed raw score，枚举全部唯一 threshold 与 `top_k=1..5`，未重调 backend、未运行 Provider、未
+创建 Holdout v3。全局 non-dominated points 为 20 个，两个强制界限为
+`max_recall_when_irrelevant_injection_lte_0.15=0.375` 与
+`min_irrelevant_injection_when_recall_gte_0.85=null`；因此没有证明可行的 recall/injection operating
+point，候选不进入默认入口。完整记录见
+[`s3-8-memory-retrieval-backend-audit-2026-09-18.md`](./evidence/s3-8-memory-retrieval-backend-audit-2026-09-18.md)。
+
+本轮还重跑既有 12-case Memory cold/warm benchmark：after warm model Token `2870`、Context Token
+`130`、retrieval Token `81`，before 为 `3543/803/116`；after retrieval latency mean
+`0.06020750151947141ms` 比 before `0.04959008341150669ms` 高 `0.01061741810796472ms`，未隐藏该回退；
+after/before warm wall latency mean 为 `43.72922716599229ms`/`45.941524498630315ms`。calculator 和
+todo smoke 均完成且源 fixture clean；wheel/sdist 与独立 wheel import 通过。该 benchmark 是
+scripted/renderer 证据，不是 Provider 净收益证据，脱敏汇总见
+[`s3-8-memory-cold-warm-2026-09-18.summary.json`](./evidence/s3-8-memory-cold-warm-2026-09-18.summary.json)。
 
 S3.5 已只用 L1/L2 development set 与自建通用标点 case 修复 lexical term 边界标点问题；内部
 identifier 标点保留，没有新增 alias/literal/末尾词特判。L1/L2 recall、误注入、retrieval/model

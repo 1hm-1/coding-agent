@@ -297,10 +297,12 @@ the compression A/B did not save tokens and remains a small local benchmark.
   Deterministic and opt-in live backends, single-agent sessions, recovery, replay, and small Eval suites.
 - P2-M2 episodic/semantic Memory 的显式 Python composition、有界 lexical retrieval 和 SQLite 审计；
   当前 12-case、L3 18-case 与 L3.5 v2 证据均使用 trusted/observation-only oracle，不代表真实 Provider
-  净收益；L3 与 L3.5 v2 均未通过 relevant-recall 门槛。<br>
+  净收益；L3 与 L3.5 v2 均未通过 relevant-recall 门槛。L3.8 对 development candidate 的独立
+  Pareto 审计也未找到 `recall>=0.85` 且 `irrelevant injection<=0.15` 的 operating point。<br>
   Explicit Python composition, bounded lexical retrieval, and SQLite audit for P2-M2 episodic/semantic
   Memory; the 12-case, L3 18-case, and L3.5 v2 evidence use trusted/observation-only oracles and are
-  not live-Provider net-benefit evidence; L3 and L3.5 v2 did not meet their relevant-recall gates.
+  not live-Provider net-benefit evidence; L3 and L3.5 v2 did not meet their relevant-recall gates, and the
+  L3.8 development Pareto audit found no operating point with recall>=0.85 and irrelevant injection<=0.15.
 - 仅在 capability probe 成功时使用原生 Linux namespace sandbox。<br>
   Native Linux namespace sandbox only when its capability probe succeeds.
 

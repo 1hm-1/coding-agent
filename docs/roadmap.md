@@ -383,6 +383,13 @@ irrelevant injection 为 `0/0.6531/0.6731`；BM25 噪声阻断生产选择。生
 路径均未改变，也没有创建 Holdout v3。收口门禁为 161/161 unittest、Ruff、36 文件 mypy、
 compileall 与 `git diff --check`。
 
+S3.8 已在 `cdea7b9` 上独立复现固定候选矩阵，并从 committed raw score 离线完成全 threshold、
+`top_k=1..5` Pareto 审计。candidate digest、逐 case selected IDs、Token/latency 汇总、raw/summary/
+manifest 一致性以及 `retrieval.py`=`f1d03cf` 均通过；没有调用 Provider 或修改检索代码。全局
+non-dominated points=20，`max_recall_when_irrelevant_injection_lte_0.15=0.375`，
+`min_irrelevant_injection_when_recall_gte_0.85=null`，没有可行 operating point，默认入口/IPC 仍不评估。
+证据见 [`s3-8-memory-retrieval-backend-audit-2026-09-18.md`](./evidence/s3-8-memory-retrieval-backend-audit-2026-09-18.md)。
+
 ## 14. Phase 2 分阶段路线
 
 | 子阶段 | 状态 | 交付物 | 退出门禁 |

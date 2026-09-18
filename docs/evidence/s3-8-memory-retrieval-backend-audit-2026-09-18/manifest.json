@@ -1,0 +1,26 @@
+{
+  "baseline_commit": "cdea7b9",
+  "candidate_digests_match": true,
+  "candidate_names": [
+    "lexical-control",
+    "bm25-content",
+    "structured-bm25",
+    "embedding-hybrid"
+  ],
+  "default_application_memory_enabled": false,
+  "holdout_v3_created": false,
+  "pareto_sha256": "a360bc1920106f35fea17d4be6a9f888ba2af2bc121ba3494448e715d69e8664",
+  "pareto_source": "committed raw score_components; no backend invocation",
+  "production_retrieval_sha256": "6e64026504311e3c467f6b34b747eea296bb68104576d8d01104d50dc073d0f8",
+  "production_retriever_changed": false,
+  "provider_evaluation": false,
+  "raw_result_sha256": "4b9a0c670813b9d7f9428f473b0979e21a0fbaf155d80179f0bbc40d9481f861",
+  "redacted_summary_sha256": "c2af2aa490de03b98efa9478c8687e4a78207f122107c3d1d48246efe50193d5",
+  "report_kind": "memory_retrieval_backend_independent_audit_manifest",
+  "schema_version": 1,
+  "selected_ids_match": true,
+  "source_manifest_sha256": "c6645c38e5d81cf9cd23c5fbb7925b2dc32d864acc98c31c7fe21ecd8d3cbc42",
+  "source_raw_result_sha256": "ed220920bbb8a54c7a38b7e17a3ed7d7ebf10abc1cf4c4feb0baa8ca6f6d342e",
+  "source_redacted_summary_sha256": "eeef3604e12b5505cf03cd75a4278756e2a5246e83d3352c95cd9105b2ee108a",
+  "suite_sha256": "30a2589c6574a179f2fcf29cf18d2f5253ec8ca22c5c0b128bd1eb1ebf4dd488"
+}
