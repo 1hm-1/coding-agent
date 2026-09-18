@@ -179,6 +179,13 @@ informative lexical overlap，10 个在 `0.60` 绝对阈值前失败，没有 ca
 本轮没有修改或重跑 retrieval/runner/Holdout，也没有启用默认 Memory。证据见
 [`s3-6-memory-holdout-v2-zero-recall-2026-09-18.md`](./evidence/s3-6-memory-holdout-v2-zero-recall-2026-09-18.md)。
 
+L3.7 已建立 `examples/memory_retrieval_backend_development.json`：40 个明确标记为
+`development_data` 的 case，覆盖 8 个代码仓库/任务领域和 8 个共享 Memory pool；分类为
+10 zero-overlap、10 low-overlap、8 同主题 hard negative、4 冲突/过时、4 无相关 Memory 和 4 个
+边界 case。每个 query 标注 relevant Memory IDs，并带有可由 fixture 验证的结构化 metadata ground
+truth。v2 20-case 以 source manifest/hash 和 case metadata 的 reference-only 子集保留，正文不复制回
+共享仓库；本项不执行 suite、不改检索算法、不创建 Holdout v3。
+
 S3.5 已只用 L1/L2 development set 与自建通用标点 case 修复 lexical term 边界标点问题；内部
 identifier 标点保留，没有新增 alias/literal/末尾词特判。L1/L2 recall、误注入、retrieval/model
 Token、scope leakage、三任务兼容 arm 与 manifest attribution 均不回退。历史 L3 测试现在只校验

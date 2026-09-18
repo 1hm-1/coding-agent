@@ -373,6 +373,12 @@ runner query、relevance label、metric/harness 与三次失败隔离未发现�
 停止堆 alias；v2 只保留诊断证据并另建 development set，下一算法候选比较 structured metadata/BM25/embedding
 hybrid，并须在查看结果前冻结 v3。本轮未改检索算法、未重跑 v2、未启用默认 Memory。
 
+L3.7 已补充 `examples/memory_retrieval_backend_development.json` 作为 development-only 数据集：40 个
+case、8 个代码仓库/任务领域、8 个共享 pool，包含 zero/low-overlap paraphrase、同主题 hard negative、
+冲突/过时、无相关 Memory 和 scope/revision/stale/injection 边界；每条 query 与每条 Memory record
+均有结构化事实 metadata。v2 的 20-case 通过外部正文的 manifest/hash reference-only 子集保留，未重新暴露
+正文；没有实现检索算法，也没有创建 Holdout v3。
+
 ## 14. Phase 2 分阶段路线
 
 | 子阶段 | 状态 | 交付物 | 退出门禁 |

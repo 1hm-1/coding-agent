@@ -168,3 +168,15 @@ Token budget 和 top-k 都没有参与拒绝。runner 使用完整 task fallback
 比较 structured metadata、BM25 和 embedding hybrid 的质量、Token、latency、index/storage 与隐私
 成本，并在算法冻结前创建新 Holdout v3。v2 不重跑，本轮 retrieval selection 未修改。详见
 [`s3-6-memory-holdout-v2-zero-recall-2026-09-18.md`](./evidence/s3-6-memory-holdout-v2-zero-recall-2026-09-18.md)。
+
+## 12. L3.7 检索后端 Development Suite
+
+新增 `examples/memory_retrieval_backend_development.json`，明确标记为 `development_data`，包含 40
+个实际 case、8 个代码仓库/任务领域和 8 个共享 Memory pool。分类固定为 10 个 zero-overlap
+paraphrase、10 个 low-overlap paraphrase、8 个同主题 hard negative、4 个冲突/过时事实、4 个无相关
+Memory 和 4 个 scope/revision/stale/injection 边界。每条 query 有 `expected_relevant_memory_ids`；
+case 与 Memory record 都提供 `fact_type`、`entities`、`concept_keys`、`repository_component`、
+`validity`、`revision`，并由对应 fixture 文件可验证。metadata 不包含完整答案、工具指令或权限信息。
+
+L3.5 v2 的 20 个 case 以 source manifest/hash 和 case metadata 保留为 reference-only development
+子集，正文继续由用户保管；本 suite 不执行、不修改 `memory/retrieval.py`，也不创建 Holdout v3。

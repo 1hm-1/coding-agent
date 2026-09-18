@@ -140,6 +140,14 @@
   堆 alias，v2 只保留诊断证据、另建 development set，算法变化前冻结 v3；检索算法和默认 Memory 路径均未修改。
   完整逐案证据见
   [`s3-6-memory-holdout-v2-zero-recall-2026-09-18.md`](./evidence/s3-6-memory-holdout-v2-zero-recall-2026-09-18.md)。
+- L3.7 新增 [`memory_retrieval_backend_development.json`](../examples/memory_retrieval_backend_development.json)，明确标记为
+  `development_data`：40 个实际 case、8 个代码仓库/任务领域、8 个共享 Memory pool，分类为
+  10 zero-overlap paraphrase、10 low-overlap paraphrase、8 同主题 hard negative、4 冲突/过时、
+  4 无相关 Memory 和 4 scope/revision/stale/injection 边界。每条 query 有 relevant Memory IDs，
+  case 与 record 都提供 fact_type/entities/concept_keys/repository_component/validity/revision
+  结构化 ground truth；metadata 不携带完整答案、工具指令或权限信息。v2 的 20 个 case 以
+  manifest/hash 引用保留为 reference-only development 子集，正文仍在用户保管位置，不创建 Holdout v3，
+  且本项未修改检索算法。
 - S3.5 算法冻结收口通过 143/143 unittest（含四份 semantic golden）、Ruff、34 文件 mypy、
   compileall 与 git diff --check；L1/L2 Runtime benchmark 的 recall/injection/retrieval/model Token、
   leakage、兼容 arm 和 manifest attribution 均无回退。未运行 coverage，最近一次 78.5% 证据不变。
