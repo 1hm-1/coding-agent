@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import argparse
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import subprocess
@@ -209,11 +210,17 @@ def _run_legacy_compatibility(workspace: Path) -> dict[str, Any]:
     is excluded from the independent-main aggregates.
     """
 
-    from examples.memory_retrieval_holdout import (
-        COMPATIBILITY_CASES,
-        _compatibility_summary,
-        _run_pairs,
+    legacy_path = Path(__file__).with_name("memory_retrieval_holdout.py")
+    specification = importlib.util.spec_from_file_location(
+        "memory_retrieval_holdout_compatibility", legacy_path
     )
+    if specification is None or specification.loader is None:
+        raise HoldoutRunnerError("legacy compatibility source cannot be loaded")
+    legacy = importlib.util.module_from_spec(specification)
+    if specification.name is None:
+        raise HoldoutRunnerError("legacy compatibility source has no module name")
+    sys.modules[specification.name] = legacy
+    specification.loader.exec_module(legacy)
 
     source = workspace / "legacy-source"
     source.mkdir(parents=True, exist_ok=True)
@@ -221,13 +228,13 @@ def _run_legacy_compatibility(workspace: Path) -> dict[str, Any]:
         "5298ba0 compatibility fixture.\n",
         encoding="utf-8",
     )
-    pairs, _outcomes = _run_pairs(
+    pairs, _outcomes = legacy._run_pairs(
         root=workspace / "legacy-runs",
         source=source,
-        cases=COMPATIBILITY_CASES,
+        cases=legacy.COMPATIBILITY_CASES,
         arm_name="compatibility-5298ba0",
     )
-    summary = _compatibility_summary(pairs)
+    summary = legacy._compatibility_summary(pairs)
     warm_success = summary.get("warm_success", {})
     if not isinstance(warm_success, Mapping):
         raise HoldoutRunnerError("legacy compatibility summary has no warm success count")
