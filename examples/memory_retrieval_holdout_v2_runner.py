@@ -367,6 +367,12 @@ def _seed_pool(store: SQLiteMemoryStore, pool: Mapping[str, Any], now: str) -> d
         expires_at = raw.get("expires_at")
         if expires_at is not None:
             expires_at = _as_string(expires_at, f"memory {memory_id} expires_at")
+        if status in {"policy_rejected", "rejected"}:
+            # A frozen negative is an assertion about the candidate input state,
+            # not an active record to be made visible to retrieval.  In particular,
+            # do not weaken MemoryPolicy merely to manufacture the negative.
+            outcomes[memory_id] = SeedOutcome(memory_id, status, seeded=False)
+            continue
         try:
             proposed = service.propose(
                 context=context,
@@ -382,12 +388,7 @@ def _seed_pool(store: SQLiteMemoryStore, pool: Mapping[str, Any], now: str) -> d
                 memory_id=memory_id,
             )
         except MemoryPolicyError:
-            if status not in {"policy_rejected", "rejected"}:
-                raise
-            outcomes[memory_id] = SeedOutcome(memory_id, status, seeded=False)
-            continue
-        if status == "policy_rejected":
-            raise HoldoutRunnerError(f"policy negative was accepted: {memory_id}")
+            raise
         if status == "rejected":
             service.reject(memory_id, context=context, expected_version=proposed.version)
             outcomes[memory_id] = SeedOutcome(memory_id, status, seeded=True)
