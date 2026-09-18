@@ -377,7 +377,11 @@ L3.7 已补充 `examples/memory_retrieval_backend_development.json` 作为 devel
 case、8 个代码仓库/任务领域、8 个共享 pool，包含 zero/low-overlap paraphrase、同主题 hard negative、
 冲突/过时、无相关 Memory 和 scope/revision/stale/injection 边界；每条 query 与每条 Memory record
 均有结构化事实 metadata。v2 的 20-case 通过外部正文的 manifest/hash reference-only 子集保留，未重新暴露
-正文；没有实现检索算法，也没有创建 Holdout v3。
+正文。其离线 candidate spike 已加入 label-free projection、frozen lexical control、content/structured
+BM25 和显式 unavailable embedding adapter。development recall 为 `0.375/0.7083/0.7083`，对应
+irrelevant injection 为 `0/0.6531/0.6731`；BM25 噪声阻断生产选择。生产 retriever、默认 Memory
+路径均未改变，也没有创建 Holdout v3。收口门禁为 161/161 unittest、Ruff、36 文件 mypy、
+compileall 与 `git diff --check`。
 
 ## 14. Phase 2 分阶段路线
 

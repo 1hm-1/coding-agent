@@ -147,7 +147,14 @@
   case 与 record 都提供 fact_type/entities/concept_keys/repository_component/validity/revision
   结构化 ground truth；metadata 不携带完整答案、工具指令或权限信息。v2 的 20 个 case 以
   manifest/hash 引用保留为 reference-only development 子集，正文仍在用户保管位置，不创建 Holdout v3，
-  且本项未修改检索算法。
+  且本项未修改检索算法。S3.7 spike 现以 label-free request projection 比较 frozen lexical、content
+  BM25 和 structured BM25，并为真实 embedding 留显式 unavailable adapter。development recall 为
+  `0.375/0.7083/0.7083`，irrelevant injection 为 `0/0.6531/0.6731`；三次 deterministic digest
+  一致，但 BM25 误注入阻断生产选择。`retrieval.py` 与 `f1d03cf` 文件 hash 一致，默认 Memory 路径
+  保持关闭。完整证据见
+  [`s3-7-memory-retrieval-backend-spike-2026-09-18.md`](./evidence/s3-7-memory-retrieval-backend-spike-2026-09-18.md)。
+- S3.7 收口通过 161/161 unittest（四份 semantic golden 不变）、Ruff、36 文件 mypy、compileall
+  与 `git diff --check`；未运行 coverage，最近一次 78.5% 证据不变。
 - S3.5 算法冻结收口通过 143/143 unittest（含四份 semantic golden）、Ruff、34 文件 mypy、
   compileall 与 git diff --check；L1/L2 Runtime benchmark 的 recall/injection/retrieval/model Token、
   leakage、兼容 arm 和 manifest attribution 均无回退。未运行 coverage，最近一次 78.5% 证据不变。
@@ -248,7 +255,7 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后为 139 个，L3.5 manifest 后为 142 个，S3.5 算法冻结后为 143 个，加入 Holdout v2 runner 后当前开发树为 146 个，在当前
+- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后为 139 个，L3.5 manifest 后为 142 个，S3.5 算法冻结后为 143 个，加入 Holdout v2 runner 后为 146 个，S3.7 development suite 后为 153 个，candidate spike 后当前开发树为 161 个，在当前
   capability probe 成功的环境中全部通过。`tests/live_provider_smoke.py` 为凭据门控的显式测试，
   不计入默认 discovery；能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。

@@ -15,8 +15,8 @@
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-本轮收口为 143/143 个默认测试通过（`6c47a7d` 的 142 个无回退，新增 1 个通用边界标点
-development test）。Ruff、34 文件 mypy、compileall 与 git diff --check 也通过。
+当前收口为 161/161 个默认测试通过（包含 S3.7 development suite 的 7 个 contract test 和 candidate
+spike 的 8 个隔离/一致性测试）。Ruff、36 文件 mypy、compileall 与 git diff --check 也通过。
 `tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
 
 ## 2. 工作区事实
@@ -184,7 +184,17 @@ L3.7 已建立 `examples/memory_retrieval_backend_development.json`：40 个明�
 10 zero-overlap、10 low-overlap、8 同主题 hard negative、4 冲突/过时、4 无相关 Memory 和 4 个
 边界 case。每个 query 标注 relevant Memory IDs，并带有可由 fixture 验证的结构化 metadata ground
 truth。v2 20-case 以 source manifest/hash 和 case metadata 的 reference-only 子集保留，正文不复制回
-共享仓库；本项不执行 suite、不改检索算法、不创建 Holdout v3。
+共享仓库；不创建 Holdout v3。
+
+S3.7 candidate spike 已运行 frozen lexical、content BM25、structured BM25 三臂；embedding 在没有真实
+adapter 时明确 unavailable，不做 hash/random/ground-truth 模拟。backend request 在读取 evaluator label
+前完成投影，自动测试证明 relevant IDs/category/oracle/expected/ground-truth metadata 不可见。40-case
+development recall 为 `0.375/0.7083/0.7083`，irrelevant injection 为 `0/0.6531/0.6731`；BM25
+增益伴随不可接受误注入，因此没有选择生产后端。`retrieval.py` 保持 `f1d03cf`，默认 Memory 关闭，
+完整 evidence 见
+[`s3-7-memory-retrieval-backend-spike-2026-09-18.md`](./evidence/s3-7-memory-retrieval-backend-spike-2026-09-18.md)。
+本轮门禁为 161/161 unittest（四份 semantic golden 不变）、Ruff、36 文件 mypy、compileall 与
+`git diff --check`。
 
 S3.5 已只用 L1/L2 development set 与自建通用标点 case 修复 lexical term 边界标点问题；内部
 identifier 标点保留，没有新增 alias/literal/末尾词特判。L1/L2 recall、误注入、retrieval/model

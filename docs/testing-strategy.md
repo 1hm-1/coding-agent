@@ -178,6 +178,12 @@ tool attempts/executions/invalid calls/repeated failure batches。M5 评测与�
 使用相同的 8-call 上限、test/file/changed-path oracle；真实提示 A/B 使用相同 case/repetition
 keys，同时明确 Provider 请求是独立随机样本，不把它描述为确定性 paired trial。
 
+S3.7 retrieval candidate tests 强制 evaluator 在 backend invocation 前投影掉 relevant IDs、category、
+oracle、expected selection 和 ground-truth metadata；四臂共享 eligibility/top-k/Token/tie-break/metrics。
+测试还覆盖 scope/revision/status 一致性、structured metadata instruction/permission 拒绝、三次
+deterministic digest、无真实 embedding 时 unavailable、raw/summary/manifest 反算及 production
+`retrieval.py` 与 `f1d03cf` 的固定 SHA-256。
+
 ## 10. Smoke 验收
 
 提交里程碑前至少运行：

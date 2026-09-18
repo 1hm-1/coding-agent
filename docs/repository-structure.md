@@ -65,6 +65,7 @@ coding-agent/
 │   ├── todo_cli_scripted_run.json    # 失败后修复的确定性脚本
 │   ├── memory_cold_warm_benchmark.py # P2-M2 冻结 cold/warm + retrieval/Context A/B
 │   ├── memory_retrieval_holdout.py   # L3 非同源 18-case 冻结 holdout + 5298ba0 兼容 arm
+│   ├── memory_retrieval_backend_spike.py # S3.7 显式离线 candidate comparison CLI
 │   ├── mini_repos/                    # M5 多仓库评测 fixture（含三个 search benchmark 仓库）
 │   └── eval_scripts/                  # M5 scripted backend/compression 输入
 ├── src/coding_agent/
@@ -231,9 +232,12 @@ src/coding_agent/memory/
 ├── service.py                 # proposal/approval/lifecycle + journal provenance
 ├── sqlite.py                  # schema v4 Memory authority
 ├── retrieval.py              # bounded weighted lexical/metadata retrieval
+├── retrieval_backends.py     # S3.7 离线 candidate contracts/backends；不接生产路径
+├── retrieval_spike.py        # label-free evaluator、统一 funnel/metrics/evidence writer
 └── evaluation.py             # cold/warm quality metrics
 
 tests/test_memory.py           # lifecycle/rollback/leakage/context/eval contract
+tests/test_memory_retrieval_backends.py # S3.7 label isolation/eligibility/repeatability contract
 ```
 
 Memory 没有 CLI 管理面或公共 Runtime IPC 字段；这些交互入口留到对应产品里程碑。

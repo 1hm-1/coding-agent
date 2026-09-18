@@ -75,6 +75,7 @@ tests → public modules above
 | `memory/policy.py`、`memory/service.py` | write scope/provenance/content policy 与显式 proposal/approval/stale/delete lifecycle | 绕过 approval、工具执行、Context 拼装 |
 | `memory/sqlite.py` | record/lifecycle/retrieval audit 的 SQLite v4 authority 与原子 optimistic transition | 检索排序、权限决策、公共 IPC |
 | `memory/retrieval.py` | deterministic weighted lexical/metadata selection、threshold/scope priority/top-k/Token/revision/expiry filtering | embedding/vector、隐式写入 |
+| `memory/retrieval_backends.py`、`memory/retrieval_spike.py` | S3.7 显式离线 candidate contract、label-free projection、BM25/structured/embedding adapter 比较与 evidence bundle | production selection、ground-truth 输入、默认 Runtime wiring |
 | `memory/evaluation.py` | cold/warm paired task success、recall、injection、Token/latency 聚合 | 把 recall 当 task success、生产收益推断 |
 | `export.py` | 已提交 DB events 到 JSONL 的原子 projection 导出 | 状态决策、replay 规则 |
 | `compression.py` | 摘要模型调用边界、event lineage、schema/required-fact 验证、stale 判定 | 权限判定、Runtime 状态迁移、覆盖原始事件 |

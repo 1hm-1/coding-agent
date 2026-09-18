@@ -180,3 +180,19 @@ case 与 Memory record 都提供 `fact_type`、`entities`、`concept_keys`、`re
 
 L3.5 v2 的 20 个 case 以 source manifest/hash 和 case metadata 保留为 reference-only development
 子集，正文继续由用户保管；本 suite 不执行、不修改 `memory/retrieval.py`，也不创建 Holdout v3。
+
+## 13. S3.7 候选检索后端 Spike
+
+新增显式离线 candidate request/retriever/evaluator：在 backend 调用前移除 relevant IDs、category、
+oracle、expected selection、ground-truth relevance、`metadata_ground_truth` 和 verification。候选只能
+看到生产可用 query/scope/revision、确定性 query facets 和已通过 SQLite authority 的 record
+content/trusted metadata。structured metadata 固定 schema、拒绝 instruction/permission，并且不能
+改变 scope/status/revision eligibility。
+
+40-case development 结果为：frozen lexical recall/injection `0.375/0`；content BM25
+`0.7083/0.6531`；structured BM25 `0.7083/0.6731`。真实 embedding adapter 未配置，明确报告
+unavailable；三次选择/score digest 一致。结果只证明比较 harness 可用并暴露 BM25 recall/noise
+trade-off，不选择生产后端，不修改 `retrieval.py`，不创建 Holdout v3。详见
+[`s3-7-memory-retrieval-backend-spike-2026-09-18.md`](./evidence/s3-7-memory-retrieval-backend-spike-2026-09-18.md)。
+门禁为 161/161 unittest、四份 semantic golden、Ruff、36 文件 mypy、compileall 与
+`git diff --check`；未重跑 coverage。

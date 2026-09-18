@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "report_kind": "memory_retrieval_backend_spike_summary",
+  "suite_id": "memory-retrieval-backend-development-v1",
+  "suite_sha256": "30a2589c6574a179f2fcf29cf18d2f5253ec8ca22c5c0b128bd1eb1ebf4dd488",
+  "data_classification": "development_data",
+  "production_retriever_changed": false,
+  "candidates": [
+    {
+      "backend": "lexical-control",
+      "availability": "available",
+      "parameters": {
+        "implementation": "LexicalMemoryRetriever@f1d03cf",
+        "minimum_relevance": 0.6,
+        "relative_score_floor": 0.72,
+        "common_weight": 0.1,
+        "final_informative_boost": 1.5
+      },
+      "repeatability": {
+        "runs": 3,
+        "deterministic": true,
+        "digests": [
+          "54c2ea7bd130c9e748a79ed0430d20dd2925b86cd2eb9a18fab4a22764cef3cd",
+          "54c2ea7bd130c9e748a79ed0430d20dd2925b86cd2eb9a18fab4a22764cef3cd",
+          "54c2ea7bd130c9e748a79ed0430d20dd2925b86cd2eb9a18fab4a22764cef3cd"
+        ]
+      },
+      "metrics": {
+        "case_count": 40,
+        "relevant_recall": 0.375,
+        "precision": 1.0,
+        "irrelevant_injection": 0.0,
+        "zero_overlap": {
+          "case_count": 10,
+          "relevant_recall": 0.0
+        },
+        "hard_negative": {
+          "case_count": 8,
+          "cases_with_selection": 0,
+          "selected_count": 0
+        },
+        "retrieval_tokens": {
+          "total": 196,
+          "mean": 4.9
+        },
+        "latency_ms": {
+          "mean": 0.051230049211881123,
+          "p50": 0.049901995225809515,
+          "p95": 0.06732500332873315
+        }
+      },
+      "unavailable_reason": null,
+      "case_selection_digest": "629ec1672b5f777d47f95f3584f8022c7ef96fcb18ae6b3d9da64fddc7a33fae"
+    },
+    {
+      "backend": "bm25-content",
+      "availability": "available",
+      "parameters": {
+        "k1": 1.2,
+        "b": 0.75,
+        "minimum_score": 0.1,
+        "relative_score_floor": 0.35,
+        "indexed_fields": [
+          "content"
+        ]
+      },
+      "repeatability": {
+        "runs": 3,
+        "deterministic": true,
+        "digests": [
+          "83c7d73e8a9d3bb019b56639a63235d528312723d9a13d3940389f5c85614efd",
+          "83c7d73e8a9d3bb019b56639a63235d528312723d9a13d3940389f5c85614efd",
+          "83c7d73e8a9d3bb019b56639a63235d528312723d9a13d3940389f5c85614efd"
+        ]
+      },
+      "metrics": {
+        "case_count": 40,
+        "relevant_recall": 0.7083333333333334,
+        "precision": 0.3469387755102041,
+        "irrelevant_injection": 0.6530612244897959,
+        "zero_overlap": {
+          "case_count": 10,
+          "relevant_recall": 0.3
+        },
+        "hard_negative": {
+          "case_count": 8,
+          "cases_with_selection": 7,
+          "selected_count": 15
+        },
+        "retrieval_tokens": {
+          "total": 1080,
+          "mean": 27.0
+        },
+        "latency_ms": {
+          "mean": 0.059809122467413545,
+          "p50": 0.059465994127094746,
+          "p95": 0.0807719916338101
+        }
+      },
+      "unavailable_reason": null,
+      "case_selection_digest": "a5639eaaf99ce364b72e936349edf428d09d1fda982aed4dcd7940d5c28021af"
+    },
+    {
+      "backend": "structured-bm25",
+      "availability": "available",
+      "parameters": {
+        "k1": 1.2,
+        "b": 0.75,
+        "minimum_score": 0.1,
+        "relative_score_floor": 0.35,
+        "indexed_fields": [
+          "content",
+          "fact_type",
+          "entities",
+          "concept_keys",
+          "repository_component"
+        ],
+        "metadata_weight": 0.5,
+        "query_metadata_source": "deterministic_query_text_and_repository_components",
+        "authority_fields": []
+      },
+      "repeatability": {
+        "runs": 3,
+        "deterministic": true,
+        "digests": [
+          "7ae81384e495d26910a2eb53fe33cf892684fbe5caa233323c2f2bda6078141b",
+          "7ae81384e495d26910a2eb53fe33cf892684fbe5caa233323c2f2bda6078141b",
+          "7ae81384e495d26910a2eb53fe33cf892684fbe5caa233323c2f2bda6078141b"
+        ]
+      },
+      "metrics": {
+        "case_count": 40,
+        "relevant_recall": 0.7083333333333334,
+        "precision": 0.3269230769230769,
+        "irrelevant_injection": 0.6730769230769231,
+        "zero_overlap": {
+          "case_count": 10,
+          "relevant_recall": 0.3
+        },
+        "hard_negative": {
+          "case_count": 8,
+          "cases_with_selection": 8,
+          "selected_count": 15
+        },
+        "retrieval_tokens": {
+          "total": 1140,
+          "mean": 28.5
+        },
+        "latency_ms": {
+          "mean": 0.10940347528958227,
+          "p50": 0.10169799497816712,
+          "p95": 0.13976299669593573
+        }
+      },
+      "unavailable_reason": null,
+      "case_selection_digest": "f66706f4609766c84c05d3000f8b913dd36dcf92613fc6de5142b0c239b512a5"
+    },
+    {
+      "backend": "embedding-hybrid",
+      "availability": "unavailable",
+      "parameters": {
+        "k1": 1.2,
+        "b": 0.75,
+        "minimum_score": 0.1,
+        "relative_score_floor": 0.35,
+        "indexed_fields": [
+          "content"
+        ],
+        "embedding_weight": 0.65,
+        "adapter": null,
+        "fallback_simulation": false
+      },
+      "repeatability": {
+        "runs": 3,
+        "deterministic": true,
+        "digests": [
+          "533b457f3aaf70845918cf80a8e2abddecd1337f7eef3c03c5a0a4402db764c0",
+          "533b457f3aaf70845918cf80a8e2abddecd1337f7eef3c03c5a0a4402db764c0",
+          "533b457f3aaf70845918cf80a8e2abddecd1337f7eef3c03c5a0a4402db764c0"
+        ]
+      },
+      "metrics": null,
+      "unavailable_reason": "no_real_embedding_adapter_configured",
+      "case_selection_digest": "914e31617be7027fc0a06f4ab54345baa1fbc1e9ff585d4ae841a9fa1459a739"
+    }
+  ]
+}
