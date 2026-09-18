@@ -1,6 +1,6 @@
 # 新窗口开发交接
 
-> 交接基线：2026-09-18，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC、P2-M2 Layered Memory 及 S3 paired live harness 已完成；P2-M3 尚未激活。
+> 交接基线：2026-09-18，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC 已完成；P2-M2.3 completed with no qualifying backend，P2-M3 尚未激活。
 > 固定版本：`v0.1.0`；安装、测试、离线 Eval、Demo 和支持边界见 `docs/releases/v0.1.0.md`。
 
 ## 1. 开始前必须做
@@ -135,10 +135,9 @@ irrelevant injection 1/3→0，retrieval Token 116→81，Memory context/额外�
 [`docs/evidence/memory-cold-warm-2026-09-16.summary.json`](./evidence/memory-cold-warm-2026-09-16.summary.json)。
 本次未运行真实 Provider，因此不宣称真实模型净收益。Memory 的交付形态明确为显式 Python
 composition：默认 `AgentApplication` 与 `run-headless` 不创建、查询或注入 Memory，也不把它加入
-Runtime IPC capability；只有未来扩大真实任务/Provider A/B 并证明净收益后，才重新评估默认入口或
-IPC 集成。S2 复核结论为有条件通过，并修复了 before 自定义 renderer 下 record 级 Context Token
-归因与实际注入不一致；冻结 A/B 总 Token 和 task 指标不变。仍需真实 Provider A/B，P2-M3
-仍未激活。
+Runtime IPC capability。S2 当时的复核结论为有条件通过，并修复了 before 自定义 renderer 下
+record 级 Context Token 归因与实际注入不一致；冻结 A/B 总 Token 和 task 指标不变。该条件路径已被
+S3.8 最终路线收口取代：本阶段不执行真实 Provider L4，默认 enablement 已拒绝，P2-M3 仍未激活。
 
 L3 非同源 holdout 已在 `8ebc800` 基线上完成并冻结：18 个 case 使用三个共享 pool（6/7/5），
 manifest SHA-256 为 `3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f7e2ed1`，并加入
@@ -154,8 +153,8 @@ manifest SHA-256 为 `3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f
 S3 已新增 `evaluate-memory-live` paired harness：同一 Provider/model/task/budget/source revision/oracle，
 pair 内交替 off/on；Memory 必须来自先前 committed Runtime completion event。脱敏报告包含 Token、
 retrieval、latency、工具/失败、first relevant action 与安全不变量，并保留完整 Memory manifest，拒绝
-Secret、绝对路径和 reasoning content。当前仅完成离线 contract test，真实 Provider A/B 仍待凭据
-门控运行；Memory 继续显式 opt-in，P2-M3 未激活。
+Secret、绝对路径和 reasoning content。当前仅完成离线 contract test；S3.8 最终收口决定不执行该
+真实 Provider L4。Memory 继续显式 opt-in，P2-M3 未激活。
 
 L3.5 Holdout v2 已在 S3.5 算法冻结后完成唯一一次有效执行：正文仍由用户在仓库外保管，共享仓库
 保留 metadata 和 S3.6 脱敏 term-level 诊断，不保存原始 prose；manifest 位于
@@ -217,14 +216,28 @@ todo smoke 均完成且源 fixture clean；wheel/sdist 与独立 wheel import �
 scripted/renderer 证据，不是 Provider 净收益证据，脱敏汇总见
 [`s3-8-memory-cold-warm-2026-09-18.summary.json`](./evidence/s3-8-memory-cold-warm-2026-09-18.summary.json)。
 
+最终路线收口复核 `8b8915f` 的 raw/summary/Pareto/manifest hash 和指标分子分母一致。Pareto
+artifact 的扫描算术正确，但其 20 个全局非支配点包含 production lexical 的硬重叠门控无法选择的
+零分项，且缺少空选择点；保守重算仍保持安全 injection 下最大 recall `0.375`，且不存在
+recall `>=0.85` 的候选。正式状态为：lexical-control rejected、bm25-content rejected、
+structured-bm25 rejected、embedding-hybrid not evaluated/unavailable、production candidate none、
+Memory default enablement rejected。P2-M2.3 已 **completed with no qualifying backend**；冻结 artifact
+不修改。详见
+[`s3-8-retrieval-route-closure-2026-09-18.md`](./evidence/s3-8-retrieval-route-closure-2026-09-18.md)。
+
 S3.5 已只用 L1/L2 development set 与自建通用标点 case 修复 lexical term 边界标点问题；内部
 identifier 标点保留，没有新增 alias/literal/末尾词特判。L1/L2 recall、误注入、retrieval/model
 Token、scope leakage、三任务兼容 arm 与 manifest attribution 均不回退。历史 L3 测试现在只校验
 冻结 evidence/hash，不再用候选算法重跑已知 Holdout；Holdout v2 已按 manifest 记录一次首轮结果，不能
 修改 case、算法或重跑以替换该结果。
 
-下一候选是 P2-M3 Profiles/Skill Runtime，但尚未激活。继续保持 M4.1/M4.2 OS isolation，不加入
-shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。
+后续仅有两条设计路线：A 冻结 Memory，等待用户明确激活 P2-M3 Profiles/Skill Runtime；B 另行
+提出 P2-M2.4 Semantic/Embedding Retrieval，并先评估 provider/model/version、网络/Secret/隐私、
+cache identity 与升级重建、delete/stale/scope 传播、vector index authority、timeout/offline/
+fail-closed、成本与 Token/success，以及新的 development set 和全新 blind Holdout。本次没有选择或
+实施任一路线；当前 lexical 只供显式实验，默认 Application/headless/IPC Memory 关闭，不创建
+Holdout v3、不执行 L4、不将 deterministic benchmark 外推为 Provider 结果。继续保持 M4.1/M4.2
+OS isolation，不加入 shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。
 
 ## 5. 完成一次开发后的交接动作
 
@@ -236,7 +249,7 @@ shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector b
   新假设时重复消耗 Provider 配额；
 - L3 holdout 的 18-case 首轮结果已冻结并保存脱敏摘要；它在 `8ebc800` 基线上未达到 recall/injection
   门槛，不能用改题或真实 Provider 未运行来填补该证据缺口。L3.5 v2 首轮也未达到 recall 门槛，且
-  observation-only runner 不是 Provider A/B；真实 Provider A/B 仍需独立完成；
+  observation-only runner 不是 Provider A/B；P2-M2.3 已以无合格后端收口，不执行真实 Provider L4；
 - 在最终说明中给出测试数量、golden 状态、迁移版本、覆盖率/类型检查/CI 状态和仍未实现项；当前 schema 为 v4，M4.1/M4.2 native backend 不等同于 OCI container；
 - 不使用“生产可用”“完全安全”等超出证据的表述。
 

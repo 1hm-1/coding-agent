@@ -1,8 +1,8 @@
 # 开发路线图
 
-> 路线图状态基线：2026-09-16
+> 路线图状态基线：2026-09-18
 > 当前完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Release/Evidence Hardening
-> 当前实施项：**Phase 2 P2-M2 Layered Memory 与检索优化已完成；P2-M3 尚未激活**
+> 当前实施项：**Phase 2 P2-M2.3 completed with no qualifying backend；P2-M3 尚未激活**
 > 当前证据补充：简历 benchmark 的 scripted 校准及 `deepseek-flash` live 25-run/压缩
 > 10-pair 已完成；live 稳定性为 24/25，压缩没有节省 Token，见 `docs/resume-benchmark.md`。
 
@@ -344,9 +344,10 @@ before cold/warm mean 为 `45.834164333731074ms`/`47.033260334198225ms`，after 
 `45.834164333731074ms`/`45.95990916732262ms`；检索 mean 为
 `0.056614917411934584ms`→`0.06059541647118749ms`，增加 `0.003980499059252907ms`，该
 回退保留在 evidence。S2 复核修复了 before 自定义 renderer 下 record 级 Token 归因不一致，
-并给出有条件通过：Memory 继续显式 opt-in；L3 非同源 holdout 后续已补齐但未达到 recall/injection
-门槛，仍待真实 Provider A/B 后才考虑默认启用。Memory 只通过显式 Python composition 提供，默认 Application/headless
-与 Runtime IPC 不启用；本次未运行真实 Provider，也没有真实 Provider 净收益结论。P2-M3 尚未激活。
+并给出当时的有条件通过：Memory 继续显式 opt-in；L3 非同源 holdout 后续已补齐但未达到 recall/
+injection 门槛。该条件路径后来被 S3.8 最终拒绝默认 enablement 的结论取代。Memory 只通过显式
+Python composition 提供，默认 Application/headless 与 Runtime IPC 不启用；没有真实 Provider 净收益
+结论。P2-M3 尚未激活。
 
 随后完成 L3 非同源冻结 holdout，基线固定为 `8ebc800`，manifest SHA-256 为
 `3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f7e2ed1`。18 个新 case 分布在三个
@@ -390,13 +391,28 @@ non-dominated points=20，`max_recall_when_irrelevant_injection_lte_0.15=0.375`�
 `min_irrelevant_injection_when_recall_gte_0.85=null`，没有可行 operating point，默认入口/IPC 仍不评估。
 证据见 [`s3-8-memory-retrieval-backend-audit-2026-09-18.md`](./evidence/s3-8-memory-retrieval-backend-audit-2026-09-18.md)。
 
+最终路线审查确认 `8b8915f` 的指标分子分母及 raw/summary/Pareto/manifest hash 一致。Pareto
+artifact 的算术与声明扫描一致，但 20 个全局非支配点包含 production lexical 硬重叠门控不可达的
+零分项，且未加入空选择点；保守重算不改变两个决定性界限。P2-M2.3 因而标记为
+**completed with no qualifying backend**：lexical-control、bm25-content、structured-bm25 均 rejected，
+embedding-hybrid not evaluated/unavailable，production candidate 为 none，Memory default enablement
+rejected。当前 lexical 仅供显式实验；不创建 Holdout v3、不执行 L4，也不把 deterministic benchmark
+外推为真实 Provider 结果。正式记录见
+[`s3-8-retrieval-route-closure-2026-09-18.md`](./evidence/s3-8-retrieval-route-closure-2026-09-18.md)。
+
+后续只保留两个设计级路线，均未由本次收口激活：路线 A 冻结 Memory 并在用户明确激活后进入
+P2-M3 Profiles/Skills；路线 B 另立 P2-M2.4 Semantic/Embedding Retrieval，至少先设计 provider/model/
+version、网络/Secret/隐私、cache identity 与升级重建、delete/stale/scope 传播、vector index authority、
+timeout/offline/fail-closed、单次检索成本与 Token/success，并使用新 development set 与全新 blind
+Holdout。路线 B 不得作为当前 P2-M2.3 的补丁隐式进入默认 Runtime。
+
 ## 14. Phase 2 分阶段路线
 
 | 子阶段 | 状态 | 交付物 | 退出门禁 |
 |---|---|---|---|
 | P2-D0 架构与契约设计 | 已完成 | `v2-product-architecture.md`、Runtime IPC v1 文档和 JSON Schema、兼容规则 | producer/consumer 权责、版本、取消、错误、secret/workspace 规则无歧义；明确尚未实现 |
 | P2-M1 Headless Runtime IPC | 已完成（2026-09-16） | `protocol-info`、`run-headless`、stdout JSONL、cooperative cancellation | v1 schema、golden、退出码、v0.1/v0.2 adapter contract vectors 全部通过 |
-| P2-M2 分层记忆 | 已完成（2026-09-17，S3.5 泛化修复后算法冻结） | episodic/semantic memory ports、SQLite authority、确定性加权检索、边界标点规范化、紧凑 Context 与显式 live paired harness；默认仍关闭 | L1/L2 A/B 无回退；L3.5 v2 首轮已记录但 lexical recall 未达门槛，observation-only 不是 Provider 证据，真实 Provider A/B 待完成 |
+| P2-M2 分层记忆 | P2-M2.3 completed with no qualifying backend（2026-09-18） | episodic/semantic memory ports、SQLite authority、冻结 lexical 实验路径、紧凑 Context 与显式 live paired harness；默认仍关闭 | lexical/content BM25/structured BM25 均 rejected；embedding 未评估/不可用；无生产候选，不创建 v3、不执行 L4 |
 | P2-M3 Profiles 与 Skill Runtime | 未启动 | immutable profile、Skill registry/loader/selector、能力策略 | skill provenance/permission/budget/replay 测试通过，不绕过 ToolHarness |
 | P2-M4 MCP 能力网关 | 未启动 | MCP adapter 经 CapabilityGateway 映射到 Harness | discovery、schema、secret、timeout、审计和恶意 server 负例通过 |
 | P2-M5 可恢复多 Agent 编排 | 未启动 | coordinator FSM、角色 mailboxes、hierarchical budgets、single-writer workspace | crash/replay/cancel/冲突/预算和相对单 Agent eval 通过 |

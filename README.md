@@ -19,13 +19,15 @@ executable evidence instead of presenting a large tool list around a chat interf
 
 当前基线完成 M1—M4、Release/Evidence Hardening、由真实 Eval 失败覆盖批准的 M5.1
 只读搜索，以及 Phase 2 P2-M1 Headless Runtime IPC 与 P2-M2 Layered Memory。
-P2-M2 的 Memory 仅通过显式 Python composition 使用；默认 `AgentApplication`/headless
-配置不会自动查询或注入 Memory。P2-M3 Skill/Profile、MCP、多 Agent 仍未激活。
+P2-M2 的 Memory lifecycle 已实现，但 P2-M2.3 没有合格检索后端；当前 lexical 仅供显式实验性
+Python composition。默认 `AgentApplication`/headless/IPC 不查询或注入 Memory。P2-M3
+Skill/Profile、MCP、多 Agent 仍未激活。
 
 The current baseline completes M1—M4, Release/Evidence Hardening, M5.1 read-only search approved
 by live Eval failure coverage, and Phase 2 P2-M1 Headless Runtime IPC plus P2-M2 Layered Memory.
-P2-M2 Memory is available only through explicit Python composition; the default
-`AgentApplication`/headless configuration does not automatically query or inject Memory.
+P2-M2 implements the Memory lifecycle, but P2-M2.3 produced no qualifying retrieval backend; the
+current lexical retriever is for explicit experimental Python composition only. Default
+`AgentApplication`, headless, and IPC paths do not query or inject Memory.
 P2-M3 Skills/Profiles, MCP, and multi-agent orchestration remain inactive.
 
 ## 验证结果 / Evidence at a glance
@@ -246,7 +248,7 @@ retrieval、P50/P95 latency、工具/失败与安全不变量，但不保存 rea
 | Tools | `read_file`, `search_files`, `edit_file`, `restricted_test`, `run_command` |
 | Persistence | SQLite schema v4；原子 Runtime journal + Memory record/lifecycle/retrieval audit / SQLite v4, atomic Runtime journal and Memory audit |
 | Context | 分区预算、hard retention、原子 tool-call 组裁剪、带 lineage 的压缩 / Section budgets, hard retention, atomic tool-call groups, lineage-aware compression |
-| Memory | 受控 episodic/semantic proposal/approval/stale/delete；有界 lexical retrieval；scope/revision/provenance 隔离；仅显式 Python composition / Governed lifecycle, bounded lexical retrieval, scoped provenance; explicit Python composition only |
+| Memory | 受控 episodic/semantic lifecycle 与审计；scope/revision/provenance 隔离；无生产检索候选，lexical 仅供显式实验 / Governed lifecycle and audit with scoped provenance; no production retrieval candidate, lexical experimental only |
 | Sandbox | Rootless Linux namespaces、只读 rootfs、默认禁网、资源限制、进程清理 / Rootless namespaces, read-only rootfs, no network, limits, cleanup |
 | Evaluation | 版本化 suite、可信 oracle、正常任务/负控制分离、context 与 Memory paired A/B、Provider override / Versioned suites, trusted oracles, context and Memory paired A/B, Provider override |
 | Models | Deterministic ScriptedBackend, OpenAI-compatible, Anthropic, retry/backoff, explicit fallback |
@@ -295,14 +297,14 @@ the compression A/B did not save tokens and remains a small local benchmark.
   CPython 3.10/3.11 and Linux/POSIX process semantics.
 - 确定性和显式启用的真实模型后端、单 Agent session、恢复、回放与小型 Eval。<br>
   Deterministic and opt-in live backends, single-agent sessions, recovery, replay, and small Eval suites.
-- P2-M2 episodic/semantic Memory 的显式 Python composition、有界 lexical retrieval 和 SQLite 审计；
+- P2-M2 episodic/semantic Memory lifecycle、SQLite 审计，以及仅供显式实验的 lexical composition；
   当前 12-case、L3 18-case 与 L3.5 v2 证据均使用 trusted/observation-only oracle，不代表真实 Provider
-  净收益；L3 与 L3.5 v2 均未通过 relevant-recall 门槛。L3.8 对 development candidate 的独立
+  净收益；L3 与 L3.5 v2 均未通过 relevant-recall 门槛。S3.8 对 development candidate 的独立
   Pareto 审计也未找到 `recall>=0.85` 且 `irrelevant injection<=0.15` 的 operating point。<br>
-  Explicit Python composition, bounded lexical retrieval, and SQLite audit for P2-M2 episodic/semantic
+  Governed lifecycle, SQLite audit, and explicit experimental lexical composition for P2-M2 episodic/semantic
   Memory; the 12-case, L3 18-case, and L3.5 v2 evidence use trusted/observation-only oracles and are
   not live-Provider net-benefit evidence; L3 and L3.5 v2 did not meet their relevant-recall gates, and the
-  L3.8 development Pareto audit found no operating point with recall>=0.85 and irrelevant injection<=0.15.
+  S3.8 development Pareto audit found no operating point with recall>=0.85 and irrelevant injection<=0.15.
 - 仅在 capability probe 成功时使用原生 Linux namespace sandbox。<br>
   Native Linux namespace sandbox only when its capability probe succeeds.
 
@@ -312,10 +314,12 @@ the compression A/B did not save tokens and remains a small local benchmark.
   Production-grade strong multi-tenant isolation, OCI image lifecycle, SBOM, or vulnerability scanning.
 - 通用 Shell、任意 executable、默认网络或模型驱动依赖安装。<br>
   General Shell, arbitrary executables, default network, or model-directed dependency installation.
-- Git inspection 工具、多 Agent、UI、RAG、Skills、procedural memory，以及默认入口的自动 Memory
-  注入；Memory CLI/UI 也未实现。默认 `AgentApplication`、`run-headless` 和 Runtime IPC 不创建、
+- Git inspection 工具、多 Agent、UI、RAG、Skills、procedural memory、semantic/embedding/vector
+  retrieval，以及默认入口的自动 Memory 注入；Memory CLI/UI 也未实现。默认 `AgentApplication`、
+  `run-headless` 和 Runtime IPC 不创建、
   查询或注入 Memory。<br>
-  Git inspection tools, multi-agent orchestration, UI, RAG, Skills, procedural memory, automatic
+  Git inspection tools, multi-agent orchestration, UI, RAG, Skills, procedural memory,
+  semantic/embedding/vector retrieval, automatic
   Memory injection in default entrypoints, or a Memory CLI/UI. The default `AgentApplication`,
   `run-headless`, and Runtime IPC do not create, query, or inject Memory.
 - Windows/macOS 等价 sandbox 保证或通用生产成功率声明。<br>

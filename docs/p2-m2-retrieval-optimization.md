@@ -232,3 +232,33 @@ headless/IPC Memory 保持关闭。完整证据见
 为 `81/116`；retrieval latency mean 为 `0.06020750151947141/0.04959008341150669ms`，after 增加
 `0.01061741810796472ms`，按实测保留。该数据仍是 scripted/renderer 观测，不是 Provider 结果，摘要见
 [`s3-8-memory-cold-warm-2026-09-18.summary.json`](./evidence/s3-8-memory-cold-warm-2026-09-18.summary.json)。
+
+## 15. S3.8 检索路线最终收口
+
+对 `8b8915f` 的独立复核确认 raw、summary、Pareto 与 manifest hash 一致；固定参数结果可由
+`9/24`、`17/24`、`17/24` relevant hits 和 `9/49/52` selected counts 重建。Pareto artifact 的算术
+符合其声明扫描，但全局 20 个非支配点包含 production lexical `no_lexical_overlap` 硬门控不可达的
+零分项，且没有空选择点。因此该数量只描述探索 score sweep；按生产门控保守重算后，injection
+`<=0.15` 时最大 recall 仍为 `0.375`，且仍没有 recall `>=0.85` 的候选，决策不变。
+
+正式结论：
+
+```text
+lexical-control: rejected
+bm25-content: rejected
+structured-bm25: rejected
+embedding-hybrid: not evaluated/unavailable
+production candidate: none
+Memory default enablement: rejected
+```
+
+P2-M2.3 状态为 **completed with no qualifying backend**。当前 lexical retriever 只供显式实验性
+Python composition；默认 Application/headless/IPC Memory 关闭。不创建 Holdout v3，不执行 L4，
+不把 deterministic benchmark 成功外推为真实 Provider 任务成功或净收益。
+
+设计级后续路线 A 是冻结 Memory 并在明确激活后进入 P2-M3 Profiles/Skills；路线 B 是另立
+P2-M2.4 Semantic/Embedding Retrieval。路线 B 至少需评估 embedding provider/model/version、网络/
+Secret/隐私、cache identity 与模型升级重建、delete/stale/scope 传播、vector index authority、
+timeout/offline/fail-closed、每次检索成本与 Token/success，并在看结果前冻结新的 development set
+和全新 blind Holdout。本轮不实施任一路线。完整审查见
+[`s3-8-retrieval-route-closure-2026-09-18.md`](./evidence/s3-8-retrieval-route-closure-2026-09-18.md)。

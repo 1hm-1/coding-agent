@@ -1,8 +1,8 @@
 # 当前实现状态
 
-> 基线日期：2026-09-17
+> 基线日期：2026-09-18
 > 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Phase 2 P2-M1/P2-M2
-> 当前阶段：Phase 2 P2-M2 Layered Memory 与冻结 benchmark 检索优化已完成；P2-M3 尚未激活
+> 当前阶段：Phase 2 P2-M2.3 已 **completed with no qualifying backend**；P2-M3 尚未激活
 > 当前附加门禁：Release/Evidence Hardening 已完成（文档、指标、Git/CI、coverage、类型检查、评测证据）。
 > 固定发布基线：`v0.1.0`（复现命令与边界见 [`releases/v0.1.0.md`](./releases/v0.1.0.md)）。
 > Phase 2 P2-D0 设计与 P2-M1 producer 已完成。除“尚未实现”章节外，本文只描述已经存在并通过测试的行为。
@@ -92,9 +92,9 @@
   wheel/sdist、独立 wheel Memory import、calculator/todo smoke 与多任务 benchmark；本轮未运行
   真实 Provider。
 - S2 复核发现并修复了 benchmark before renderer 下 record 级 Context Token 归因不一致；总 section
-  Token、模型输入和既有 A/B 数字未受影响。复核结论为有条件通过：Memory 继续显式 opt-in，L3
-  非同源 holdout 已完成但未达到 recall/injection 门槛；真实 Provider A/B 后才评估默认启用，
-  P2-M3 仍未激活。
+  Token、模型输入和既有 A/B 数字未受影响。当时复核结论为有条件通过：Memory 继续显式 opt-in，
+  L3 非同源 holdout 已完成但未达到 recall/injection 门槛；该条件路径后来被 S3.8 最终拒绝默认
+  enablement 的结论取代，P2-M3 仍未激活。
 - L3 非同源 holdout 已固定在提交 `8ebc800` 的实现上，manifest SHA-256 为
   `3d4bffb06a19ee219534d4649d93e983e7ecd14cebfd90b84ae64feb1f7e2ed1`。18 个 case 分布为
   6 个 semantic relevant、4 个 hard negative、2 个 shared-pool competition、2 个 scope isolation、
@@ -179,6 +179,15 @@
   `43.72922716599229ms`，before 为 `45.941524498630315ms`。该 benchmark 仍是 scripted/renderer
   观测，不是真实 Provider 收益证据；脱敏汇总见
   [`s3-8-memory-cold-warm-2026-09-18.summary.json`](./evidence/s3-8-memory-cold-warm-2026-09-18.summary.json)。
+- S3.8 最终路线收口复核 `8b8915f` 的 raw/summary/Pareto/manifest hash 与指标分子分母一致。
+  Pareto artifact 的算术与声明扫描一致；其 20 个全局非支配点包含生产 lexical 硬
+  `no_lexical_overlap` 门控下不可达的零分项，且未加入空选择点，因此该数量只描述探索扫描，
+  不代表精确的生产可达配置。保守重算仍得到 injection `<=0.15` 时最大 recall `0.375`，且没有
+  recall `>=0.85` 的候选，故不影响拒绝结论。正式结论为 lexical-control、bm25-content、
+  structured-bm25 均 rejected，embedding-hybrid not evaluated/unavailable，production candidate
+  为 none，Memory default enablement rejected；P2-M2.3 状态为 **completed with no qualifying backend**。
+  冻结证据未改动，详见
+  [`s3-8-retrieval-route-closure-2026-09-18.md`](./evidence/s3-8-retrieval-route-closure-2026-09-18.md)。
 - S3.5 算法冻结收口通过 143/143 unittest（含四份 semantic golden）、Ruff、34 文件 mypy、
   compileall 与 git diff --check；L1/L2 Runtime benchmark 的 recall/injection/retrieval/model Token、
   leakage、兼容 arm 和 manifest attribution 均无回退。未运行 coverage，最近一次 78.5% 证据不变。
@@ -449,9 +458,11 @@ PYTHONPATH=src .venv/bin/python examples/memory_retrieval_holdout.py
   producer authority；四类 document 均由自动测试验证，vectors 随 wheel/sdist 发布；
 - 初始多 Agent 拓扑计划采用 Manager/Explorer/Implementer/Reviewer，并坚持单写者 workspace 规则；
 - P2-M1—P2-M6 必须逐阶段实现和验收，不允许一次性把设计目录全部脚手架化；
-- P2-M1 与 P2-M2 已冻结；P2-M2 Memory 仍只通过显式 Python composition 提供，默认
+- P2-M1 与 P2-M2 已冻结；P2-M2.3 已 completed with no qualifying backend。当前 lexical retriever
+  仅供显式实验性 Python composition，默认
   `AgentApplication`、`run-headless` 与 Runtime IPC 不创建、查询或注入 Memory；P2-M3
-  Profiles/Skill Runtime 是下一候选，但尚未激活。
+  Profiles/Skill Runtime 是路线 A 的下一候选，但尚未激活。路线 B 只能作为独立 P2-M2.4
+  Semantic/Embedding Retrieval 里程碑另行提出；当前未创建 Holdout v3，也不执行 L4。
 
 ## 5. 已知限制与技术债
 
@@ -497,7 +508,9 @@ PYTHONPATH=src .venv/bin/python examples/memory_retrieval_holdout.py
     `0.06059541647118749ms`，该回退已保留。随后新增的 L3 非同源 18-case holdout 固定在
     `8ebc800`，首轮 relevant recall=`0.6666666666666666`、irrelevant injection=
     `0.16666666666666666`，未达到门槛；该失败结果已冻结，不能据此宣称真实模型净收益或启用
-    默认 Application/headless Memory。
+    默认 Application/headless Memory。S3.8 最终审查进一步拒绝 lexical-control、bm25-content 与
+    structured-bm25，embedding-hybrid 未评估且不可用，没有生产候选；确定性 benchmark 结果不得
+    外推为真实 Provider 成功率或净收益。
 
 ## 6. 不允许虚构的项目事实
 
