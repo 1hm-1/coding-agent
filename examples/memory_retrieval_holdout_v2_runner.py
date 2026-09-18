@@ -201,6 +201,50 @@ def _compatibility_cases(raw: Mapping[str, Any]) -> tuple[list[CaseSpec], dict[s
     return cases, {pool_id: pool}
 
 
+def _run_legacy_compatibility(workspace: Path) -> dict[str, Any]:
+    """Run only the frozen 5298ba0 compatibility control.
+
+    The v2 body intentionally stores metadata for this arm rather than copying the
+    historical task text.  The source module is already frozen in the repository and
+    is excluded from the independent-main aggregates.
+    """
+
+    from examples.memory_retrieval_holdout import (
+        COMPATIBILITY_CASES,
+        _compatibility_summary,
+        _run_pairs,
+    )
+
+    source = workspace / "legacy-source"
+    source.mkdir(parents=True, exist_ok=True)
+    (source / "README.md").write_text(
+        "5298ba0 compatibility fixture.\n",
+        encoding="utf-8",
+    )
+    pairs, _outcomes = _run_pairs(
+        root=workspace / "legacy-runs",
+        source=source,
+        cases=COMPATIBILITY_CASES,
+        arm_name="compatibility-5298ba0",
+    )
+    summary = _compatibility_summary(pairs)
+    warm_success = summary.get("warm_success", {})
+    if not isinstance(warm_success, Mapping):
+        raise HoldoutRunnerError("legacy compatibility summary has no warm success count")
+    return {
+        "source_commit": "5298ba0",
+        "executor_kind": "legacy_scripted_compatibility",
+        "provider_evaluation": False,
+        "case_count": len(pairs),
+        "valid_case_count": len(pairs),
+        "invalid_case_count": 0,
+        "warm_success_count": int(warm_success.get("successful", 0)),
+        "warm_success_total": int(warm_success.get("total", 0)),
+        "manifest_tokens_match_renderer": bool(summary.get("manifest_tokens_match_renderer")),
+        "cases": summary.get("cases", []),
+    }
+
+
 def load_suite(path: str | Path) -> dict[str, Any]:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
@@ -857,20 +901,72 @@ def run_suite(
     pools.update(compat_pools)
     now = DEFAULT_NOW
     with tempfile.TemporaryDirectory(prefix="memory-holdout-v2-") as temporary:
+        temporary_root = Path(temporary)
         results = _run_case_group(
             cases,
             repositories,
             {case_pool: pools[case_pool] for case_pool in {case.memory_pool_id for case in cases}},
-            Path(temporary),
+            temporary_root,
             now,
         )
         compat_results = _run_case_group(
             compat_cases,
             repositories,
             {case_pool: pools[case_pool] for case_pool in {case.memory_pool_id for case in compat_cases}},
-            Path(temporary) / "compatibility",
+            temporary_root / "compatibility",
             now,
         ) if compat_cases else []
+        compatibility_metadata = raw.get("compatibility_arm")
+        compatibility_report: dict[str, Any]
+        if compat_cases:
+            compatibility_report = {
+                "source_commit": "v2-inline",
+                "executor_kind": "observation_only",
+                "provider_evaluation": False,
+                "case_count": len(compat_results),
+                "valid_case_count": sum(bool(item.get("valid")) for item in compat_results),
+                "invalid_case_count": sum(not bool(item.get("valid")) for item in compat_results),
+                "warm_success_count": sum(bool(item.get("task_success")) for item in compat_results),
+                "warm_success_total": len(compat_results),
+                "manifest_tokens_match_renderer": all(
+                    bool(item.get("manifest_token_matches_renderer")) for item in compat_results
+                ),
+                "cases": compat_results,
+            }
+        elif isinstance(compatibility_metadata, Mapping) and int(compatibility_metadata.get("count", 0)) == 3:
+            if str(compatibility_metadata.get("source_commit")) != "5298ba0":
+                raise HoldoutRunnerError("unsupported compatibility source commit")
+            try:
+                compatibility_report = _run_legacy_compatibility(temporary_root / "compatibility")
+            except (OSError, ValueError, KeyError, TypeError, HoldoutRunnerError) as exc:
+                # Main case observations are already in memory and must remain
+                # reportable if the historical control has an infrastructure fault.
+                compatibility_report = {
+                    "source_commit": "5298ba0",
+                    "executor_kind": "legacy_scripted_compatibility",
+                    "provider_evaluation": False,
+                    "case_count": 3,
+                    "valid_case_count": 0,
+                    "invalid_case_count": 3,
+                    "warm_success_count": 0,
+                    "warm_success_total": 3,
+                    "manifest_tokens_match_renderer": False,
+                    "cases": [],
+                    "failure_reason": f"{type(exc).__name__}: {exc}",
+                }
+        else:
+            compatibility_report = {
+                "source_commit": "none",
+                "executor_kind": "not_present",
+                "provider_evaluation": False,
+                "case_count": 0,
+                "valid_case_count": 0,
+                "invalid_case_count": 0,
+                "warm_success_count": 0,
+                "warm_success_total": 0,
+                "manifest_tokens_match_renderer": True,
+                "cases": [],
+            }
     timestamp = execution_time or datetime.now(timezone.utc).isoformat()
     valid_count = sum(bool(item.get("valid")) for item in results)
     report: dict[str, Any] = {
@@ -888,12 +984,7 @@ def run_suite(
         "invalid_case_count": len(results) - valid_count,
         "metrics": _aggregate(results),
         "cases": results,
-        "compatibility_arm": {
-            "case_count": len(compat_results),
-            "valid_case_count": sum(bool(item.get("valid")) for item in compat_results),
-            "cases": compat_results,
-            "warm_success_count": sum(bool(item.get("task_success")) for item in compat_results),
-        },
+        "compatibility_arm": compatibility_report,
         "safety": {
             "algorithm_source": "coding_agent.memory.retrieval.LexicalMemoryRetriever",
             "context_renderer_source": "coding_agent.context.BudgetedContextBuilder",

@@ -76,5 +76,9 @@
         ]
       }
     }
-  ]
+  ],
+  "compatibility_arm": {
+    "source_commit": "5298ba0",
+    "count": 3
+  }
 }

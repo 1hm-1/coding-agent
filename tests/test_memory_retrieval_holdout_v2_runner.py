@@ -41,6 +41,8 @@ class MemoryRetrievalHoldoutV2RunnerTest(unittest.TestCase):
         self.assertEqual(report["metrics"]["manifest_token_mismatch_count"], 0)
         self.assertFalse(report["provider_evaluation"])
         self.assertFalse(report["safety"]["answer_key_used"])
+        self.assertEqual(report["compatibility_arm"]["warm_success_count"], 3)
+        self.assertEqual(report["compatibility_arm"]["warm_success_total"], 3)
 
     def test_result_bundle_hashes_raw_and_redacted_outputs(self) -> None:
         suite_sha = sha256_file(DEVELOPMENT_SUITE)
