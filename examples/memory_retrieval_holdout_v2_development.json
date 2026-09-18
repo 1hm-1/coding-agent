@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "holdout_id": "synthetic-memory-retrieval-v2-development",
+  "repositories": {
+    "dev-ledger": {
+      "revision": "dev-revision-1",
+      "files": {
+        "ledger.py": "def checksum_slot():\n    return 'pending'\n",
+        "tests/test_ledger.py": "import unittest\n\nclass LedgerTest(unittest.TestCase):\n    def test_fixture_is_present(self):\n        self.assertTrue(True)\n\nif __name__ == '__main__':\n    unittest.main()\n"
+      }
+    }
+  },
+  "memory_pools": {
+    "dev-shared-pool": {
+      "records": [
+        {
+          "memory_id": "dev-checksum-memory",
+          "scope": "repository",
+          "scope_id": "dev-ledger",
+          "repository_revision": "dev-revision-1",
+          "kind": "semantic",
+          "content": "The ledger stores its digest in checksum_slot.",
+          "status": "active"
+        },
+        {
+          "memory_id": "dev-stale-memory",
+          "scope": "repository",
+          "scope_id": "dev-ledger",
+          "repository_revision": "dev-revision-1",
+          "kind": "semantic",
+          "content": "The retired ledger used checksum_cache.",
+          "status": "stale"
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "case_id": "dev-related",
+      "repository_id": "dev-ledger",
+      "memory_pool_id": "dev-shared-pool",
+      "category": "paraphrase",
+      "task": "Where does the ledger keep its digest?",
+      "query_scope": {
+        "repository_id": "dev-ledger",
+        "revision": "dev-revision-1"
+      },
+      "expected_relevant_memory_ids": ["dev-checksum-memory"],
+      "excluded_memory_ids": ["dev-stale-memory"],
+      "oracle": {
+        "type": "test_and_file",
+        "checks": [
+          {"kind": "file_contains", "path": "ledger.py", "text": "checksum_slot"},
+          {"kind": "command_result", "profile": "python_unittest", "expected_exit_code": 0},
+          {"kind": "tool_observation", "expected_tool_calls": []}
+        ]
+      }
+    },
+    {
+      "case_id": "dev-no-memory",
+      "repository_id": "dev-ledger",
+      "memory_pool_id": "dev-shared-pool",
+      "category": "no_memory",
+      "task": "Which constellation controls the harbor tide?",
+      "query_scope": {
+        "repository_id": "dev-ledger",
+        "revision": "dev-revision-1"
+      },
+      "expected_relevant_memory_ids": [],
+      "excluded_memory_ids": ["dev-checksum-memory", "dev-stale-memory"],
+      "oracle": {
+        "type": "file_behavior",
+        "checks": [
+          {"kind": "file_absent", "path": "harbor.py"},
+          {"kind": "behavior_delta", "expected": "none"}
+        ]
+      }
+    }
+  ]
+}
