@@ -1,9 +1,14 @@
 # Phase 2 Implementation Plan
 
-> 状态：P2-M1 与 P2-M2 已完成；P2-M3 尚未激活。
+> 状态：P2-M1 与 P2-M2 已完成；本文后续产品顺序已被 Coding Agent V1 roadmap supersede。
 > 激活日期：2026-09-15
 > 当前开发版本：`0.2.0.dev0`；`v0.1.0` 仍是固定发布基线。
-> 当前没有活跃实现范围；P2-M1/P2-M2 已冻结，下一候选为 P2-M3，但必须等待用户明确激活。
+> 当前没有活跃实现范围；P2-M1/P2-M2 已冻结。新 authority 是
+> [`target-architecture-snapshot.md`](./target-architecture-snapshot.md) 与
+> [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。旧 CR-R1、
+> Memory-first/Core Snapshot 默认路径和 P2-M3-first 顺序均不得从本文激活。
+> 追加记录：用户要求尝试优化 Memory 的离线实验已完成，范围与证据见
+> [`p2-m2-retrieval-optimization.md`](./p2-m2-retrieval-optimization.md)。不改变上述生产冻结边界。
 
 ## 1. 产品目标与实施顺序
 
@@ -13,15 +18,16 @@
 ```text
 P2-M1 Runtime IPC 稳定边界
   → P2-M2 分层 Memory
-  → P2-M3 Agent Profiles 与 Skill Runtime
-  → P2-M4 MCP Capability Gateway
-  → P2-M5 可恢复多 Agent
-  → P2-M6 Terminal 产品与发布证据
+  → [historical sequence superseded]
 ```
 
 Memory 是首个产品能力里程碑。P2-M1 先固定 Runtime 的公共进程边界，使后续 Memory、Skill、
 MCP 和多 Agent 的内部演进都能由同一 producer contract 回归保护。不得跳过 P2-M1 直接让产品层
 读取私有 SQLite、trajectory 或 Runtime Python 类型。
+
+P2-M2 已证明 governance lifecycle；它作为 optional subsystem 资产保留。M2-lite 只要求显式
+UserPreference，Core Snapshot 与 generic auto top-k 默认 OFF，Memory 不进入 V1 critical path。
+产品层从 M0–M7 的新顺序见当前 roadmap；本文剩余章节只证明 P2-M1 已完成范围。
 
 ## 2. P2-M1 范围（已完成）
 
@@ -41,7 +47,8 @@ consumer。P2-M2 已在独立实施文档中完成；其 Memory 只通过显式 
 ## 3. 不变量
 
 1. `AgentRuntime` 继续是不知道 IPC 的单任务内核；IPC 只通过 application use case 组合它。
-2. Runtime 的副作用仍全部经过 ToolHarness，source repository 仍不作为写入目标。
+2. Runtime 的副作用仍全部经过 ToolHarness；在新 product workspace milestone 激活前，当前
+   headless/one-shot source repository 仍不作为写入目标。
 3. SQLite 仍是恢复 authority；stdout event 只是脱敏投影。
 4. Provider-specific request 格式只留在 adapter。
 5. `v0.1.0` 不得被描述为实现 IPC；开发实现使用 `0.2.0.dev0`。

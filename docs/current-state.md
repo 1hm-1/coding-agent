@@ -1,8 +1,25 @@
 # 当前实现状态
 
-> 基线日期：2026-09-18
+> 基线日期：2026-09-21
 > 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Phase 2 P2-M1/P2-M2
-> 当前阶段：Phase 2 P2-M2.3 已 **completed with no qualifying backend**；P2-M3 尚未激活
+> 当前阶段：Phase 2 P2-M2.3 已 **completed with no qualifying Dynamic Recall backend**；
+> P2-R1 原默认 serving 假设已被 M2-lite Memory ADR 取代；Memory 实施仍未激活；P2-M3 顺延
+> Coding Agent V1 横向产品架构已冻结；当前 authority 为最终 ADR 集、
+> [`target-architecture-snapshot.md`](./target-architecture-snapshot.md) 和
+> [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。
+> **Product-Layer M0 Architecture Freeze + Characterization 已获 owner Accepted 并完成；不要与
+> 已完成的历史 Runtime M0 混淆。M1–M7 仍未激活，当前无 active 产品实施 milestone；
+> M1 必须等待正式 execution contract 发布与激活。** 当前 Session、copied workspace、Schema v4、
+> Runtime IPC、Memory wiring 和所有未来 target product behavior 均未因激活记录而改变。
+> V1 开发能力与验收范围已冻结在
+> [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)，但这只是未来 M4/M7
+> acceptance contract，不表示其中的 direct-tree、Git、delete、完整 Python workflow 或 interactive
+> responsiveness 已实现。P2-R1 不再是下一候选；M1 只能在正式 execution contract 发布并明确激活后实施。
+> M0 报告与证据见 [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)：
+> M0 证据收口后的测试总数为 183：182 pass、1 个 M3-owned expected failure；14-run 完整 scripted baseline 与
+> 25-run stability baseline 均无 infrastructure failure。未运行 live Provider，未改生产代码或 Schema。
+> 用户追加的离线 Memory 优化实验已完成：cascade 在 development 上 recall 9/24→10/24，
+> injection 仍为 0；仅为实验候选，生产冻结结论不变。见 [实验记录](./evidence/memory-coverage-experiment-2026-09-18.md)。
 > 当前附加门禁：Release/Evidence Hardening 已完成（文档、指标、Git/CI、coverage、类型检查、评测证据）。
 > 固定发布基线：`v0.1.0`（复现命令与边界见 [`releases/v0.1.0.md`](./releases/v0.1.0.md)）。
 > Phase 2 P2-D0 设计与 P2-M1 producer 已完成。除“尚未实现”章节外，本文只描述已经存在并通过测试的行为。
@@ -38,6 +55,16 @@
   calculator/todo smoke。
 
 ### Layered Memory（P2-M2 已完成）
+
+- 2026-09-18 根据用户“尝试优化 memory”的追加要求，新增显式 `contrastive-coverage` 与
+  `lexical-coverage-cascade` 离线候选。只在 spike CLI 的 `--include-contrastive` 下评测；
+  原四臂默认矩阵不变。cascade 保留 lexical 的排序/预算决策，只在没有相关候选时使用
+  信息词覆盖与竞争证据拒绝；无新增 alias、metadata ground truth、缓存或网络。
+- 同一 40-case development 三次重复：lexical/coverage/cascade recall 为 `9/24、9/24、10/24`，
+  injection 均为 0，retrieval Token 为 `196、198、220`；cascade mean latency
+  `0.13699ms` 高于 lexical `0.05118ms`。零重叠组仍无召回，未达到 0.85 门槛，不能外推真实任务
+  收益或覆盖 S3.8 冻结结论。169/169 unittest、四份 golden、Ruff、36 文件 mypy、compileall
+  通过；本次未重测 coverage/build/CI。SQLite v4、默认 Memory 关闭与未激活里程碑均不变。
 
 - Working memory 继续由 session/messages/context 管理；新增的长期层只包含 episodic 与 semantic
   memory，scope 为 session/repository/user。Procedural memory 仍属于未来 P2-M3 Skill。
@@ -192,6 +219,23 @@
   compileall 与 git diff --check；L1/L2 Runtime benchmark 的 recall/injection/retrieval/model Token、
   leakage、兼容 arm 和 manifest attribution 均无回退。未运行 coverage，最近一次 78.5% 证据不变。
 
+### Memory 产品定位：M2-lite（设计已批准，尚未实现）
+
+- P2-M2 已实现的是可靠的 Memory governance/control plane；provenance、scope、revision、
+  supersede、tombstone、audit 和 SQLite authority 继续保留。
+- P2-M2.3 的拒绝结论只覆盖已评估的 lexical/BM25 **Dynamic Recall** 候选；既有失败与负例证据继续
+  保留，但 Memory 产品范围现已独立收敛为 M2-lite。
+- Memory 不属于核心 Coding Agent 必需路径。V1 只要求用户明确“记住/以后默认”时可形成 governed、
+  scoped active UserPreference；普通偏好、Agent inference、Tool observation 与 Conversation summary
+  均不自动写入长期 Memory。
+- 默认 Core Snapshot 与 generic auto top-k 均为 OFF；Memory 没有 required-envelope Token reservation。
+  History Search 的产品优先级高于自动长期提炼，但尚未实现。
+- 当前 `AgentApplication`/headless/IPC 默认不接入 Memory 既是代码事实，也符合新的默认产品边界，
+  不再视为必须通过 Core Snapshot 修复的产品缺口。
+- 完整 authority、write/read、invalidation 与 supersession 决策见
+  [`decisions/memory-product-positioning.md`](./decisions/memory-product-positioning.md)。旧 P2-R1 文档仅在
+  governance/control-plane 部分继续有效。
+
 ### Model
 
 - 提供 `ScriptedBackend`、OpenAI-compatible 和 Anthropic adapter，并可用 `FallbackBackend` 组合。
@@ -288,7 +332,7 @@
 - 四份 semantic golden：成功、测试失败后恢复、权限拒绝、Runtime failure。
 - `todo_cli` 展示一次 `false → true` 的测试恢复轨迹。
 - Harness 对测试超时和 handler 未预期异常有测试。
-- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后为 139 个，L3.5 manifest 后为 142 个，S3.5 算法冻结后为 143 个，加入 Holdout v2 runner 后为 146 个，S3.7 development suite 后为 153 个，candidate spike 后为 161 个，S3.8 audit 后当前开发树为 164 个，在当前
+- 固定 `v0.1.0` 有 93 个默认测试；P2-M1 后为 111 个，P2-M2 冻结基线为 134 个，检索优化后为 136 个，加入 L3 holdout contract test 后为 137 个，S3 live paired harness 后为 139 个，L3.5 manifest 后为 142 个，S3.5 算法冻结后为 143 个，加入 Holdout v2 runner 后为 146 个，S3.7 development suite 后为 153 个，candidate spike 后为 161 个，S3.8 audit 后为 164 个，追加离线 coverage/cascade 实验后的 M0 前开发树为 169 个，在当时
   capability probe 成功的环境中全部通过。`tests/live_provider_smoke.py` 为凭据门控的显式测试，
   不计入默认 discovery；能力受限 runner 会对 7 个 native-only case 显式 skip。
 - SQLite M2.1 测试覆盖 migration 幂等/未来版本拒绝、snapshot round-trip、原子 mutation、乐观冲突、提交前回滚和 DB→JSONL 重建。
@@ -447,22 +491,41 @@ PYTHONPATH=src .venv/bin/python examples/memory_retrieval_holdout.py
   托管 CI 历史或生产成功率。
 - 多 Agent、终端交互层、Skill/MCP、procedural memory、向量检索或 RAG；这些能力已有 Phase 2
   设计但代码未实现；episodic/semantic memory 已由 P2-M2 实现；
+- M2-lite 尚未实现显式 UserPreference 产品 UX；Core Snapshot、产品默认 safe-auto read、自动
+  ProjectExperience/DecisionMemory 与 Dynamic Recall 均已延期。History Search 也尚未实现；现有
+  lexical retriever 只供显式实验，不能充当这些能力已经存在的证据；
 - Agent Platform consumer adapter；本仓库只交付 producer contract、Schema、golden 与可复用
   vectors。`v0.1.0` 不支持 IPC；P2-M1 实现只存在于 `0.2.0.dev0` 开发树。
+- V1 capability matrix 级别的完整交付与验收尚未完成，包括 real-tree create/edit/delete、read-only
+  Git inspection、unittest/pytest、Ruff、mypy、pure-Python/package build、完整 permission UX、
+  controlled undo 和 interactive responsiveness。现有 `python_unittest`、`python_project` 与 trusted
+  profile 能力仍是有效 legacy 实现事实，但不能等同于完整 V1 capability/support matrix。
 
 ### Phase 2 当前边界
 
-- [`v2-product-architecture.md`](./v2-product-architecture.md) 固定未来模块边界：当前 `AgentRuntime` 保持单任务执行内核，其上再增加产品层、协调器、记忆、Skill 和能力网关；
+- [`v2-product-architecture.md`](./v2-product-architecture.md) 记录历史 Phase 2 规划及仍可复用的 Runtime
+  边界；它不再固定当前 V1 产品顺序或覆盖 accepted ADR。当前 `AgentRuntime` 仍是单任务执行内核；
 - [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md) 固定 Platform 只能通过版本化 headless IPC 使用 Runtime，不能读取内部 SQLite 或私有 trajectory；
 - `protocol/v1/*.schema.json` 是 request、capabilities、event envelope 和 terminal result 的
   producer authority；四类 document 均由自动测试验证，vectors 随 wheel/sdist 发布；
-- 初始多 Agent 拓扑计划采用 Manager/Explorer/Implementer/Reviewer，并坚持单写者 workspace 规则；
-- P2-M1—P2-M6 必须逐阶段实现和验收，不允许一次性把设计目录全部脚手架化；
-- P2-M1 与 P2-M2 已冻结；P2-M2.3 已 completed with no qualifying backend。当前 lexical retriever
-  仅供显式实验性 Python composition，默认
-  `AgentApplication`、`run-headless` 与 Runtime IPC 不创建、查询或注入 Memory；P2-M3
-  Profiles/Skill Runtime 是路线 A 的下一候选，但尚未激活。路线 B 只能作为独立 P2-M2.4
-  Semantic/Embedding Retrieval 里程碑另行提出；当前未创建 Holdout v3，也不执行 L4。
+- 历史 Phase 2 曾规划 Manager/Explorer/Implementer/Reviewer 多 Agent 拓扑；它不是当前 V1 产品
+  authority，也未激活。多 Agent 继续延期；单写者、ToolHarness 和恢复不变量仍保留；
+- 历史 P2-M1—P2-M6 顺序只解释已完成证据和延期能力，不是当前激活顺序。当前 authority 是 V1
+  M0–M7 DAG，其中 M6 Memory 为 optional branch；仍禁止一次性脚手架化未激活阶段；
+- P2-M1 与 P2-M2 已冻结；P2-M2.3 已 completed with no qualifying Dynamic Recall backend。
+  当前 lexical retriever 仅供显式实验性 Python composition，默认 `AgentApplication`、
+  `run-headless` 与 Runtime IPC 不创建、查询或注入 Memory。M2-lite 仅保留显式 UserPreference 的
+  future product space，尚未激活；P2-M3 顺延。Semantic/Embedding Retrieval 若继续，只能作为
+  Dynamic Recall 的独立 research/optional capability，不阻塞核心 Coding Agent 或 History Search；
+  当前未创建 Holdout v3，也不执行 L4。
+- 产品主干现已冻结为 `RepositoryIdentity → ProjectScope → WorkspaceBinding` 与
+  `Conversation → Turn → RuntimeExecution → ModelRequest*`。本地 interactive 默认绑定真实 working
+  tree；managed worktree 用于显式隔离、并行或高风险场景。旧
+  [`conversation-runtime-refactor-plan.md`](./conversation-runtime-refactor-plan.md) 已 superseded。
+  当前代码仍是 `run_task()` 创建单任务 Session、每个 Session 创建 copied workspace 的 one-shot
+  模型；不得把 target architecture 描述为已经实现。
+- 新产品层增量路线为 M0–M7；Memory M2-lite 的 M6 是 optional branch，不阻塞 Memory-off 核心
+  workflow。路线见 [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。
 
 ## 5. 已知限制与技术债
 
@@ -511,6 +574,14 @@ PYTHONPATH=src .venv/bin/python examples/memory_retrieval_holdout.py
     默认 Application/headless Memory。S3.8 最终审查进一步拒绝 lexical-control、bm25-content 与
     structured-bm25，embedding-hybrid 未评估且不可用，没有生产候选；确定性 benchmark 结果不得
     外推为真实 Provider 成功率或净收益。
+18. Runtime/backend 当前为同步调用，interactive input/control responsiveness 尚未实现。当前 evaluator
+    只在 `MODEL_CALL_SUCCEEDED` 上记录 model latency，provider usage 缺失可能映射为 0，历史
+    `permission_violations` 统计 denial；这些是 M0 必须版本化的测量限制，不能把 0 重解释为 measured
+    zero，或把 denial 重解释为已执行的越权副作用。
+19. Product-Layer M0 已证明 uncertain provider retry 在 context 改变后保留 request ID、将 attempt
+    增至 2，但重建并覆盖 `request_json`；它不能证明远端第一次调用是否执行或计费。缺陷归 M3，
+    M0 未修复。完整请求摘要、事件与 committed-response 正控制见
+    [`evidence/v1-m0/uncertain-retry-v1.json`](./evidence/v1-m0/uncertain-retry-v1.json)。
 
 ## 6. 不允许虚构的项目事实
 

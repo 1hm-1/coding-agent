@@ -1,6 +1,15 @@
 # Coding Agent Phase 2 Product Architecture
 
-> 文档状态：已批准设计；P2-M1 producer 与 P2-M2 Layered Memory 已完成，P2-M3 尚未激活。
+> 文档状态：已批准设计；P2-M1 producer 与 P2-M2 Memory control plane 已完成；
+> P2-R1 原产品定义部分假设已被 M2-lite Memory ADR 取代，实施仍未激活，P2-M3 顺延。
+> Memory 定位说明：[`decisions/memory-product-positioning.md`](./decisions/memory-product-positioning.md)
+> 将 Memory 限定为 optional supporting subsystem。本文后文关于默认 Core Snapshot、safe automatic
+> reads 或通用自动提炼的描述属于已 superseded 的历史设计，不能作为默认产品或实施要求。
+> 产品层目标说明：旧 [`conversation-runtime-refactor-plan.md`](./conversation-runtime-refactor-plan.md)
+> 已被最终 ADR 集取代。当前目标以 [`target-architecture-snapshot.md`](./target-architecture-snapshot.md)
+> 和 [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md) 为准。
+> 本文已完成的 P2-M1/P2-M2 部分仍是实现证据；LocalSessionController、默认 Core Snapshot、
+> multi-agent-first 或 terminal-last 的旧后续顺序不再构成 V1 目标。当前运行行为仍未改变。
 > 固定发布基线：`v0.1.0`；当前开发版本为 `0.2.0.dev0`，事实仍以 [`current-state.md`](./current-state.md) 为准。
 > 实施约束：任何子阶段开始前仍需单独激活、补充验收测试并更新交接文档。
 
@@ -137,8 +146,11 @@ src/coding_agent/
 │   ├── base.py                      # MemoryStore/Selector/Writer protocols
 │   ├── domain.py                    # MemoryRecord、scope、provenance、state
 │   ├── sqlite.py                    # 本地 authority implementation
-│   ├── retrieval.py                 # bounded deterministic retrieval
-│   └── policy.py                    # proposal/validation/approval/stale
+│   ├── retrieval.py                 # Dynamic Recall seam
+│   ├── snapshot.py                  # Core Snapshot materialized view compiler（P2-R1）
+│   ├── serving.py                   # serving profile、预算与 Context manifest（P2-R1）
+│   ├── history.py                   # bounded History Search service（P2-R1）
+│   └── policy.py                    # proposal/risk/revision/approval/stale
 ├── skills/
 │   ├── domain.py                    # SkillManifest 与 version identity
 │   ├── registry.py                  # discovery、conflict、scope
@@ -276,7 +288,25 @@ supersedes
 content_hash
 ```
 
-### 7.3 写入规则
+### 7.3 历史 Memory serving proposal 与当前 M2-lite 定位
+
+P2-M2 已完成的 lifecycle/SQLite 设计作为 **Memory Governance Plane** 保留。当前接受的 M2-lite
+定位只要求显式 UserPreference Memory；Memory 不属于核心 Coding Agent 必需路径。下述三路 serving
+plane 是历史候选分解，不再代表 V1 默认产品范围。
+
+后续 P2-R1 在其上增加 **Memory Serving Plane**，将 Agent Context 分为三条路径：
+
+| Serving 层 | 目的 | 状态 |
+|---|---|---|
+| Core Snapshot | Session 开始时始终提供稳定、高价值的用户/Repository 信息 | **DEFERRED；默认 OFF** |
+| Dynamic Recall | 按当前任务自动召回额外相关记录 | 现有 lexical/BM25 候选被拒绝，无生产后端 |
+| History Search | Agent 按需查询过去事件与任务历史 | 已设计未实现 |
+
+Core Snapshot 是 SQLite active records 的有界、可重建 materialized view，不是第二 authority；
+History Search 是只读工具并必须经过 ToolHarness。完整契约、默认语义与实施门禁见
+[`p2-r1-governed-agent-memory-redesign.md`](./p2-r1-governed-agent-memory-redesign.md)。
+
+### 7.4 写入规则
 
 模型不能直接写入永久可信记忆：
 
@@ -286,7 +316,8 @@ model proposes
   → provenance validation
   → scope/permission policy
   → dedup/conflict check
-  → optional user approval
+  → risk classification
+  → low-risk auto activation | sensitive/high-impact approval
   → commit active record
 ```
 
@@ -298,8 +329,12 @@ model proposes
 - 删除是显式 tombstone/audit event，用户可以查看和清除；
 - 旧事实冲突时不静默覆盖，通过 `supersedes` 或 conflict 状态表达；
 - 检索结果必须进入 `context_built` manifest，记录 memory id、版本、分数和 Token 成本。
+- 低风险自动 activate 仍必须来自 committed Runtime event，通过 provenance/secret/conflict policy，
+  并且可见、可撤销、可审计；敏感、高影响和跨仓库事实继续要求显式 approval。
+- Repository Memory 的 revision binding 后续扩展为 `exact`、`compatible`、`path_bound`、
+  `content_hash_bound`、`revision_independent`；宽松模式必须有可重验证条件，不能放宽 scope containment。
 
-### 7.4 检索与评测
+### 7.5 Serving、检索与评测
 
 首版优先确定性 lexical/metadata retrieval；只有真实召回缺口证明需要时再增加 embedding/vector
 backend。无论使用哪种算法，都必须有：
@@ -312,10 +347,18 @@ backend。无论使用哪种算法，都必须有：
 - relevant recall、irrelevant injection、task success、Token 和 latency 指标；
 - cross-user/cross-repository leakage 负例。
 
-P2-M2 的当前交付是显式 Python composition：调用方将 Memory store、service、retriever 和 query
+P2-M2 的当前交付事实是显式 Python composition：调用方将 Memory store、service、retriever 和 query
 factory 组装到 `BudgetedContextBuilder`。默认 `AgentApplication` 与 `run-headless` 不自动创建、
 查询或注入 Memory，也不把 Memory 声明为 Runtime IPC capability；默认启用需要后续独立的
-产品入口、权限和评测决策。
+产品入口、权限和评测决策。这是当前实现限制，不是最终产品哲学。
+
+当前目标产品采用 M2-lite：默认 Core Snapshot 和 generic auto top-k 均为 OFF，少量显式 active
+UserPreference 只能作为有界、低 authority Context candidate；History Search 的产品优先级高于自动
+长期提炼。`AgentRuntime` 保持 Memory-agnostic；headless IPC 不隐式读取宿主 Memory。Memory 组件
+不可用时继续以 memory-off 运行核心 workflow。
+
+P2-M2.3 的“no qualifying backend”只适用于已评估的 Dynamic Recall 候选，不能外推为对
+Core Snapshot、History Search、risk-tier writes 或整个 Memory 产品的否决。
 
 ## 8. Skill 系统
 
@@ -565,6 +608,16 @@ Phase 2 必须继承并加强以下不变量：
 - bounded retrieval/context manifest；
 - leakage、cold/warm A/B 和 memory quality metrics。
 
+### P2-R1：Governed Agent Memory Redesign
+
+- 保留 SQLite governance authority、provenance、scope、lifecycle、tombstone 和 audit；
+- 当前 V1 产品范围收敛为显式 UserPreference Memory；
+- Core Snapshot、Dynamic Recall、自动 ProjectExperience/DecisionMemory 与通用自动提炼均 DEFERRED；
+- History Search 优先于自动长期提炼，但其实现不由本 ADR 激活；
+- local/headless 默认继续 memory-off，未来启用仍需独立产品与评测决策。
+
+M2-lite 产品定位已批准，实施未激活。本节不改变 P2-M3 或其他 roadmap 顺序。
+
 ### P2-M3：Agent Profiles and Skills
 
 - immutable profile snapshot；
@@ -614,6 +667,7 @@ Phase 2 只有在以下事实全部存在时，才能宣传为成熟终端 Codin
 
 ## 16. 当前实施决策
 
-P2-M1 与 P2-M2 已通过各自退出门禁。P2-M2 只实现 episodic/semantic Memory，验收见
-[`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md)。P2-M3 尚未激活；不得提前
-开始 Skill、MCP、多 Agent、TUI、RAG 或向量检索。
+P2-M1 与 P2-M2 已通过各自退出门禁。P2-M2 只实现 episodic/semantic Memory governance lifecycle，
+验收见 [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md)。现有 Dynamic Recall
+候选没有达到生产门槛，但这暴露的是 serving model 缺口。P2-R1 已形成产品定义、尚未激活；
+P2-M3 顺延。不得提前开始代码实现、Skill、MCP、多 Agent、TUI、RAG 或向量检索。

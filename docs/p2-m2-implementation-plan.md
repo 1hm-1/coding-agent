@@ -152,3 +152,15 @@ estimator model Token `5518`，cold/warm latency mean 为
 `0.85`，所以 Memory 继续只通过显式 Python composition 提供，默认 Application/headless/IPC 不接入，
 P2-M3 不激活。完整脱敏说明见
 [`memory-retrieval-holdout-v2-2026-09-18.md`](./evidence/memory-retrieval-holdout-v2-2026-09-18.md)。
+
+## 6. 后续产品定义说明（不改写 P2-M2 验收）
+
+P2-M2 的“默认关闭”和统一 explicit activation 是本里程碑当时的安全收口条件，历史门禁继续有效；
+它们不再被视为长期产品目标。后续审查将 Memory 的第一目标改为跨会话可用性，将既有 provenance、
+scope、revision、revocation 和 audit 作为硬约束。P2-M2.3 的失败只否决当前 Dynamic Recall 候选，
+不否决 Core Snapshot、History Search 或 risk-tier governed writes。
+
+该阶段随后曾提出 P2-R1 Governed Agent Memory Redesign；其默认 Core Snapshot 与自动 serving
+假设现已被 [`decisions/memory-product-positioning.md`](./decisions/memory-product-positioning.md)
+supersede。当前代码行为、SQLite authority 和本文件历史验收证据均不变；未来实施顺序以
+[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md) 为准。

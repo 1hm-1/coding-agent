@@ -5,6 +5,9 @@
 > Phase 2 产品架构：P2-M1 producer 与 P2-M2 Layered Memory 已完成；Memory 仅显式组装，见
 > [`v2-product-architecture.md`](./v2-product-architecture.md)、[`p2-implementation-plan.md`](./p2-implementation-plan.md)
 > 与 [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md)
+> Coding Agent V1 产品层目标已冻结，见
+> [`target-architecture-snapshot.md`](./target-architecture-snapshot.md)。本文的 [CURRENT] 部分仍描述
+> 现有 Runtime Kernel；产品层迁移尚未实施。
 
 ## 1. 状态标记
 
@@ -61,8 +64,12 @@
 
 ### 4.3 工作区
 
-- [TARGET] 用户源仓库不得成为 Agent 的写入目标。
+- [TARGET] 本地 interactive 模式默认将当前 development working tree 作为 `WorkspaceBinding`，
+  写入必须经过 writer authority、revision precondition、ToolHarness 和审计；managed worktree 是显式
+  隔离/并行/高风险选项，不是普通启动默认值。
 - [CURRENT] 任务使用复制出的独立 workspace；文件工具路径被强约束；结束时验证 source fingerprint。
+- [CURRENT COMPATIBILITY] 在上述产品层 milestone 激活前，现有 one-shot/headless/eval 路径继续
+  使用 copied workspace，不能把目标设计误写成当前已实现行为。
 - [CURRENT] 可信 test/command profile 固定了可执行文件和资源策略；M4.1 将仓库测试代码放入 Linux rootless
   namespace，sandbox 不挂载原 source，只挂载可写任务 workspace，并用默认禁网和资源
   配额形成 OS 边界；M4.2 的 `run_command` 沿用同一边界并只接受结构化 argv。
@@ -115,30 +122,31 @@ P2-M2 的 MemoryService、SQLiteMemoryStore 和 lexical retriever 由调用方�
 ## 6. 目标架构
 
 ```text
-CLI / Eval Runner
-       │
-       ▼
-Application Use Cases
-       │
-       ├──── Session/Checkpoint Store ─── SQLite (authority)
-       │                │
-       │                └─────────────── JSONL exporter / Replay
-       │
-       ├──── Workspace Manager ───────── isolated task workspace
-       │                                  └── M4 Sandbox Executor
-       │
-       └──── Agent Runtime (explicit FSM)
-                    │
-                    ├── Context Engine ─ recent/task/repo/optional memory/summary
-                    ├── ModelBackend ─── Scripted/OpenAI/Anthropic/Fallback
-                    └── Tool Harness ─── registry/policy/timeout/journal
-                                              │
-                                              └── read/edit/test/approved tools
-
-SQLite events ──→ Metrics / Eval Oracle / Failure Report / Trace Export
+CLI attachment
+      │
+      ▼
+thin ConversationApplicationCoordinator + use-case handlers
+      │
+      ├── RepositoryIdentity → ProjectScope → WorkspaceBinding
+      └── Conversation → Turn → RuntimeExecution → ModelRequest*
+                                      │
+                                      ▼
+                         existing Runtime Execution Kernel
+                         FSM / journal / checkpoint / lease
+                         recovery / adapters / ToolHarness
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    ▼                                   ▼
+             current WorkspaceBinding             SQLite authority
+             + Sandbox / Preconditions             + JSONL export/replay
 ```
 
-“窄腰”是 `ModelRequest/Response`、`ToolCall/Result`、`RuntimeSnapshot` 和 `Event`。Provider、工具和存储可以替换，但 Runtime 不应出现它们的实现细节。
+产品层负责长期 Conversation、Turn admission、WorkspaceBinding、Instructions、Context projection 和
+用户操作；现有 `Session` 逐步收窄并重新解释为 `RuntimeExecution`。Runtime Kernel 的“窄腰”仍是
+`ModelRequest/Response`、`ToolCall/Result`、`RuntimeSnapshot` 和 `Event`。Provider、工具和存储可以
+替换，但 Runtime 不应出现它们的实现细节。完整对象关系、authority 和支持系统见
+[`target-architecture-snapshot.md`](./target-architecture-snapshot.md)；迁移顺序见
+[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。
 
 ## 7. 当前确定性数据流
 

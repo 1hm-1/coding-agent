@@ -1,8 +1,15 @@
 # 开发路线图
 
-> 路线图状态基线：2026-09-18
+> 路线图状态基线：2026-09-21
 > 当前完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Release/Evidence Hardening
-> 当前实施项：**Phase 2 P2-M2.3 completed with no qualifying backend；P2-M3 尚未激活**
+> 当前实施项：**Product-Layer M0 Architecture Freeze + Characterization 已获 owner
+> Accepted 并完成；M1–M7 inactive；当前无 active 产品实施里程碑。** M1 必须等待正式
+> execution contract 发布与激活。不要与本文已完成的历史 Runtime M0 混淆。
+> 当前前向路线：[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。
+> V1 capability、measurement 与 interactive responsiveness acceptance 已冻结；具体能力矩阵见
+> [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)。这些不是当前实现声明。
+> 旧 CR-R1 与原 P2-R1 默认 Memory serving 方向已经 superseded，只保留历史决策证据。
+> 追加离线 Memory 优化实验已完成：仅增加显式 coverage/cascade candidate，未选择生产后端。
 > 当前证据补充：简历 benchmark 的 scripted 校准及 `deepseek-flash` live 25-run/压缩
 > 10-pair 已完成；live 稳定性为 24/25，压缩没有节省 Token，见 `docs/resume-benchmark.md`。
 
@@ -23,6 +30,8 @@
 | Release/Evidence Hardening | 已完成 | 交付证据、质量门禁和评测范围是否可复核 | Git/CI/coverage/mypy/live-smoke/eval evidence |
 | M5 Capability Expansion | M5.1 完成，其余条件阶段 | 哪些新工具真正提高任务覆盖率 | eval-driven decision record |
 | Phase 2 Product Runtime | P2-D0、P2-M1、P2-M2 完成 | 如何在保留单任务 Runtime 内核的前提下形成成熟终端产品 | v2 architecture + versioned IPC + Layered Memory；后续逐阶段 contract/eval evidence |
+| Coding Agent V1 Product Layer | M0 Accepted/完成；M1–M7 inactive；target behavior 未实现 | 如何把长期 Conversation/Turn 与一次 RuntimeExecution 分离，并在真实 working tree 上复用可靠内核 | [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)、[`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)、[`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md) |
+| CR-R1 Conversation Runtime Realignment | **SUPERSEDED；从未激活** | 历史草案，不再提供 target authority | [`conversation-runtime-refactor-plan.md`](./conversation-runtime-refactor-plan.md) |
 
 ## 2. 全局里程碑门禁
 
@@ -33,7 +42,12 @@
 - 原有全量测试和 semantic golden 继续通过，或存在经过批准的版本化迁移；
 - 轨迹足以解释运行结果，错误不只存在于 stderr；
 - 文档区分“已实现”和“计划”，`current-state.md` 已同步；
-- 未把 source repository 变成写入目标；
+- workspace 行为符合当前激活 milestone：产品层 direct-working-tree 尚未激活时继续保持 legacy source
+  不写；激活后必须满足 WorkspaceBinding、writer authority、revision precondition、checkpoint 和
+  ToolHarness 约束；
+- V1 M2 的 real-tree 路径保持 read-only；edit/delete、command/cache、Git 可选写、startup artifact、
+  indirect effect 和 undo 必须等待 M3 instruction/context 与完整 M4 capability/permission/diff/undo/
+  recovery 同时通过。isolated fixture 只豁免 rollout，不豁免安全语义；
 - 没有为了过测试删除失败样本、golden 或指标分母中的失败 run。
 
 ## 3. M0：Architecture Baseline（已完成）
@@ -400,19 +414,30 @@ rejected。当前 lexical 仅供显式实验；不创建 Holdout v3、不执行 
 外推为真实 Provider 结果。正式记录见
 [`s3-8-retrieval-route-closure-2026-09-18.md`](./evidence/s3-8-retrieval-route-closure-2026-09-18.md)。
 
-后续只保留两个设计级路线，均未由本次收口激活：路线 A 冻结 Memory 并在用户明确激活后进入
-P2-M3 Profiles/Skills；路线 B 另立 P2-M2.4 Semantic/Embedding Retrieval，至少先设计 provider/model/
-version、网络/Secret/隐私、cache identity 与升级重建、delete/stale/scope 传播、vector index authority、
-timeout/offline/fail-closed、单次检索成本与 Token/success，并使用新 development set 与全新 blind
-Holdout。路线 B 不得作为当前 P2-M2.3 的补丁隐式进入默认 Runtime。
+该检索收口当时保留路线 A（进入 P2-M3）与路线 B（另立 Semantic/Embedding Retrieval）；后续
+产品定义审查当时认为这个二选一遗漏了 Memory Serving Plane。冻结结果仍有效，但只适用于 Dynamic
+Recall 候选。当时随后提出 P2-R1 Governed Agent Memory Redesign；其默认 Core Snapshot 与自动
+serving 假设后来又被 M2-lite ADR supersede。若未来继续 embedding，
+仍需独立设计 provider/model/version、网络/Secret/隐私、cache identity 与升级重建、delete/stale/scope
+传播、vector index authority、timeout/offline/fail-closed、单次检索成本与 Token/success，并使用新
+development set 与全新 blind Holdout。本轮不实施代码。历史方向见
+[`p2-r1-governed-agent-memory-redesign.md`](./p2-r1-governed-agent-memory-redesign.md)。
 
 ## 14. Phase 2 分阶段路线
+
+2026-09-18 用户追加要求“尝试优化 memory”：在既有 development suite 上完成 coverage 与
+lexical-first cascade 实验。cascade recall 从 `9/24` 增至 `10/24`、injection 保持 0；Token
+`196→220` 且 latency 增加，仍未满足质量门槛。169 个回归测试通过，结果只保留为显式离线
+候选，不解冻生产、创建 Holdout、启动 Provider/embedding 或激活 P2-M3。详见
+[实验记录](./evidence/memory-coverage-experiment-2026-09-18.md)。
 
 | 子阶段 | 状态 | 交付物 | 退出门禁 |
 |---|---|---|---|
 | P2-D0 架构与契约设计 | 已完成 | `v2-product-architecture.md`、Runtime IPC v1 文档和 JSON Schema、兼容规则 | producer/consumer 权责、版本、取消、错误、secret/workspace 规则无歧义；明确尚未实现 |
 | P2-M1 Headless Runtime IPC | 已完成（2026-09-16） | `protocol-info`、`run-headless`、stdout JSONL、cooperative cancellation | v1 schema、golden、退出码、v0.1/v0.2 adapter contract vectors 全部通过 |
 | P2-M2 分层记忆 | P2-M2.3 completed with no qualifying backend（2026-09-18） | episodic/semantic memory ports、SQLite authority、冻结 lexical 实验路径、紧凑 Context 与显式 live paired harness；默认仍关闭 | lexical/content BM25/structured BM25 均 rejected；embedding 未评估/不可用；无生产候选，不创建 v3、不执行 L4 |
+| CR-R1 Conversation-Centered Runtime Realignment | **SUPERSEDED；从未激活** | 历史 Conversation-first 草案；其中 isolated Conversation workspace、lifetime writer ownership 和阶段顺序不再有效 | 不得从该行激活实施；以新 V1 roadmap 为准 |
+| P2-R1 Governed Agent Memory Redesign | **产品默认假设已 superseded；未激活** | 已实现 governance 资产保留；默认 Core Snapshot、自动 extraction/recall 不进入 V1 critical path | M2-lite 只要求显式 UserPreference；History Search 优先于自动长期提炼；Memory 完全 optional |
 | P2-M3 Profiles 与 Skill Runtime | 未启动 | immutable profile、Skill registry/loader/selector、能力策略 | skill provenance/permission/budget/replay 测试通过，不绕过 ToolHarness |
 | P2-M4 MCP 能力网关 | 未启动 | MCP adapter 经 CapabilityGateway 映射到 Harness | discovery、schema、secret、timeout、审计和恶意 server 负例通过 |
 | P2-M5 可恢复多 Agent 编排 | 未启动 | coordinator FSM、角色 mailboxes、hierarchical budgets、single-writer workspace | crash/replay/cancel/冲突/预算和相对单 Agent eval 通过 |
@@ -421,3 +446,10 @@ Holdout。路线 B 不得作为当前 P2-M2.3 的补丁隐式进入默认 Runtim
 Phase 2 的详细边界以 [`v2-product-architecture.md`](./v2-product-architecture.md) 为准；公共进程
 协议以 [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md) 和仓库根目录
 `protocol/v1/*.schema.json` 为准。
+
+上述 Phase 2 表保留历史阶段与已完成证据。2026-09-20 后的产品层实施 authority 是
+[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md) 中的
+M0–M7 DAG。该路线增量复用 Runtime Kernel，Memory 的 M6 支线不阻塞 M0–M5 或 M7 的
+Memory-off 核心验收。Product-Layer M0 characterization 已获 owner Accepted 并完成；M1–M7
+仍未激活，当前无 active 产品实施里程碑，M1 需等待正式 execution contract；P2-R1 不是下一候选。
+本文第 3 节的历史 Runtime M0 已完成记录不得与 Product-Layer M0 混淆。

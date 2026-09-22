@@ -2,13 +2,20 @@
 
 Scope: this file applies to `/home/hmli/code/coding-agent` only.
 
-1. Before editing, read `docs/HANDOFF.md`, `docs/current-state.md`, and the active milestone document.
-2. Current stable implementation baseline is Phase 2 P2-M2 Layered Memory complete. P2-M3 Profiles
-   and Skill Runtime is the next candidate milestone but remains inactive until explicitly activated.
+1. Before editing, read `docs/HANDOFF.md`, `docs/current-state.md`, the current roadmap status,
+   and any active formal execution contract under `docs/execution-contracts/` when present.
+2. Current stable implementation baseline is Phase 2 P2-M2 Layered Memory complete. Product-Layer
+   M0 Architecture Freeze + Characterization is Accepted and complete. No product implementation
+   milestone is active; M1–M7 remain inactive, and M1 requires an issued formal execution contract.
+   P2-R1 is historical/superseded, not the next candidate.
 3. Preserve the M1/M1.5 vertical slice and all four semantic golden tests.
-4. Do not add a general Shell tool. `restricted_test` accepts trusted profile names only, and
-   `run_command` accepts only trusted profiles with structured argv.
-5. Never let Runtime bypass ToolHarness for side effects, and never write to the source repository.
+4. Do not add a general Shell tool. In the current legacy implementation, `restricted_test` accepts
+   trusted profile names only and `run_command` accepts only trusted profiles with structured argv.
+   Future gated interactive commands follow the V1 capability matrix: enforceable trusted
+   envelopes and exact `ASK`, not a permanently profile-closed domain command model.
+5. Never let Runtime bypass ToolHarness for side effects. Current legacy one-shot/headless paths
+   must never write to the source repository. Target interactive direct-working-tree mutation is
+   allowed only after both V1 M3 and M4 gates pass; M2 alone is read-only on real user trees.
 6. Keep provider-specific formats inside model adapters. Keep state transitions inside the FSM.
 7. Skill, MCP, multi-agent, UI, RAG, vector stores, and framework dependencies remain deferred until
    their named milestone is explicitly activated.
@@ -23,3 +30,19 @@ Scope: this file applies to `/home/hmli/code/coding-agent` only.
 14. `docs/protocol/runtime-ipc-v1.md` and `protocol/v1/*.schema.json` are the producer authority for
     public Runtime IPC. Do not expose private SQLite/trajectory schemas as Platform IPC, duplicate
     the schemas in a consumer repository, or claim that `v0.1.0` implements the protocol.
+15. Interpret P2-M2.3 correctly: it rejected the evaluated lexical/BM25 Dynamic Recall candidates,
+    not Memory governance or History Search. The accepted M2-lite ADR supersedes P2-R1 default Core
+    Snapshot and automatic-serving assumptions; do not change default Memory wiring without a newly
+    activated milestone.
+16. The V1 capability promise is frozen in `docs/v1-development-capability-matrix.md`. Do not treat
+    trusted profiles as a complete command universe, add unrestricted arbitrary shell, or bypass
+    the M3+M4 rollout gate through commands, caches, startup artifacts, indirect effects, or undo.
+17. Do not confuse the Accepted, completed Product-Layer M0 with the completed historical Runtime
+    M0. Product-Layer M0 was characterization only and did not implement target product behavior or
+    authorize M1 entities, schemas, semantic fixes, or production metrics instrumentation. Its
+    historical narrowly scoped testability exception is closed with M0 completion.
+18. Store published formal milestone contracts at
+    `docs/execution-contracts/mN-execution-contract.md`; issuance includes the repository copy and
+    navigation links, with scope and activation explicit. Do not invent future contracts or
+    autoactivate milestones. Record material amendments explicitly instead of silently rewriting
+    issued scope.

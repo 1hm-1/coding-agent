@@ -1,24 +1,43 @@
 # 新窗口开发交接
 
-> 交接基线：2026-09-18，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC 已完成；P2-M2.3 completed with no qualifying backend，P2-M3 尚未激活。
+> 交接基线：2026-09-21，M2.1—M2.3、M3.1—M3.3、M4.1、M4.2、M5.1、Phase 2 P2-M1 Headless Runtime IPC 已完成；P2-M2.3 completed with no qualifying Dynamic Recall backend。
+> P2-R1 原默认 serving 假设已被 M2-lite Memory ADR 取代；Memory 实施未激活；P2-M3 顺延。
+> 横向产品架构已冻结，旧 CR-R1 已 superseded；Product-Layer M0 Architecture Freeze +
+> Characterization 已获 owner Accepted 并完成，M1–M7 仍未激活。当前无 active 产品实施里程碑；
+> M1 必须等待正式 execution contract 发布与激活。
+> V1 capability/metrics/responsiveness acceptance 已补齐；P2-R1 不再是下一候选。M0 只允许
+> characterization，不表示未来 target product behavior 已实现。
 > 固定版本：`v0.1.0`；安装、测试、离线 Eval、Demo 和支持边界见 `docs/releases/v0.1.0.md`。
+> M0 证据收口后的测试总数为 183：182 pass、1 个明确的 M3-owned expected failure；完整报告见
+> [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)。
+> `--include-contrastive` 增加两个显式实验臂，cascade development recall 37.5%→41.7%、
+> injection=0，但 Token/latency 上升且未达验收。Dynamic Recall 生产候选仍冻结，P2-R1/P2-M3/embedding 均未激活；
+> 详情见 [实验记录](./evidence/memory-coverage-experiment-2026-09-18.md)，历史证据不重写。
 
 ## 1. 开始前必须做
 
 1. 将工作目录切换到 `/home/hmli/code/coding-agent`。
 2. 完整阅读 `AGENTS.md`、`docs/README.md`、`docs/current-state.md`。
-3. 阅读已完成的 `docs/p2-implementation-plan.md`、`docs/p2-m2-implementation-plan.md`、
-   `docs/p2-m2-retrieval-optimization.md` 与 Runtime IPC 权威规范；开始 P2-M3 前等待用户明确激活。
+3. 阅读 [`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、
+   [`architecture-consistency-audit.md`](./architecture-consistency-audit.md)、
+   [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)、
+   [正式 M0 milestone execution contract](./execution-contracts/m0-execution-contract.md)、
+   [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)、全部 accepted ADR，以及
+   已完成的 P2-M1/P2-M2 和 Runtime IPC 权威规范。旧
+   `conversation-runtime-refactor-plan.md` 只作历史记录，不得从中激活实施。
 4. 运行：
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -v
 ```
 
-当前收口为 164/164 个默认测试通过（包含 S3.7 development suite 的 7 个 contract test、candidate
+S3.8 收口为 164/164 个默认测试通过（包含 S3.7 development suite 的 7 个 contract test、candidate
 spike 的 8 个隔离/一致性测试和 S3.8 audit 的 3 个测试）。Ruff、36 文件 mypy、compileall、coverage
 `79.3%` 与 git diff --check 也通过。
 `tests/live_provider_smoke.py` 是凭据门控的显式 smoke，不属于默认 discovery。若不是，先定位环境或已有变化。
+169/169 是 M0 前基线。M0 证据收口后总计 183 个测试，其中 182 pass、1 个 expected failure；完整 scripted Eval 为
+14/14 valid，五个稳定性 case 各五次为 25/25 valid/successful，均无 infrastructure failure。
+未运行 live Provider。M0 未修改生产代码、Schema、Memory 实验或 protected golden。
 
 ## 2. 工作区事实
 
@@ -33,7 +52,14 @@ spike 的 8 个隔离/一致性测试和 S3.8 audit 的 3 个测试）。Ruff、
 
 ## 3. 不得破坏的 M1/M1.5 契约
 
-- 源仓库不能作为 Agent 写入目标；任务修改只发生在隔离 workspace。
+- **当前实现基线**仍不得把 source repository 作为写入目标；one-shot/headless 任务修改只发生在
+  copied workspace。未来 direct-working-tree interactive 路径只有在对应 milestone 激活并满足新
+  Workspace/Permission/Diff ADR 后才能改变这一实现不变量。
+- V1 M2 最多建立 direct WorkspaceBinding、Conversation/Turn continuity 和 real-tree read-only
+  路径。所有真实用户 working tree 产品 mutation 必须等待 M3 instruction/context 与完整 M4
+  permission/capability/diff/undo/recovery 两道门禁同时通过；command/cache、Git index refresh、
+  startup/admission artifact、间接副作用和 undo 也在门禁内。isolated fixture 只豁免 rollout，
+  不豁免 ToolHarness/sandbox/policy/journal/recovery 语义。
 - Tool 调用必须经过 Harness，不能从 Runtime 直接读写文件或启动进程。
 - `restricted_test` 仍只接受可信 profile；M4.1 不增加通用 Shell，M4.2 也必须保持结构化 argv 边界。
 - `COMPLETED` 只代表 Runtime 正常结束，不等于 task success。
@@ -43,6 +69,10 @@ spike 的 8 个隔离/一致性测试和 S3.8 audit 的 3 个测试）。Ruff、
 - Phase 2 P2-M1 producer 与 P2-M2 episodic/semantic Memory 已实现；多 Agent、终端、Skill/MCP、
   procedural memory、RAG/vector 仍未激活，没有明确里程碑不得加入代码或依赖。
 - `v0.1.0` 没有 `protocol-info`、`run-headless` 或 Runtime IPC v1；这些能力只属于当前 `0.2.0.dev0` 开发树。
+- **Product-Layer M0** 已 Accepted/完成，不要与已完成的历史 Runtime M0 混淆。M0 仅做
+  architecture freeze/characterization，未实现 target product behavior。当前没有 active 产品实施
+  milestone；M1–M7、产品实体、Schema、语义修复和生产 metrics instrumentation 均未授权。
+  M0 历史 testability exception 已随 M0 完成而关闭。
 
 ## 4. M2/M3/M4/M5.1 完成事实与下一步推荐入口
 
@@ -231,13 +261,29 @@ Token、scope leakage、三任务兼容 arm 与 manifest attribution 均不回�
 冻结 evidence/hash，不再用候选算法重跑已知 Holdout；Holdout v2 已按 manifest 记录一次首轮结果，不能
 修改 case、算法或重跑以替换该结果。
 
-后续仅有两条设计路线：A 冻结 Memory，等待用户明确激活 P2-M3 Profiles/Skill Runtime；B 另行
-提出 P2-M2.4 Semantic/Embedding Retrieval，并先评估 provider/model/version、网络/Secret/隐私、
-cache identity 与升级重建、delete/stale/scope 传播、vector index authority、timeout/offline/
-fail-closed、成本与 Token/success，以及新的 development set 和全新 blind Holdout。本次没有选择或
-实施任一路线；当前 lexical 只供显式实验，默认 Application/headless/IPC Memory 关闭，不创建
-Holdout v3、不执行 L4、不将 deterministic benchmark 外推为 Provider 结果。继续保持 M4.1/M4.2
-OS isolation，不加入 shell 字符串、默认网络、Skill、MCP、多 Agent、UI、RAG 或 vector backend。
+后续产品审查采用 M2-lite：P2-M2.3 只否决当前 lexical/BM25 Dynamic Recall 候选；既有 SQLite
+authority、provenance、scope、revision、tombstone、audit 和 proposal lifecycle 保留为治理资产。
+Memory 不属于核心 Coding Agent 必需路径，V1 只预留用户明确要求“记住/以后默认”时形成 scoped
+UserPreference 的产品能力。默认 Core Snapshot、generic auto top-k、自动提炼与自动
+ProjectExperience/DecisionMemory 均关闭或延期；History Search 优先于自动长期提炼。
+
+当前 Application/headless/IPC Memory 关闭既是代码事实，也符合新的默认边界。权威决策见
+[`decisions/memory-product-positioning.md`](./decisions/memory-product-positioning.md)；旧
+[`p2-r1-governed-agent-memory-redesign.md`](./p2-r1-governed-agent-memory-redesign.md) 只在
+governance/control-plane 部分继续有效。Memory 实施尚未激活。本次不创建 Holdout v3、不执行 L4、
+不运行 Provider，也不修改默认 wiring。P2-M3 顺延；Skill、MCP、多 Agent、UI、RAG/vector、shell
+字符串和默认网络仍未授权。
+
+横向架构审查已经完成。产品主干、authority、兼容边界和 M0–M7 实施依赖分别见
+[`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、
+[`architecture-consistency-audit.md`](./architecture-consistency-audit.md) 与
+[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。旧
+[`conversation-runtime-refactor-plan.md`](./conversation-runtime-refactor-plan.md) 已 superseded；新路线
+Product-Layer M0 characterization 已 Accepted/完成；M1–M7 与 target product behavior 仍未激活。
+当前无 active 产品实施里程碑；M1 需等待正式 execution contract。
+
+后续开发协作采用“主控发布任务、审阅成果并检查代码；Sol high 执行已批准的具体修改”的分工。
+这是仓库开发流程，不是产品 multi-Agent 功能，也不激活任何 milestone。
 
 ## 5. 完成一次开发后的交接动作
 
@@ -258,10 +304,16 @@ OS isolation，不加入 shell 字符串、默认网络、Skill、MCP、多 Agen
 在 `/home/hmli/code/coding-agent` 作为工作目录打开新窗口，然后使用：
 
 ```text
-请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、已完成的
-docs/p2-implementation-plan.md、docs/p2-m2-implementation-plan.md 和 Runtime IPC v1/compatibility
-权威规范。P2-M1/P2-M2 已完成，先运行 143 个默认测试确认基线；P2-M3 尚未激活，不得提前加入
-Skill、MCP、多 Agent、UI、RAG/vector、shell 字符串或默认网络。
+请先完整阅读 AGENTS.md、docs/HANDOFF.md、docs/current-state.md、
+docs/target-architecture-snapshot.md、docs/architecture-consistency-audit.md、
+docs/coding-agent-v1-implementation-roadmap.md、docs/execution-contracts/m0-execution-contract.md、
+docs/v1-development-capability-matrix.md、全部 accepted ADR 和 Runtime IPC v1/compatibility
+权威规范。P2-M1/P2-M2 已完成；169/169 是 M0 前历史基线，M0 证据收口为 183 个测试：
+182 pass、1 个 M3-owned expected failure，不要将这些数字当作本窗口新运行。横向产品架构已冻结，
+Product-Layer M0 characterization 已 Accepted/完成；不要与历史 Runtime M0 混淆。当前无 active 产品实施里程碑；
+M1–M7 和 target product behavior 均未激活，M1 必须等待正式 execution contract 发布与激活。P2-R1 不再是下一候选，Memory
+定位为 optional M2-lite。不得提前加入 Product entities/Schema、Skill、MCP、多 Agent、RAG/vector、
+shell 字符串或默认网络。
 ```
 
 若新 Agent 建议扩大范围，先要求它指出当前 roadmap 门禁或 acceptance criteria 需要该变化；无法对应时不采纳。

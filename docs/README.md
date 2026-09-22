@@ -21,8 +21,27 @@
 | Phase 2 P2-M1 Headless Runtime IPC | 已完成 | [`p2-implementation-plan.md`](./p2-implementation-plan.md) |
 | Phase 2 P2-M2 Layered Memory | 已完成 | [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md) |
 | P2-M2 Retrieval/Token 优化 | 已完成 | [`p2-m2-retrieval-optimization.md`](./p2-m2-retrieval-optimization.md) |
+| Coding Agent V1 横向产品架构 | 已冻结；Product-Layer M0 Accepted/完成；M1–M7 inactive；当前无 active 实施 milestone | [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)、[`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、[`architecture-consistency-audit.md`](./architecture-consistency-audit.md)、[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)、[`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)、[已完成的 M0 milestone execution contract](./execution-contracts/m0-execution-contract.md) |
+| CR-R1 Conversation-Centered Runtime Realignment | **SUPERSEDED；从未激活** | [`conversation-runtime-refactor-plan.md`](./conversation-runtime-refactor-plan.md) |
+| P2-R1 Governed Agent Memory Redesign | 原默认 serving 假设已被 M2-lite ADR 取代；实施未激活 | [`decisions/memory-product-positioning.md`](./decisions/memory-product-positioning.md)、[`p2-r1-governed-agent-memory-redesign.md`](./p2-r1-governed-agent-memory-redesign.md) |
 
-当前代码事实以 [`current-state.md`](./current-state.md) 为准。目标架构以 [`architecture.md`](./architecture.md) 为准。两者冲突时，不要假设目标已经实现。
+当前代码事实以 [`current-state.md`](./current-state.md) 为准。Runtime Kernel 基线以
+[`architecture.md`](./architecture.md) 为准；产品层目标以
+[`target-architecture-snapshot.md`](./target-architecture-snapshot.md) 与 accepted ADR 为准。目标与
+当前事实冲突时，不要假设目标已经实现。
+
+### 1.1 已接受但尚未实施的产品架构 ADR
+
+以下 ADR 已完成 architecture decision，均不表示当前代码、Schema、CLI 或 Runtime IPC 已经实现：
+
+- [`decisions/project-repository-workspace-conversation.md`](./decisions/project-repository-workspace-conversation.md)：RepositoryIdentity、ProjectScope、WorkspaceBinding 与 Conversation；
+- [`decisions/conversation-turn-runtime-execution-lifecycle.md`](./decisions/conversation-turn-runtime-execution-lifecycle.md)：Conversation、Turn 与 RuntimeExecution lifecycle；
+- [`decisions/tool-capability-command-permission.md`](./decisions/tool-capability-command-permission.md)：Tool capability、command execution 与 permission UX；
+- [`decisions/diff-code-checkpoint-undo.md`](./decisions/diff-code-checkpoint-undo.md)：Diff authority、CodeCheckpoint 与 undo；
+- [`decisions/project-instructions-repository-rules.md`](./decisions/project-instructions-repository-rules.md)：Project instructions 与 repository rules；
+- [`decisions/context-composition-compaction.md`](./decisions/context-composition-compaction.md)：per-ModelRequest context composition、compaction、Summary lineage 与恢复边界。
+- [`decisions/memory-product-positioning.md`](./decisions/memory-product-positioning.md)：M2-lite、显式 UserPreference Memory、authority 与默认关闭边界。
+- [`decisions/interactive-cli-product-workflow.md`](./decisions/interactive-cli-product-workflow.md)：Interactive CLI、thin ConversationApplicationCoordinator、Turn admission、writer safe release 与端到端产品流程。
 
 ## 2. 推荐阅读顺序
 
@@ -30,18 +49,20 @@
 
 1. [`HANDOFF.md`](./HANDOFF.md)：工作区状态、禁止事项和下一步；
 2. [`current-state.md`](./current-state.md)：当前代码能力与已知限制；
-3. [`development-guide.md`](./development-guide.md)：环境、命令和开发流程；
-4. [`contracts.md`](./contracts.md)：当前接口、事件和失败语义；
-5. [`testing-strategy.md`](./testing-strategy.md)：测试与 golden 更新规则；
-6. [`m2-implementation-plan.md`](./m2-implementation-plan.md)：M2 子阶段的实施顺序与验收；
-7. [`m3-implementation-plan.md`](./m3-implementation-plan.md)：Context、Compression 和 Eval 验收；
-8. [`architecture.md`](./architecture.md) 与 [`module-design.md`](./module-design.md)：v0.1 Runtime 架构；
-9. [`v2-product-architecture.md`](./v2-product-architecture.md)：已完成 Memory 与未来 Skill/MCP、多 Agent 边界；
-10. [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md)：当前 Runtime producer 与未来 Agent Platform consumer 的进程契约；
-11. [`requirements-traceability.md`](./requirements-traceability.md)：原始目标与面试能力的证据边界。
-12. [`p2-implementation-plan.md`](./p2-implementation-plan.md)：已完成 P2-M1 范围、验收证据和后续顺序。
-13. [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md)：已完成 Memory 范围、策略与验收证据。
-14. [`p2-m2-retrieval-optimization.md`](./p2-m2-retrieval-optimization.md)：冻结 benchmark 上的检索精度与 Token A/B。
+3. [`target-architecture-snapshot.md`](./target-architecture-snapshot.md)：冻结后的产品主干与 authority；
+4. [`architecture-consistency-audit.md`](./architecture-consistency-audit.md)：旧假设与 accepted ADR 的冲突及 supersession；
+5. [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)：M0 的当前到目标、迁移、重试、指标、baseline 与退出证据；
+6. [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)：M0 已 Accepted/完成、M1–M7 未激活的实施 DAG；
+7. [已完成的 M0 milestone execution contract](./execution-contracts/m0-execution-contract.md)：M0 executor 的历史授权范围、禁区、证据与退出条件；
+8. [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)：V1 能力承诺、权限结果、M3+M4 real-tree mutation gate 与明确 non-goals；
+9. 本页列出的全部 accepted ADR；
+10. [`development-guide.md`](./development-guide.md)：环境、命令和开发流程；
+11. [`contracts.md`](./contracts.md)：当前接口、事件和失败语义；
+12. [`testing-strategy.md`](./testing-strategy.md)：测试与 golden 更新规则；
+13. [`architecture.md`](./architecture.md) 与 [`module-design.md`](./module-design.md)：当前 Runtime Kernel 架构；
+14. [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md)：当前 Runtime producer 与未来 Agent Platform consumer 的进程契约；
+15. [`requirements-traceability.md`](./requirements-traceability.md)：原始目标与面试能力的证据边界；
+16. 已完成的 P2-M1/P2-M2 实施文档与冻结评测证据。
 
 做代码评审：先读 `contracts.md` 和 `testing-strategy.md`，再对照当前里程碑退出条件。
 
@@ -54,6 +75,12 @@
 | `current-state.md` | 现在真实能运行什么？有哪些技术债？ |
 | `architecture.md` | 当前 v0.1 Runtime Kernel 为什么这样分层？关键不变量是什么？ |
 | `module-design.md` | 当前代码每个模块负责什么、依赖谁？ |
+| `target-architecture-snapshot.md` | 冻结后的一级领域主干、authority 和 Runtime Kernel 复用边界是什么？ |
+| `architecture-consistency-audit.md` | 哪些旧假设与 accepted ADR 冲突，哪个决定是 authority？ |
+| `coding-agent-v1-implementation-roadmap.md` | 如何按依赖从 M0 增量迁移到 M7，且让 Memory 不阻塞 critical path？ |
+| `coding-agent-v1-m0-characterization.md` | M0 验证了哪些现状、迁移输入、缺陷、指标与退出条件？ |
+| `execution-contracts/m0-execution-contract.md` | 已完成的 M0 milestone execution contract 曾授权 executor 做什么、禁止什么、必须提交哪些证据？ |
+| `v1-development-capability-matrix.md` | V1 具体承诺哪些 filesystem/Git/Python/command 能力，哪些为 DENY/UNAVAILABLE，何时允许 real-tree mutation？ |
 | `v2-product-architecture.md` | Phase 2 成熟终端 Coding Agent 如何扩展，哪些仍未实现？ |
 | `protocol/runtime-ipc-v1.md` | Runtime producer 对 Platform consumer 暴露什么稳定进程协议？ |
 | `protocol/compatibility.md` | IPC v1 如何演进、兼容和发布？ |
@@ -72,6 +99,11 @@
 | `m5-eval-expansion.md` | 新工具能力是否已经被评测证据证明需要？ |
 | `p2-implementation-plan.md` | P2-M1 实现了什么、哪些门禁已经通过？ |
 | `p2-m2-implementation-plan.md` | P2-M2 Memory 实现了什么、哪些信任与质量门禁已经通过？ |
+| `conversation-runtime-refactor-plan.md` | 已 superseded 的 CR-R1 历史草案；只用于理解决策演进。 |
+| `decisions/context-composition-compaction.md` | ModelRequest context 如何从权威状态投影、压缩、审计并精确恢复？ |
+| `decisions/memory-product-positioning.md` | Memory 在 Coding Agent 中承担什么职责、何时保存或注入，以及哪些默认 serving 假设已延期？ |
+| `decisions/interactive-cli-product-workflow.md` | CLI 如何把 Conversation、Runtime、permission、workspace、diff/undo 和恢复串成完整产品流程？ |
+| `p2-r1-governed-agent-memory-redesign.md` | 哪些早期 Memory serving 假设已被 M2-lite 取代，哪些 governance 资产继续保留？ |
 | `resume-benchmark.md` | 简历稳定性指标和上下文压缩开关 A/B 如何设计、运行与解读？ |
 | `releases/v0.1.0.md` | 固定版本如何安装、验收、运行 Eval/Demo，支持边界是什么？ |
 | `HANDOFF.md` | 当前工作区如何安全交接？ |

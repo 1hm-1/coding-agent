@@ -12,7 +12,7 @@
 | tool call、observation、retry、interrupt、resume | 已实现 | Runtime + M2 journal | M1 golden；M2 crash/retry matrix |
 | 统一 Tool contract | 已实现 | `tools/base.py`、`tools/harness.py` | schema/permission/timeout/error/output tests |
 | read/search/edit/shell/test/git | read/edit/test 已实现；M4.2 增加结构化 `run_command`；M5.1 增加只读字面量 `search_files`；其余条件扩展 | search 已由独立 live A/B 批准；后续 capability holdout 12/12 未形成 git/更广执行的失败覆盖；不提供 shell 字符串 | `test_tools.py`、`test_m2_recovery.py`、`test_m4_execution.py`、search decision record、固定 eval 和 capability holdout |
-| 每任务隔离 workspace | M4.1 Linux OS 强隔离已实现；其他平台 fail closed | `workspace.py`、`sandbox/` | source fingerprint、path escape、namespace attack/resource/parallel tests |
+| Workspace ownership / isolation | 当前 one-shot/headless 使用 copied workspace；V1 interactive 目标为 direct working tree 默认、显式 managed worktree 隔离 | `workspace.py`、`sandbox/`；[`project-repository-workspace-conversation.md`](./decisions/project-repository-workspace-conversation.md) | 既有 source fingerprint/path escape/namespace tests 保留；新产品路径需 writer、drift、rebind、worktree 与 recovery-barrier 验收 |
 | messages/tool/state/metadata 持久化 | M2 已完成，SQLite authority 包含调用 journal | SQLite journal | transaction、round-trip、rollback、export、recovery tests |
 | 可中断恢复 session | 已实现 | M2.2 Application/Runtime + lease | state-boundary/crash-window/reconciliation/resolution tests |
 | recent/task/repo/compressed context | 已实现：预算、硬保留、摘要 lineage 和 stale invalidation | `context.py`、`compression.py`、`workspace.py` | retention/token/compression tests；paired A/B seam |
@@ -20,7 +20,7 @@
 | success/tool/token/latency/failure/recovery 指标 | M3 已完成离线聚合 | `evaluation.py` + committed events | report schema、失败分母和 recovery tests |
 | replayable structured trajectory | 已实现，M2.1 已将 SQLite 设为 authority | `trajectory.py` / SQLite export | sequence/replay/golden/export equivalence |
 | Release/Evidence hardening | 已完成 | Git/CI、coverage、扩大的 mypy 门禁、recovery metrics、multi-repository eval、opt-in provider smoke | `.github/workflows/`、`pyproject.toml`、`evaluation.py`、`examples/eval_suite.json`、默认测试与手动 smoke；提交 `cf82f3c` 的 Python 3.10/3.11 hosted CI 成功；不宣称生产成功率 |
-| 成熟终端 Agent 产品扩展 | P2-M1/P2-M2 lifecycle 已实现；P2-M2.3 无合格检索后端；其余已设计未实现 | [`v2-product-architecture.md`](./v2-product-architecture.md) | Headless IPC 与 episodic/semantic Memory lifecycle 已有证据；lexical/content BM25/structured BM25 均被拒绝，embedding 未评估/不可用，当前 lexical 仅供显式实验；默认 Application/headless/IPC 不启用 Memory；deterministic A/B 不外推到 Provider；Skill/MCP、多 Agent 和终端层仍需逐阶段验收 |
+| 成熟终端 Agent 产品扩展 | 横向产品架构已冻结；M0 已 Accepted/完成；M1–M7 未激活 | [`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md) | Headless IPC 与 Memory governance 是可复用资产；Conversation/Turn/RuntimeExecution、direct workspace、Instructions、frozen Context、Permission、Diff/Undo 与 interactive CLI 仍需按 M0–M7 验收；Memory M2-lite 不阻塞 critical path |
 | Runtime 与 Agent Platform 集成 | P2-M1 producer 已完成；Platform consumer 待外部验证 | [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md)、`protocol/v1/*.schema.json`、[`p2-implementation-plan.md`](./p2-implementation-plan.md)、`tests/test_protocol.py` | discovery/headless、golden、取消/退出码、v0.1/v0.2 vectors 已通过；consumer suite 尚未执行 |
 
 ## 2. 面试高频主题映射
@@ -37,7 +37,7 @@
 | retry/fallback | [`m2-implementation-plan.md`](./m2-implementation-plan.md) §5 | 已实现 | 只对分类基础设施错误；质量差不自动 fallback |
 | 重复工具调用/幂等 | [`contracts.md`](./contracts.md)、M2.2 recovery rules | 部分实现 | 已确认结果不重复；未知写操作需 resolution，不能宣称 exactly-once |
 | 上下文压缩与信息丢失 | [`architecture.md`](./architecture.md) §13、[`roadmap.md`](./roadmap.md) §7 | M3 已实现 | 不编造 Token 降幅；用 lineage、required-fact retention 和 task success A/B |
-| 短期/长期记忆 | Context M3 与 P2-M2 episodic/semantic lifecycle 已实现；生产检索候选为空 | lifecycle 已实现；retrieval 实验未获上线资格（procedural 未来设计） | 可讲受控 lifecycle、provenance、scope 和冻结证据；lexical 仅供显式实验，Token 降幅只适用于 scripted benchmark，默认路径关闭，procedural memory/Skill 到 P2-M3 |
+| 短期/长期记忆 | Context M3 与 P2-M2 governance lifecycle 已实现；V1 接受 M2-lite | control plane 已实现；显式 UserPreference 产品接线、History Search 未实现；Core Snapshot 与 generic auto top-k 默认 OFF | 可讲受控 lifecycle、provenance、scope 和冻结证据；Memory 是 optional low-authority source，Memory-off 是受支持的核心产品状态，不得宣称尚未实现的 serving 能力 |
 | Eval 体系和 Badcase 定位 | [`testing-strategy.md`](./testing-strategy.md)、[`roadmap.md`](./roadmap.md) §7 | M3 离线 eval + M5.1 live A/B + capability holdout 已实现 | 能区分 oracle/runtime/e2e 和无效调用；小样本不外推生产成功率 |
 | A/B 与上线迭代 | [`roadmap.md`](./roadmap.md) M3 | 离线 paired A/B 已实现 | 只做固定 suite 的描述性比较；真实流量实验不在当前项目证据内 |
 | 安全、权限、Prompt Injection | [`architecture.md`](./architecture.md) §10、M4.1/M4.2 | 应用层 + Linux namespace 部分实现 | capability fail-closed、structured argv allowlist、secret/network/escape/resource/approval tests；不宣称抵御内核漏洞或跨平台等价 |
@@ -76,7 +76,9 @@
 - 生产流量中的 retry/fallback 效果；
 - 未在固定数据集、baseline、样本数和成功率 delta 之外外推压缩 Token 节省；
 - 未把当前小型固定 suite 的 task success rate 当作生产成功率；
-- production-grade Memory retrieval、默认 Memory enablement、semantic/embedding/vector index；
+- 显式 UserPreference Memory 的 V1 产品入口与按需 Conversation History Search；
+- generic automatic Memory extraction、默认 Core Snapshot/top-k、ProjectExperience auto recall、
+  semantic/embedding/vector index；
 - 所有平台/内核配置下的完整容器级隔离、OCI image lifecycle、通用 Shell 或已批准网络。
 
 ## 4. 需求变更流程

@@ -19,16 +19,23 @@ executable evidence instead of presenting a large tool list around a chat interf
 
 当前基线完成 M1—M4、Release/Evidence Hardening、由真实 Eval 失败覆盖批准的 M5.1
 只读搜索，以及 Phase 2 P2-M1 Headless Runtime IPC 与 P2-M2 Layered Memory。
-P2-M2 的 Memory lifecycle 已实现，但 P2-M2.3 没有合格检索后端；当前 lexical 仅供显式实验性
-Python composition。默认 `AgentApplication`/headless/IPC 不查询或注入 Memory。P2-M3
-Skill/Profile、MCP、多 Agent 仍未激活。
+P2-M2 的 Memory governance lifecycle 已实现，但 P2-M2.3 没有合格的 Dynamic Recall 后端；
+当前 lexical 仅供显式实验性 Python composition。默认 `AgentApplication`/headless/IPC 不查询或
+注入 Memory。Coding Agent V1 横向产品架构已经冻结，Memory 收敛为 optional M2-lite：默认
+Core Snapshot 和 generic auto top-k 保持关闭，V1 只要求显式 UserPreference，且不阻塞核心路径。
+Product-Layer M0 已 Accepted/完成；M1–M7 仍未激活，当前没有 active 产品实施里程碑。M1 必须等待
+正式 execution contract 发布与激活。当前实现仍是 one-shot Session 与 copied workspace。
 
 The current baseline completes M1—M4, Release/Evidence Hardening, M5.1 read-only search approved
 by live Eval failure coverage, and Phase 2 P2-M1 Headless Runtime IPC plus P2-M2 Layered Memory.
-P2-M2 implements the Memory lifecycle, but P2-M2.3 produced no qualifying retrieval backend; the
-current lexical retriever is for explicit experimental Python composition only. Default
-`AgentApplication`, headless, and IPC paths do not query or inject Memory.
-P2-M3 Skills/Profiles, MCP, and multi-agent orchestration remain inactive.
+P2-M2 implements the governed Memory lifecycle, but P2-M2.3 produced no qualifying Dynamic Recall
+backend; the current lexical retriever is for explicit experimental composition only. Default
+entrypoints do not serve Memory. The Coding Agent V1 product architecture is now frozen with
+Memory as optional M2-lite: default Core Snapshot and generic automatic top-k remain off, V1 only
+requires explicit UserPreference, and Memory does not block the critical path. Product-Layer M0 is
+Accepted and complete; M1–M7 remain inactive, with no active product implementation milestone. M1
+requires an issued and activated formal execution contract. The current code still uses one-shot
+Sessions and copied workspaces.
 
 ## 验证结果 / Evidence at a glance
 
@@ -84,14 +91,17 @@ flowchart LR
 
 - Runtime 的状态变化只发生在 FSM；Provider 格式只存在于 adapter。<br>
   Runtime state changes stay inside the FSM; Provider-specific formats stay inside adapters.
-- 所有副作用都经过 ToolHarness，任务只修改隔离 workspace。<br>
-  Every side effect passes through ToolHarness, and tasks modify only the isolated workspace.
+- 所有副作用都经过 ToolHarness；当前 one-shot/headless 任务只修改 copied workspace。<br>
+  Every side effect passes through ToolHarness; current one-shot/headless tasks modify only copied workspaces.
 - SQLite 是 session 恢复的唯一权威，JSONL 是可删除、可重建的导出。<br>
   SQLite is the sole recovery authority; JSONL is a disposable, rebuildable export.
 - 不提供通用 Shell；执行能力只接受可信 profile 与结构化 argv。<br>
   There is no general Shell; execution accepts only trusted profiles and structured argv.
 
-详细设计见 [架构文档 / architecture](docs/architecture.md)、
+以上图示描述当前 Runtime。冻结后的产品层见
+[Target Architecture Snapshot](docs/target-architecture-snapshot.md) 和
+[Implementation Roadmap](docs/coding-agent-v1-implementation-roadmap.md)。Runtime 详细设计见
+[架构文档 / architecture](docs/architecture.md)、
 [模块边界 / module design](docs/module-design.md) 和
 [运行契约 / contracts](docs/contracts.md)。
 
@@ -314,13 +324,15 @@ the compression A/B did not save tokens and remains a small local benchmark.
   Production-grade strong multi-tenant isolation, OCI image lifecycle, SBOM, or vulnerability scanning.
 - 通用 Shell、任意 executable、默认网络或模型驱动依赖安装。<br>
   General Shell, arbitrary executables, default network, or model-directed dependency installation.
-- Git inspection 工具、多 Agent、UI、RAG、Skills、procedural memory、semantic/embedding/vector
-  retrieval，以及默认入口的自动 Memory 注入；Memory CLI/UI 也未实现。默认 `AgentApplication`、
+- 当前 interactive Product Layer、Git inspection 工具、多 Agent、RAG、Skills、procedural memory、
+  semantic/embedding/vector retrieval、Core Snapshot、History Search、显式 UserPreference 产品入口，
+  以及默认入口的自动 Memory serving；Memory CLI/UI 也未实现。默认 `AgentApplication`、
   `run-headless` 和 Runtime IPC 不创建、
   查询或注入 Memory。<br>
-  Git inspection tools, multi-agent orchestration, UI, RAG, Skills, procedural memory,
-  semantic/embedding/vector retrieval, automatic
-  Memory injection in default entrypoints, or a Memory CLI/UI. The default `AgentApplication`,
+  The target interactive Product Layer, Git inspection tools, multi-agent orchestration, RAG,
+  Skills, procedural memory, semantic/embedding/vector retrieval, Core Snapshot, History Search,
+  an explicit UserPreference product entrypoint, automatic
+  Memory serving in default entrypoints, or a Memory CLI/UI. The default `AgentApplication`,
   `run-headless`, and Runtime IPC do not create, query, or inject Memory.
 - Windows/macOS 等价 sandbox 保证或通用生产成功率声明。<br>
   Windows/macOS-equivalent sandbox guarantees or a general production success-rate claim.
@@ -331,7 +343,10 @@ the compression A/B did not save tokens and remains a small local benchmark.
 |---|---|
 | [当前实现 / Current state](docs/current-state.md) | 已实现行为、限制与技术债 / Implemented behavior, limits, and debt |
 | [开发交接 / Handoff](docs/HANDOFF.md) | 新开发窗口的唯一入口 / Entry point for a new development session |
-| [架构 / Architecture](docs/architecture.md) | 目标架构与安全边界 / Target architecture and security boundaries |
+| [架构快照 / Target architecture](docs/target-architecture-snapshot.md) | 冻结后的产品主干与 authority / Frozen product spine and authority |
+| [一致性审计 / Consistency audit](docs/architecture-consistency-audit.md) | 旧假设的 supersession / Supersession of legacy assumptions |
+| [实施路线 / Implementation roadmap](docs/coding-agent-v1-implementation-roadmap.md) | M0 Accepted；M1–M7 未激活 / M0 Accepted; M1–M7 inactive |
+| [Runtime 架构 / Runtime architecture](docs/architecture.md) | 当前内核与安全边界 / Current kernel and safety boundaries |
 | [开发指南 / Development guide](docs/development-guide.md) | 安装、命令与变更流程 / Setup, commands, and change workflow |
 | [测试策略 / Testing strategy](docs/testing-strategy.md) | 测试层次、golden 与 CI / Test layers, goldens, and CI |
 | [路线图 / Roadmap](docs/roadmap.md) | 证据门控的里程碑 / Evidence-gated milestones |

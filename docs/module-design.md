@@ -2,13 +2,19 @@
 
 > 文档类型：代码边界与依赖规则
 > 当前基线：M5.1
-> 当前变化：Phase 2 P2-M1 producer 与 P2-M2 Layered Memory 已完成；P2-M3 尚未激活
+> 当前变化：Phase 2 P2-M1 producer 与 P2-M2 Memory governance 已完成；Coding Agent V1 产品层
+> 架构已冻结，Product-Layer M0 已 Accepted/完成，M1–M7 尚未激活
 
 本文回答当前 v0.1 Runtime 的三个问题：功能应该放在哪个模块、模块之间允许传递什么、错误由谁处理。
 当前可执行契约见 [`contracts.md`](./contracts.md)，Runtime 架构与安全边界见
 [`architecture.md`](./architecture.md)。P2-M2 Memory 与未来产品层、Skill/MCP、多 Agent 边界见
 [`v2-product-architecture.md`](./v2-product-architecture.md)；只有本文列出的 Memory 模块已实现，
 不得把其余未来目录误当成现有模块。
+
+本文只描述当前模块。未来 product/application service 边界以
+[`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、accepted ADR 和
+[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md) 为准；不得
+通过扩张当前 `AgentApplication` 或新增有状态 SessionManager 来提前实现产品层。
 
 ## 1. 设计原则
 
@@ -215,6 +221,13 @@ P2-M2 的 Memory 是可选的调用方组合：调用者可以把 `SQLiteMemoryS
 或注入 Memory；Memory 也不是当前 Runtime IPC capability。retriever 使用确定性加权 lexical
 coverage、metadata 隔离、scope tie-break、最低门槛与相对分数截断；模型 Memory section 只含
 不可信边界和内容，完整 ID/version/score/provenance/实际 Context Token 成本留在 manifest。
+
+这是当前实现事实，不是最终产品入口目标。P2-R1 激活后，计划新增独立 serving 边界（名称以实施
+ADR 为准）：snapshot compiler 只从 SQLite active records 构造可重建 materialized view；serving
+policy 决定 Core Snapshot/Dynamic Recall/History Search；history tool 仍经 ToolHarness；本地
+controller 与 headless IPC 分别承担身份/scope 和 capability negotiation。不得把这些职责塞回
+`runtime.py` 或让 ContextBuilder 直接成为新的持久化 authority。详细设计见
+[`p2-r1-governed-agent-memory-redesign.md`](./p2-r1-governed-agent-memory-redesign.md)，当前均未实现。
 
 ## 5. 调用所有权和失败所有权
 
