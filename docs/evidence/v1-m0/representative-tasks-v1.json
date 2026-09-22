@@ -1,0 +1,247 @@
+{
+  "future_interactive_arms": "unavailable until M2-M5: no current interactive Product entry point can produce a comparable Conversation/Turn run; the offline historical oracle for every task is available and passed",
+  "m0_validation": {
+    "future_agent_run_unavailable_conditions": [
+      {
+        "condition": "Product interactive comparison arm",
+        "evidence": "M2-M5 remain inactive and no interactive Product entry point exists."
+      },
+      {
+        "condition": "Paid/live provider task execution",
+        "evidence": "outside M0 authorization and unnecessary for oracle/setup validation."
+      }
+    ],
+    "method": "Each reference commit was exported with git archive into its own /tmp directory. Commands ran with that directory as cwd; neither source repository was checked out or modified.",
+    "command_context": "For each task, run setup_command and then oracle_command sequentially in the same POSIX shell so snapshot_root (and, for the package task, dist_root) remains defined.",
+    "provider_execution": "not run or required by these oracles",
+    "release_package_verifier": {
+      "path": "examples/v1_m0_verify_release_snapshot.py",
+      "sha256": "247a1498190e147fa5ab0e89948c50aa0300d928d5c064a4b8096027b11986d6"
+    },
+    "result": "all six reference snapshots passed their exact offline oracle",
+    "snapshot_root_durability": "temporary by design; immutable commit and tree IDs plus exact commands make setup reproducible",
+    "source_repository_mutation": false
+  },
+  "purpose": "Frozen future real-repository task lane; no agent/provider execution in M0.",
+  "repositories": {
+    "coding-agent": {
+      "language": "Python",
+      "path": "/home/hmli/code/coding-agent"
+    },
+    "hermes-agent": {
+      "language": "Python",
+      "path": "/home/hmli/code/hermes-agent",
+      "read_only": true
+    }
+  },
+  "schema_version": 1,
+  "tasks": [
+    {
+      "acceptance_rule": "all listed checks must pass; any command failure, failed assertion, skip, missing artifact, or missing dependency rejects the task sample",
+      "base_revision": "e31aee144c364d9096d355357b864d0e1ade8d70",
+      "budget": {
+        "model_calls": 20,
+        "tool_calls": 40
+      },
+      "dependency_manifests": {
+        "fresh_environment_command": "uv sync --frozen in the extracted snapshot; the M0 validation reused the named pre-existing repository .venv and recorded its interpreter/test-runner versions",
+        "git_blob_ids": {
+          "pyproject.toml": "bc514d890b9cc7af40fb04afc61220150706604b",
+          "uv.lock": "71fd89870b353525d3ca5bb81838a059a5f103b4"
+        }
+      },
+      "environment": "CPython 3.11.16 using the current coding-agent .venv dependencies; native sandbox available; no provider credentials or network",
+      "id": "coding-agent-provider-journal-timeout",
+      "lane": "future controlled real-repository evaluation",
+      "oracle": "Run the complete model, ToolHarness, and Context regression modules at the reference snapshot; accept only exit 0 with all 32 tests passing, including malformed usage journal closure, unexpected backend journal closure, generic handler timeout worker termination, and intact context turns.",
+      "oracle_command": "PYTHONPATH=src /home/hmli/code/coding-agent/.venv/bin/python -m unittest tests.test_models tests.test_tools tests.test_m3_context -v",
+      "reference_revision": "f11b9a5b795afccd29500fe54380b5b5f0368b6a",
+      "reference_tree": "6d55121da1a17111f98dc813be8887f295d3c53f",
+      "repository": "coding-agent",
+      "request": "Harden provider failure journaling and bounded tool-handler timeouts, and add regression coverage for malformed usage and worker termination.",
+      "setup_command": "snapshot_root=\"$(mktemp -d /tmp/coding-agent-v1-m0-provider-journal.XXXXXX)\"; git -C /home/hmli/code/coding-agent archive f11b9a5b795afccd29500fe54380b5b5f0368b6a | tar -xf - -C \"$snapshot_root\"; cd \"$snapshot_root\"",
+      "type": "cross-file repair",
+      "unavailable_prerequisites": [],
+      "validation": {
+        "exit_code": 0,
+        "failures": 0,
+        "skips": 0,
+        "status": "passed",
+        "tests_passed": 32
+      }
+    },
+    {
+      "acceptance_rule": "all listed checks must pass; any command failure, failed assertion, skip, missing artifact, or missing dependency rejects the task sample",
+      "base_revision": "cdea7b930050e406fb3818a02ce270cec47c2a42",
+      "budget": {
+        "model_calls": 12,
+        "tool_calls": 30
+      },
+      "dependency_manifests": {
+        "fresh_environment_command": "uv sync --frozen in the extracted snapshot; the M0 validation reused the named pre-existing repository .venv and recorded its interpreter/test-runner versions",
+        "git_blob_ids": {
+          "pyproject.toml": "36b17a671e805c664026a8f5b38e701401b94fb0",
+          "uv.lock": "a2daed2a8a9358d688e3e3504f167568b19a2c08"
+        }
+      },
+      "environment": "CPython 3.11.16 using the current coding-agent .venv dependencies; checked-in audit artifacts; no provider credentials or network",
+      "id": "coding-agent-independent-retrieval-audit",
+      "lane": "future controlled real-repository evaluation",
+      "oracle": "Run the independent audit test module; accept only exit 0 with its fixed matrix reproduction, Pareto sweep axes, and production retrieval authority hash tests all passing.",
+      "oracle_command": "PYTHONPATH=src /home/hmli/code/coding-agent/.venv/bin/python -m unittest tests.test_memory_retrieval_backend_audit -v",
+      "reference_revision": "8b8915fee5970720e1f3776e921a4d486131557a",
+      "reference_tree": "9465df8f131107dcce230f34f2314b3faa83e27f",
+      "repository": "coding-agent",
+      "request": "Add an independent deterministic audit that verifies retrieval backend tradeoffs and artifact integrity without changing the production selection.",
+      "setup_command": "snapshot_root=\"$(mktemp -d /tmp/coding-agent-v1-m0-retrieval-audit.XXXXXX)\"; git -C /home/hmli/code/coding-agent archive 8b8915fee5970720e1f3776e921a4d486131557a | tar -xf - -C \"$snapshot_root\"; cd \"$snapshot_root\"",
+      "type": "regression-test addition",
+      "unavailable_prerequisites": [],
+      "validation": {
+        "exit_code": 0,
+        "failures": 0,
+        "skips": 0,
+        "status": "passed",
+        "tests_passed": 3
+      }
+    },
+    {
+      "acceptance_rule": "all listed checks must pass; any command failure, failed assertion, skip, missing artifact, or missing dependency rejects the task sample",
+      "base_revision": "7851eb2277d8eeeb3627c6b2ea836c455c930012",
+      "budget": {
+        "model_calls": 16,
+        "tool_calls": 32
+      },
+      "dependency_manifests": {
+        "fresh_environment_command": "uv sync --frozen in the extracted snapshot; the M0 validation reused the named pre-existing repository .venv and recorded its interpreter/test-runner versions",
+        "git_blob_ids": {
+          "pyproject.toml": "08d1c1f7297a2a703700776087258f9ba3809dc5",
+          "uv.lock": "71fd89870b353525d3ca5bb81838a059a5f103b4"
+        }
+      },
+      "environment": "uv 0.12.8 with local build backend/cache, CPython build environment, writable /tmp output; no provider credentials",
+      "id": "coding-agent-release-package",
+      "lane": "future controlled real-repository evaluation",
+      "oracle": "Build sdist and wheel from the reference snapshot; accept only if both production_coding_agent-0.1.0 artifacts exist, wheel METADATA says Version: 0.1.0, docs/releases/v0.1.0.md exists, and every relative link in that release document resolves.",
+      "oracle_command": "dist_root=\"$(mktemp -d /tmp/coding-agent-v1-m0-package-dist.XXXXXX)\"; /home/hmli/.local/bin/uv build --out-dir \"$dist_root\"; /home/hmli/code/coding-agent/.venv/bin/python /home/hmli/code/coding-agent/examples/v1_m0_verify_release_snapshot.py --snapshot \"$snapshot_root\" --dist \"$dist_root\" --version 0.1.0",
+      "reference_revision": "77a7a943610f16dfb863b6a93699df1ed794bbb4",
+      "reference_tree": "fb6eb2d7b815f2b4fb514dd8c0c1b5e3989c6293",
+      "repository": "coding-agent",
+      "request": "Prepare the v0.1.0 release metadata and documentation while keeping the existing quality and build gates reproducible.",
+      "setup_command": "snapshot_root=\"$(mktemp -d /tmp/coding-agent-v1-m0-release-package.XXXXXX)\"; git -C /home/hmli/code/coding-agent archive 77a7a943610f16dfb863b6a93699df1ed794bbb4 | tar -xf - -C \"$snapshot_root\"; cd \"$snapshot_root\"",
+      "type": "package/configuration work",
+      "unavailable_prerequisites": [],
+      "validation": {
+        "artifacts": [
+          "production_coding_agent-0.1.0.tar.gz",
+          "production_coding_agent-0.1.0-py3-none-any.whl"
+        ],
+        "build_exit_code": 0,
+        "metadata_version": "0.1.0",
+        "release_relative_links": "all resolved",
+        "status": "passed"
+      }
+    },
+    {
+      "acceptance_rule": "all listed checks must pass; any command failure, failed assertion, skip, missing artifact, or missing dependency rejects the task sample",
+      "base_revision": "b8d3c8aa07301eeacad06cde25e460a189c9d6d6",
+      "budget": {
+        "model_calls": 20,
+        "tool_calls": 40
+      },
+      "dependency_manifests": {
+        "fresh_environment_command": "uv sync --frozen in the extracted snapshot; the M0 validation reused the named pre-existing repository .venv and recorded its interpreter/test-runner versions",
+        "git_blob_ids": {
+          "pyproject.toml": "a9c8df69fd03d5db9f48d16632b2f29a600457f7",
+          "uv.lock": "223e1b59994bacd42da785ac2beb1e207af617e0"
+        }
+      },
+      "environment": "Hermes read-only development .venv, CPython 3.11.16, pytest 9.1.1; fake probes/monkeypatch; no live provider or network",
+      "id": "hermes-model-alias-credentials",
+      "lane": "future controlled real-repository evaluation",
+      "oracle": "Run the exact credential regression file; accept only exit 0 with all 59 tests passing, including cross-provider secret non-forwarding and fail-closed alias resolution.",
+      "oracle_command": "PYTHONPATH=. /home/hmli/code/hermes-agent/.venv/bin/python -m pytest -q tests/hermes_cli/test_model_alias_credentials_83612.py",
+      "reference_revision": "3145986c20267cda9a93285d4afedf77ecd80876",
+      "reference_tree": "fb0bc4d1a913274fa2d8c85351be4cc75e7e7419",
+      "repository": "hermes-agent",
+      "request": "Honor model_aliases API-key configuration without leaking credentials across providers, with fail-closed regression coverage.",
+      "setup_command": "snapshot_root=\"$(mktemp -d /tmp/coding-agent-v1-m0-hermes-credentials.XXXXXX)\"; git -C /home/hmli/code/hermes-agent archive 3145986c20267cda9a93285d4afedf77ecd80876 | tar -xf - -C \"$snapshot_root\"; cd \"$snapshot_root\"",
+      "type": "cross-file repair",
+      "unavailable_prerequisites": [],
+      "validation": {
+        "exit_code": 0,
+        "failures": 0,
+        "skips": 0,
+        "status": "passed",
+        "tests_passed": 59
+      }
+    },
+    {
+      "acceptance_rule": "all listed checks must pass; any command failure, failed assertion, skip, missing artifact, or missing dependency rejects the task sample",
+      "base_revision": "99d037eeb997e90548f4207027081b3feecff5bd",
+      "budget": {
+        "model_calls": 12,
+        "tool_calls": 24
+      },
+      "dependency_manifests": {
+        "fresh_environment_command": "uv sync --frozen in the extracted snapshot; the M0 validation reused the named pre-existing repository .venv and recorded its interpreter/test-runner versions",
+        "git_blob_ids": {
+          "pyproject.toml": "a9c8df69fd03d5db9f48d16632b2f29a600457f7",
+          "uv.lock": "223e1b59994bacd42da785ac2beb1e207af617e0"
+        }
+      },
+      "environment": "Hermes read-only development .venv, CPython 3.11.16, pytest 9.1.1, local temporary filesystem; no network",
+      "id": "hermes-atomic-targz",
+      "lane": "future controlled real-repository evaluation",
+      "oracle": "Run the exact archive safety regression file; accept only exit 0 with all three tests passing: mid-write failure preserves destination and cleans temp files, content round-trips, and successful replacement works.",
+      "oracle_command": "PYTHONPATH=. /home/hmli/code/hermes-agent/.venv/bin/python -m pytest -q tests/hermes_cli/test_archive_safe.py",
+      "reference_revision": "4d4cffd118ac0addf1c3b42bbf0395b1fb0b9436",
+      "reference_tree": "d2e21ba9ec7fd448349d7f97e010a99640f8c916",
+      "repository": "hermes-agent",
+      "request": "Make profile tarball creation write through a temporary file and atomically replace the destination, preserving failure safety.",
+      "setup_command": "snapshot_root=\"$(mktemp -d /tmp/coding-agent-v1-m0-hermes-archive.XXXXXX)\"; git -C /home/hmli/code/hermes-agent archive 4d4cffd118ac0addf1c3b42bbf0395b1fb0b9436 | tar -xf - -C \"$snapshot_root\"; cd \"$snapshot_root\"",
+      "type": "regression-test addition",
+      "unavailable_prerequisites": [],
+      "validation": {
+        "exit_code": 0,
+        "failures": 0,
+        "skips": 0,
+        "status": "passed",
+        "tests_passed": 3
+      }
+    },
+    {
+      "acceptance_rule": "all listed checks must pass; any command failure, failed assertion, skip, missing artifact, or missing dependency rejects the task sample",
+      "base_revision": "d3a45a9ce4f3c6392ba85d64e46690a4dd02486d",
+      "budget": {
+        "model_calls": 16,
+        "tool_calls": 32
+      },
+      "dependency_manifests": {
+        "fresh_environment_command": "uv sync --frozen in the extracted snapshot; the M0 validation reused the named pre-existing repository .venv and recorded its interpreter/test-runner versions",
+        "git_blob_ids": {
+          "pyproject.toml": "a9c8df69fd03d5db9f48d16632b2f29a600457f7",
+          "uv.lock": "223e1b59994bacd42da785ac2beb1e207af617e0"
+        }
+      },
+      "environment": "Hermes read-only development .venv, CPython 3.11.16, pytest 9.1.1, GNU bash 5.1.16; download path stubbed and no network installation",
+      "id": "hermes-node-prerelease-install",
+      "lane": "future controlled real-repository evaluation",
+      "oracle": "Run the exact installer regression file; accept only exit 0 with all six tests passing for prerelease rejection, final/floor handling, older-line fallback, pre-replacement binary probe ordering, and bootstrap guard parity.",
+      "oracle_command": "PYTHONPATH=. /home/hmli/code/hermes-agent/.venv/bin/python -m pytest -q tests/test_install_sh_node_prerelease.py",
+      "reference_revision": "39540a03fcf4929c2edf50639350bd73490cb964",
+      "reference_tree": "d1ee6ef382c8b6e9d7d6c290fabc369bfe2fe02a",
+      "repository": "hermes-agent",
+      "request": "Prevent the installer from adopting a prerelease Node.js build and add a deterministic installer regression test.",
+      "setup_command": "snapshot_root=\"$(mktemp -d /tmp/coding-agent-v1-m0-hermes-node.XXXXXX)\"; git -C /home/hmli/code/hermes-agent archive 39540a03fcf4929c2edf50639350bd73490cb964 | tar -xf - -C \"$snapshot_root\"; cd \"$snapshot_root\"",
+      "type": "package/configuration work",
+      "unavailable_prerequisites": [],
+      "validation": {
+        "exit_code": 0,
+        "failures": 0,
+        "skips": 0,
+        "status": "passed",
+        "tests_passed": 6
+      }
+    }
+  ]
+}

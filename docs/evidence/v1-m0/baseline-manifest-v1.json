@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "name": "coding-agent-v1-m0-offline-baseline",
+  "repository_head": "b5f83ed713a22aa4c44834334c2edde3f921566b",
+  "dirty_worktree": true,
+  "backend_requirement": "scripted-only",
+  "provider_calls_authorized": false,
+  "durable_projection": {
+    "path": "offline-baseline-v1.json",
+    "sha256": "2466d87f54c6457fd09e33a57bb4dff7ac3d5cf6909cf7d522b68a92ad3c4139",
+    "session_ids_present": 39,
+    "run_count": 39,
+    "aggregate_recalculation": "all nine checked distributions match report.json in both lanes"
+  },
+  "raw_evidence_manifest": {
+    "path": "raw/manifest-v1.json",
+    "sha256": "f462a898ec8a831799588298fbfeac222acd65a96b580058ad3b28a7b6202bed"
+  },
+  "full_suite": {
+    "manifest": "examples/eval_suite.json",
+    "manifest_sha256": "170096fef0de6c8e31e7c9b01fc15325b9843a88f5f68c7d87a6b7f268e69406",
+    "repetitions": 1,
+    "variant": "budgeted",
+    "result": {
+      "requested": 14,
+      "valid": 14,
+      "normal_tasks": 10,
+      "normal_task_success": 10,
+      "negative_controls": 4,
+      "negative_controls_observed": 4,
+      "infrastructure_failures": 0,
+      "runtime_completion_rate_all_valid": 0.9285714285714286,
+      "source_invariant_rate": 1.0
+    },
+    "original_execution_hashes": {
+      "report.json": "2426b0f9b1d9044e18318b233efd9b0bb63d627db5718dfce3319e71925b889b",
+      "runs.jsonl": "a7d663b76932d4b679066337f162c057cf560e18716934fa20035133e08156f5",
+      "manifest.snapshot.json": "4304c789c00a34a0460636f4292f69ece31ee7c9401a110b953228393359e1cd"
+    },
+    "durable_sanitized_artifacts": {
+      "directory": "raw/full-suite",
+      "report.json_sha256": "2426b0f9b1d9044e18318b233efd9b0bb63d627db5718dfce3319e71925b889b",
+      "runs.jsonl_sha256": "06b01395059a5da3ef369bb17bce5eb613535f341e4907c65aca43127d0c195e",
+      "manifest.snapshot.json_sha256": "4304c789c00a34a0460636f4292f69ece31ee7c9401a110b953228393359e1cd"
+    }
+  },
+  "stability": {
+    "manifest": "examples/eval_suite.json",
+    "repetitions": 5,
+    "variant": "budgeted",
+    "case_ids": [
+      "calculator-success",
+      "todo-recovery",
+      "pipeline-multi-file-recovery",
+      "settings-scoped-edit",
+      "search-lab-content-location"
+    ],
+    "result": {
+      "requested": 25,
+      "valid": 25,
+      "task_success": 25,
+      "runtime_completed": 25,
+      "infrastructure_failures": 0,
+      "source_invariant_rate": 1.0
+    },
+    "original_execution_hashes": {
+      "report.json": "4645b2373f3e9bc04c527a737ad7a1724f41fe25c2e2a2216fd0ddd957a05f61",
+      "runs.jsonl": "e4eca9be961ea9d7a66aa667c0e508be2c1b9cb407c19601b825400ba461602b",
+      "manifest.snapshot.json": "9e8a150f4371a9495eacbff5dd9174fc25ab401c58106f80ec00aa01c8dc74d5"
+    },
+    "durable_sanitized_artifacts": {
+      "directory": "raw/stability",
+      "report.json_sha256": "4645b2373f3e9bc04c527a737ad7a1724f41fe25c2e2a2216fd0ddd957a05f61",
+      "runs.jsonl_sha256": "028b69ad2afbdf7f65518b4502c17f8c0d51464d3b8a68d8ac0391b555de2463",
+      "manifest.snapshot.json_sha256": "9e8a150f4371a9495eacbff5dd9174fc25ab401c58106f80ec00aa01c8dc74d5"
+    }
+  },
+  "additional_lanes": ["calculator-scripted-smoke", "todo-scripted-smoke", "memory-cold-warm-regression"],
+  "additional_lane_results": {
+    "calculator-scripted-smoke": {
+      "state": "completed",
+      "event_count": 48,
+      "tool_order": ["read_file", "edit_file", "restricted_test"],
+      "final_test_passed": true,
+      "source_unchanged": true,
+      "script_sha256": "e1fca59a49535ea896a2f8112bbc572f75f90dfa0b24c04085038601951c6cc7"
+    },
+    "todo-scripted-smoke": {
+      "state": "completed",
+      "event_count": 72,
+      "test_outcomes": [false, true],
+      "source_unchanged": true,
+      "script_sha256": "1e8c3329c9b7be0ff46ebe54488d5151dd06a3b1b02496a62a8543df7a2fdf89"
+    },
+    "memory-cold-warm-regression": {
+      "paired_cases": 12,
+      "cold_task_success": 0.6666666666666666,
+      "warm_task_success": 1.0,
+      "relevant_recall": 1.0,
+      "precision": 1.0,
+      "irrelevant_injection_rate": 0.0,
+      "implementation_defaults_enabled": false,
+      "runner_sha256": "d4d77bc0f4a019fdf2f796455918b7001a74ce10e0fc30a0019071ed1dc068e8",
+      "raw_output_sha256": "7bcd0e66976574d9641555ef932757ce3d31e6bbc54c16a98b59fad1efda280f"
+    }
+  },
+  "determinism_claim": "semantic outcomes, classifications, oracles, and fixture identities; timing excluded",
+  "environment_freeze": {
+    "python_contract_interpreter": "3.10.12",
+    "operating_system": "Linux WSL2",
+    "sandbox_backend": "linux_user_mount_pid_net",
+    "network": "disabled for sandbox executions",
+    "venv_python": "3.11.16",
+    "contract_python": "3.10.12",
+    "ruff": "0.16.6",
+    "mypy": "1.20.2",
+    "coverage": "7.16.0",
+    "observed_load_average_1_5_15": [0.20654296875, 0.13525390625, 0.048828125],
+    "load_rule": "record load average and process-local environment at execution; do not infer cross-machine performance"
+  }
+}

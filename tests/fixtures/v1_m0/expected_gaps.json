@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "gaps": [
+    {"id": "multi_turn_continuity", "owner": "M2", "current_path": "AgentApplication.run_task creates a distinct Session"},
+    {"id": "direct_workspace_binding", "owner": "M2+M3+M4", "current_path": "WorkspaceManager prepares a per-Session copy"},
+    {"id": "ephemeral_interactive_startup", "owner": "M2+M5", "current_path": "CLI requires an explicit legacy subcommand"},
+    {"id": "product_conversation_resume", "owner": "M2+M5", "current_path": "resume means resume_session for one Runtime execution"},
+    {"id": "typed_permission_lifecycle", "owner": "M4", "current_path": "permission denial is a ToolResult; WAITING_APPROVAL is reconciliation"},
+    {"id": "frozen_uncertain_retry", "owner": "M3", "current_path": "resume rebuilds context and model_calls upsert replaces request_json"},
+    {"id": "controlled_code_undo", "owner": "M4+M5", "current_path": "no undo command or CodeRewindOperation exists"},
+    {"id": "interactive_responsiveness", "owner": "M5", "current_path": "Runtime and provider calls are synchronous"}
+  ]
+}

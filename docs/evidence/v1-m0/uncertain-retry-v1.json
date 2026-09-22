@@ -1,0 +1,678 @@
+{
+  "classification": "M3-owned correctness gap",
+  "current_behavior": "The uncertain retry reconstructs the normalized request, keeps the request ID, increments the attempt, and overwrites stored request_json when admissible context changes.",
+  "gap": {
+    "attempt_after_resume": 2,
+    "event_types": [
+      "session_created",
+      "message_added",
+      "state_transition",
+      "workspace_created",
+      "state_transition",
+      "context_built",
+      "state_transition",
+      "model_call_started",
+      "resume_started",
+      "model_call_uncertain",
+      "state_transition",
+      "retry_scheduled",
+      "state_transition",
+      "model_call_started",
+      "model_call_succeeded",
+      "message_added",
+      "state_transition",
+      "run_finished"
+    ],
+    "journal_events": [
+      {
+        "event_id": "72594373-00bf-4fbe-965e-984fcac57ac1",
+        "event_type": "model_call_started",
+        "payload": {
+          "attempt": 1,
+          "backend": "m0-fake-provider",
+          "message_count": 5,
+          "request_id": "m0-uncertain-retry:model:1",
+          "tool_count": 5
+        },
+        "schema_version": 1,
+        "sequence": 8,
+        "session_id": "m0-uncertain-retry",
+        "state": "calling_model",
+        "timestamp": "2026-09-20T20:58:54.056039+00:00"
+      },
+      {
+        "event_id": "4bc916cf-aaab-433e-9c9a-8a18d39f0baa",
+        "event_type": "model_call_uncertain",
+        "payload": {
+          "attempt": 1,
+          "kind": "missing_response",
+          "request_id": "m0-uncertain-retry:model:1"
+        },
+        "schema_version": 1,
+        "sequence": 10,
+        "session_id": "m0-uncertain-retry",
+        "state": "calling_model",
+        "timestamp": "2026-09-20T20:58:54.067062+00:00"
+      },
+      {
+        "event_id": "186c112e-e62c-4a09-8fe7-59af1338f1e6",
+        "event_type": "retry_scheduled",
+        "payload": {
+          "backend": "m0-fake-provider",
+          "kind": "provider_unavailable",
+          "next_retry_at": 0.0,
+          "retry_count": 1
+        },
+        "schema_version": 1,
+        "sequence": 12,
+        "session_id": "m0-uncertain-retry",
+        "state": "retry_wait",
+        "timestamp": "2026-09-20T20:58:54.069485+00:00"
+      },
+      {
+        "event_id": "1e3bd67f-be7b-44e5-9e97-8cde65b328d1",
+        "event_type": "model_call_started",
+        "payload": {
+          "attempt": 2,
+          "backend": "m0-fake-provider",
+          "message_count": 5,
+          "request_id": "m0-uncertain-retry:model:1",
+          "tool_count": 5
+        },
+        "schema_version": 1,
+        "sequence": 14,
+        "session_id": "m0-uncertain-retry",
+        "state": "calling_model",
+        "timestamp": "2026-09-20T20:58:54.075900+00:00"
+      },
+      {
+        "event_id": "7b8cf2b6-ba54-4747-a447-54666b909f88",
+        "event_type": "model_call_succeeded",
+        "payload": {
+          "finish_reason": "stop",
+          "provider_metadata": {},
+          "request_id": "m0-uncertain-retry:model:1",
+          "tool_call_count": 0,
+          "usage": {
+            "input_tokens": 7,
+            "output_tokens": 1
+          }
+        },
+        "schema_version": 1,
+        "sequence": 15,
+        "session_id": "m0-uncertain-retry",
+        "state": "calling_model",
+        "timestamp": "2026-09-20T20:58:54.077173+00:00"
+      }
+    ],
+    "original_digest": "d4d04bdaafbe038962b2dfffe99c4b60c756e8928d662ae510b31eb951e49c83",
+    "original_request": {
+      "max_output_tokens": 2048,
+      "messages": [
+        {
+          "content": "Use supplied tools only. Paths: workspace-relative; no '/' or '..'; prefer repository_snapshot.file_paths (formatting.py, not /formatting.py). Unknown location with distinctive symbol/literal/key/error: use search_files before sequential reads; on a relevant match, stop unrelated reads. Read before the smallest exact edit; reserve one call for restricted tests; report.",
+          "metadata": {},
+          "role": "system",
+          "tool_call_id": null
+        },
+        {
+          "content": "Characterize uncertain retry.",
+          "metadata": {},
+          "role": "user",
+          "tool_call_id": null
+        },
+        {
+          "content": "{\"active_call_id\": null, \"active_call_kind\": null, \"pending_tool_calls\": [], \"remaining_budgets\": {\"model_calls\": 8, \"output_tokens\": 2048, \"steps\": 29, \"tool_calls\": 12}, \"runtime_state\": \"building_context\", \"task\": \"Characterize uncertain retry.\"}",
+          "metadata": {
+            "context_kind": "runtime_state"
+          },
+          "role": "system",
+          "tool_call_id": null
+        },
+        {
+          "content": "{\"diff_summary\": \"\", \"file_paths\": [\"value.txt\"], \"last_test\": null, \"read_files\": [], \"workspace_revision\": \"66cfc9e539fc72a5dd01d059a0924fd367003aa822ecd0780184fa5ac505e3fe\"}",
+          "metadata": {
+            "context_kind": "repository_snapshot"
+          },
+          "role": "system",
+          "tool_call_id": null
+        },
+        {
+          "content": "test-controlled-context:A",
+          "metadata": {},
+          "role": "user",
+          "tool_call_id": null
+        }
+      ],
+      "metadata": {
+        "session_id": "m0-uncertain-retry"
+      },
+      "request_id": "m0-uncertain-retry:model:1",
+      "tools": [
+        {
+          "description": "Read a UTF-8 text file inside the isolated workspace with line numbers. The path must be workspace-relative; prefer an exact path from repository_snapshot.file_paths.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "end_line": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "path": {
+                "description": "Workspace-relative path. Never start with '/' or use '..'. Prefer an exact path from repository_snapshot.file_paths; for example, use 'formatting.py', not '/formatting.py'.",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              },
+              "start_line": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
+          "name": "read_file"
+        },
+        {
+          "description": "Atomically replace one exact, unique text occurrence in a workspace file. The path must be workspace-relative; prefer an exact path from repository_snapshot.file_paths.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "new_text": {
+                "type": "string"
+              },
+              "old_text": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "description": "Workspace-relative path. Never start with '/' or use '..'. Prefer an exact path from repository_snapshot.file_paths; for example, use 'formatting.py', not '/formatting.py'.",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "old_text",
+              "new_text"
+            ],
+            "type": "object"
+          },
+          "name": "edit_file"
+        },
+        {
+          "description": "Find a case-sensitive literal string in regular UTF-8 workspace files. Use this to locate content before read_file; path must be workspace-relative. This tool does not accept regex, globs, shell commands, or Git metadata.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "max_results": {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "path": {
+                "description": "Optional workspace-relative file or directory; defaults to '.'. Never start with '/' or use '..'. Prefer a directory from repository_snapshot.file_paths.",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              },
+              "query": {
+                "description": "Case-sensitive literal text to find; not a regex.",
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "type": "object"
+          },
+          "name": "search_files"
+        },
+        {
+          "description": "Run one trusted test profile in the isolated workspace.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "profile": {
+                "enum": [
+                  "python_unittest"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "profile"
+            ],
+            "type": "object"
+          },
+          "name": "restricted_test"
+        },
+        {
+          "description": "Run a structured argv in a trusted sandbox profile; shell strings and shell interpreters are not accepted.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "argv": {
+                "items": {
+                  "maxLength": 4096,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 32,
+                "minItems": 1,
+                "type": "array"
+              },
+              "cwd": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "profile": {
+                "enum": [
+                  "python_project"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "profile",
+              "argv"
+            ],
+            "type": "object"
+          },
+          "name": "run_command"
+        }
+      ]
+    },
+    "request_id": "m0-uncertain-retry:model:1",
+    "resumed_digest": "d31b3dffecc303831c98e6e4758e449dc2ec03bd6155cfe211b9540619ef2bc0",
+    "resumed_request": {
+      "max_output_tokens": 2048,
+      "messages": [
+        {
+          "content": "Use supplied tools only. Paths: workspace-relative; no '/' or '..'; prefer repository_snapshot.file_paths (formatting.py, not /formatting.py). Unknown location with distinctive symbol/literal/key/error: use search_files before sequential reads; on a relevant match, stop unrelated reads. Read before the smallest exact edit; reserve one call for restricted tests; report.",
+          "metadata": {},
+          "role": "system",
+          "tool_call_id": null
+        },
+        {
+          "content": "Characterize uncertain retry.",
+          "metadata": {},
+          "role": "user",
+          "tool_call_id": null
+        },
+        {
+          "content": "{\"active_call_id\": \"m0-uncertain-retry:model:1\", \"active_call_kind\": \"model\", \"pending_tool_calls\": [], \"remaining_budgets\": {\"model_calls\": 7, \"output_tokens\": 2048, \"steps\": 28, \"tool_calls\": 12}, \"runtime_state\": \"calling_model\", \"task\": \"Characterize uncertain retry.\"}",
+          "metadata": {
+            "context_kind": "runtime_state"
+          },
+          "role": "system",
+          "tool_call_id": null
+        },
+        {
+          "content": "{\"diff_summary\": \"\", \"file_paths\": [\"value.txt\"], \"last_test\": null, \"read_files\": [], \"workspace_revision\": \"66cfc9e539fc72a5dd01d059a0924fd367003aa822ecd0780184fa5ac505e3fe\"}",
+          "metadata": {
+            "context_kind": "repository_snapshot"
+          },
+          "role": "system",
+          "tool_call_id": null
+        },
+        {
+          "content": "test-controlled-context:B",
+          "metadata": {},
+          "role": "user",
+          "tool_call_id": null
+        }
+      ],
+      "metadata": {
+        "session_id": "m0-uncertain-retry"
+      },
+      "request_id": "m0-uncertain-retry:model:1",
+      "tools": [
+        {
+          "description": "Read a UTF-8 text file inside the isolated workspace with line numbers. The path must be workspace-relative; prefer an exact path from repository_snapshot.file_paths.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "end_line": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "path": {
+                "description": "Workspace-relative path. Never start with '/' or use '..'. Prefer an exact path from repository_snapshot.file_paths; for example, use 'formatting.py', not '/formatting.py'.",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              },
+              "start_line": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
+          "name": "read_file"
+        },
+        {
+          "description": "Atomically replace one exact, unique text occurrence in a workspace file. The path must be workspace-relative; prefer an exact path from repository_snapshot.file_paths.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "new_text": {
+                "type": "string"
+              },
+              "old_text": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "description": "Workspace-relative path. Never start with '/' or use '..'. Prefer an exact path from repository_snapshot.file_paths; for example, use 'formatting.py', not '/formatting.py'.",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "old_text",
+              "new_text"
+            ],
+            "type": "object"
+          },
+          "name": "edit_file"
+        },
+        {
+          "description": "Find a case-sensitive literal string in regular UTF-8 workspace files. Use this to locate content before read_file; path must be workspace-relative. This tool does not accept regex, globs, shell commands, or Git metadata.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "max_results": {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "path": {
+                "description": "Optional workspace-relative file or directory; defaults to '.'. Never start with '/' or use '..'. Prefer a directory from repository_snapshot.file_paths.",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              },
+              "query": {
+                "description": "Case-sensitive literal text to find; not a regex.",
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "type": "object"
+          },
+          "name": "search_files"
+        },
+        {
+          "description": "Run one trusted test profile in the isolated workspace.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "profile": {
+                "enum": [
+                  "python_unittest"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "profile"
+            ],
+            "type": "object"
+          },
+          "name": "restricted_test"
+        },
+        {
+          "description": "Run a structured argv in a trusted sandbox profile; shell strings and shell interpreters are not accepted.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "argv": {
+                "items": {
+                  "maxLength": 4096,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 32,
+                "minItems": 1,
+                "type": "array"
+              },
+              "cwd": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "profile": {
+                "enum": [
+                  "python_project"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "profile",
+              "argv"
+            ],
+            "type": "object"
+          },
+          "name": "run_command"
+        }
+      ]
+    },
+    "source_content_after_resume": "stable\n",
+    "status_after_resume": "succeeded",
+    "status_before_resume": "running",
+    "stored_digest_after_resume": "d31b3dffecc303831c98e6e4758e449dc2ec03bd6155cfe211b9540619ef2bc0",
+    "stored_request_after_resume": {
+      "max_output_tokens": 2048,
+      "messages": [
+        {
+          "content": "Use supplied tools only. Paths: workspace-relative; no '/' or '..'; prefer repository_snapshot.file_paths (formatting.py, not /formatting.py). Unknown location with distinctive symbol/literal/key/error: use search_files before sequential reads; on a relevant match, stop unrelated reads. Read before the smallest exact edit; reserve one call for restricted tests; report.",
+          "metadata": {},
+          "role": "system",
+          "tool_call_id": null
+        },
+        {
+          "content": "Characterize uncertain retry.",
+          "metadata": {},
+          "role": "user",
+          "tool_call_id": null
+        },
+        {
+          "content": "{\"active_call_id\": \"m0-uncertain-retry:model:1\", \"active_call_kind\": \"model\", \"pending_tool_calls\": [], \"remaining_budgets\": {\"model_calls\": 7, \"output_tokens\": 2048, \"steps\": 28, \"tool_calls\": 12}, \"runtime_state\": \"calling_model\", \"task\": \"Characterize uncertain retry.\"}",
+          "metadata": {
+            "context_kind": "runtime_state"
+          },
+          "role": "system",
+          "tool_call_id": null
+        },
+        {
+          "content": "{\"diff_summary\": \"\", \"file_paths\": [\"value.txt\"], \"last_test\": null, \"read_files\": [], \"workspace_revision\": \"66cfc9e539fc72a5dd01d059a0924fd367003aa822ecd0780184fa5ac505e3fe\"}",
+          "metadata": {
+            "context_kind": "repository_snapshot"
+          },
+          "role": "system",
+          "tool_call_id": null
+        },
+        {
+          "content": "test-controlled-context:B",
+          "metadata": {},
+          "role": "user",
+          "tool_call_id": null
+        }
+      ],
+      "metadata": {
+        "session_id": "m0-uncertain-retry"
+      },
+      "request_id": "m0-uncertain-retry:model:1",
+      "tools": [
+        {
+          "description": "Read a UTF-8 text file inside the isolated workspace with line numbers. The path must be workspace-relative; prefer an exact path from repository_snapshot.file_paths.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "end_line": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "path": {
+                "description": "Workspace-relative path. Never start with '/' or use '..'. Prefer an exact path from repository_snapshot.file_paths; for example, use 'formatting.py', not '/formatting.py'.",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              },
+              "start_line": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
+          "name": "read_file"
+        },
+        {
+          "description": "Atomically replace one exact, unique text occurrence in a workspace file. The path must be workspace-relative; prefer an exact path from repository_snapshot.file_paths.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "new_text": {
+                "type": "string"
+              },
+              "old_text": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "description": "Workspace-relative path. Never start with '/' or use '..'. Prefer an exact path from repository_snapshot.file_paths; for example, use 'formatting.py', not '/formatting.py'.",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "old_text",
+              "new_text"
+            ],
+            "type": "object"
+          },
+          "name": "edit_file"
+        },
+        {
+          "description": "Find a case-sensitive literal string in regular UTF-8 workspace files. Use this to locate content before read_file; path must be workspace-relative. This tool does not accept regex, globs, shell commands, or Git metadata.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "max_results": {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "path": {
+                "description": "Optional workspace-relative file or directory; defaults to '.'. Never start with '/' or use '..'. Prefer a directory from repository_snapshot.file_paths.",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              },
+              "query": {
+                "description": "Case-sensitive literal text to find; not a regex.",
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "type": "object"
+          },
+          "name": "search_files"
+        },
+        {
+          "description": "Run one trusted test profile in the isolated workspace.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "profile": {
+                "enum": [
+                  "python_unittest"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "profile"
+            ],
+            "type": "object"
+          },
+          "name": "restricted_test"
+        },
+        {
+          "description": "Run a structured argv in a trusted sandbox profile; shell strings and shell interpreters are not accepted.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "argv": {
+                "items": {
+                  "maxLength": 4096,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 32,
+                "minItems": 1,
+                "type": "array"
+              },
+              "cwd": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "profile": {
+                "enum": [
+                  "python_project"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "profile",
+              "argv"
+            ],
+            "type": "object"
+          },
+          "name": "run_command"
+        }
+      ]
+    }
+  },
+  "positive_control": {
+    "final_state": "completed",
+    "first_provider_calls": 1,
+    "request_digest_after_resume": "be2f49c7d7523e109b15b61342f2921fbdd32401b267af73b4653062e2de89a1",
+    "request_digest_before_resume": "be2f49c7d7523e109b15b61342f2921fbdd32401b267af73b4653062e2de89a1",
+    "resumed_provider_calls": 0,
+    "source_content_after_resume": "stable\n"
+  },
+  "remote_execution_claim": "unknown; the fake provider received the first request before simulated host loss",
+  "schema_version": 1
+}

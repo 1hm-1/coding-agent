@@ -1,0 +1,724 @@
+{
+  "cases": [
+    {
+      "backend": {
+        "fixture": "scripted_run.json",
+        "kind": "scripted"
+      },
+      "case_id": "calculator-success",
+      "case_type": "task",
+      "fixture": "fixture",
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "allow": [
+            "calculator.py"
+          ],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 32,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [
+        "add must be fixed"
+      ],
+      "schema_version": 1,
+      "task": "Fix add and run tests"
+    },
+    {
+      "backend": {
+        "kind": "scripted",
+        "responses": [
+          {
+            "final": "No change was made."
+          }
+        ]
+      },
+      "case_id": "calculator-task-fail",
+      "case_type": "negative_control",
+      "fixture": "fixture",
+      "oracles": [
+        {
+          "contains": "return a * b",
+          "kind": "file",
+          "path": "calculator.py"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 32,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [],
+      "schema_version": 1,
+      "task": "Make an impossible change"
+    },
+    {
+      "backend": {
+        "kind": "scripted",
+        "responses": [
+          {
+            "tool_calls": [
+              {
+                "arguments": {
+                  "argv": [
+                    "python3",
+                    "-c",
+                    "import pathlib; print(pathlib.Path('calculator.py').is_file())"
+                  ],
+                  "profile": "python_project"
+                },
+                "id": "structured-command-1",
+                "name": "run_command"
+              }
+            ]
+          },
+          {
+            "final": "The structured command completed in the isolated workspace."
+          }
+        ]
+      },
+      "case_id": "calculator-structured-command",
+      "case_type": "task",
+      "fixture": "fixture",
+      "oracles": [
+        {
+          "exists": true,
+          "kind": "file",
+          "path": "calculator.py"
+        },
+        {
+          "allow": [],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 32,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [],
+      "schema_version": 1,
+      "task": "Run a structured workspace command and report the result"
+    },
+    {
+      "backend": {
+        "kind": "scripted",
+        "responses": [
+          {
+            "tool_calls": "invalid"
+          }
+        ]
+      },
+      "case_id": "calculator-runtime-fail",
+      "case_type": "negative_control",
+      "fixture": "fixture",
+      "oracles": [
+        {
+          "contains": "return a * b",
+          "kind": "file",
+          "path": "calculator.py"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 32,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [],
+      "schema_version": 1,
+      "task": "Read the repository"
+    },
+    {
+      "backend": {
+        "fault_stage": "after_tool_result",
+        "kind": "scripted",
+        "responses": [
+          {
+            "tool_calls": [
+              {
+                "arguments": {
+                  "path": "calculator.py"
+                },
+                "id": "read-1",
+                "name": "read_file"
+              }
+            ]
+          },
+          {
+            "final": "read"
+          }
+        ],
+        "resume": true
+      },
+      "case_id": "calculator-recovery",
+      "case_type": "task",
+      "fixture": "fixture",
+      "oracles": [
+        {
+          "exists": true,
+          "kind": "file",
+          "path": "calculator.py"
+        },
+        {
+          "kind": "result_schema",
+          "required": [
+            "state",
+            "session_id"
+          ]
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 32,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [],
+      "schema_version": 1,
+      "task": "Read and answer"
+    },
+    {
+      "backend": {
+        "fixture": "todo_cli_scripted_run.json",
+        "kind": "scripted"
+      },
+      "case_id": "todo-recovery",
+      "case_type": "task",
+      "fixture": "todo_cli",
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "contains": "return None",
+          "kind": "file",
+          "path": "todo_parser.py"
+        },
+        {
+          "allow": [
+            "todo_parser.py"
+          ],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 64,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [
+        "blank input is ignored"
+      ],
+      "schema_version": 1,
+      "task": "Fix the empty input crash and run tests."
+    },
+    {
+      "backend": {
+        "kind": "scripted",
+        "responses": [
+          {
+            "tool_calls": [
+              {
+                "arguments": {
+                  "path": "todo_parser.py"
+                },
+                "id": "todo-inspect-1",
+                "name": "read_file"
+              }
+            ]
+          },
+          {
+            "final": "The parser accepts add and done commands and ignores unknown input."
+          }
+        ]
+      },
+      "case_id": "todo-readonly-inspection",
+      "case_type": "task",
+      "fixture": "todo_cli",
+      "oracles": [
+        {
+          "exists": true,
+          "kind": "file",
+          "path": "todo_parser.py"
+        },
+        {
+          "allow": [],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 32,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [],
+      "schema_version": 1,
+      "task": "Inspect the parser and report its behavior."
+    },
+    {
+      "backend": {
+        "fixture": "eval_scripts/checkout_cross_file.json",
+        "kind": "scripted"
+      },
+      "case_id": "checkout-cross-file-location",
+      "case_type": "task",
+      "fixture": "mini_repos/checkout_service",
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "contains": "return round(subtotal * (1 - rate), 2)",
+          "kind": "file",
+          "path": "pricing.py"
+        },
+        {
+          "allow": [
+            "pricing.py"
+          ],
+          "deny": [
+            "test_checkout.py",
+            "README.md"
+          ],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 32,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [
+        "pricing is in a separate module",
+        "cent rounding must be preserved"
+      ],
+      "schema_version": 1,
+      "task": "Locate the pricing implementation across this repository, fix cent rounding, and run tests."
+    },
+    {
+      "backend": {
+        "fixture": "eval_scripts/checkout_location_failure.json",
+        "kind": "scripted"
+      },
+      "case_id": "checkout-location-failure",
+      "case_type": "negative_control",
+      "fixture": "mini_repos/checkout_service",
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "contains": "return round(subtotal * (1 - rate), 2)",
+          "kind": "file",
+          "path": "pricing.py"
+        },
+        {
+          "allow": [],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 16,
+        "max_tool_calls": 6,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [
+        "the agent must recover after an unknown file path"
+      ],
+      "schema_version": 1,
+      "task": "Locate the pricing implementation across this repository, fix cent rounding, and run tests."
+    },
+    {
+      "backend": {
+        "fixture": "eval_scripts/order_pipeline_recovery.json",
+        "kind": "scripted"
+      },
+      "case_id": "pipeline-multi-file-recovery",
+      "case_type": "task",
+      "fixture": "mini_repos/order_pipeline",
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "contains_any": [
+            "return value.strip().lower()",
+            "return value.lower().strip()"
+          ],
+          "kind": "file",
+          "path": "normalization.py"
+        },
+        {
+          "contains": "return f\"{label}=${amount:.2f}\"",
+          "kind": "file",
+          "path": "formatting.py"
+        },
+        {
+          "allow": [
+            "normalization.py",
+            "formatting.py"
+          ],
+          "deny": [
+            "test_pipeline.py",
+            "README.md"
+          ],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 48,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [
+        "normalization and formatting are separate fixes",
+        "the first test failure must be observed"
+      ],
+      "schema_version": 1,
+      "task": "Fix the report pipeline across its implementation modules, run tests after each change, and recover from the first test failure."
+    },
+    {
+      "backend": {
+        "fixture": "eval_scripts/settings_scoped.json",
+        "kind": "scripted"
+      },
+      "case_id": "settings-scoped-edit",
+      "case_type": "task",
+      "fixture": "mini_repos/settings_service",
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "contains": "value = raw.strip().lower()",
+          "kind": "file",
+          "path": "settings.py"
+        },
+        {
+          "allow": [
+            "settings.py"
+          ],
+          "deny": [
+            "README.md",
+            "service.py",
+            "test_settings.py"
+          ],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 32,
+        "max_tool_calls": 10,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [
+        "only settings.py may change"
+      ],
+      "schema_version": 1,
+      "task": "Fix mode parsing. Only modify settings.py, inspect the repository first, and run tests."
+    },
+    {
+      "backend": {
+        "fixture": "eval_scripts/settings_scope_violation.json",
+        "kind": "scripted"
+      },
+      "case_id": "settings-scope-violation",
+      "case_type": "negative_control",
+      "fixture": "mini_repos/settings_service",
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "contains": "value = raw.strip().lower()",
+          "kind": "file",
+          "path": "settings.py"
+        },
+        {
+          "allow": [
+            "settings.py"
+          ],
+          "deny": [
+            "README.md",
+            "service.py",
+            "test_settings.py"
+          ],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 40,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [
+        "a documentation edit violates the requested scope"
+      ],
+      "schema_version": 1,
+      "task": "Fix mode parsing. Only modify settings.py, inspect the repository first, and run tests."
+    },
+    {
+      "backend": {
+        "compression_backend": "primary",
+        "compression_fixture": "eval_scripts/long_history_summary.json",
+        "fixture": "eval_scripts/long_history_compression.json",
+        "kind": "scripted",
+        "max_compression_calls": 2
+      },
+      "case_id": "long-history-compression",
+      "case_type": "task",
+      "fixture": "mini_repos/long_history",
+      "oracles": [
+        {
+          "exists": true,
+          "kind": "file",
+          "path": "history.py"
+        },
+        {
+          "kind": "result_schema",
+          "required": [
+            "state",
+            "session_id"
+          ]
+        },
+        {
+          "allow": [],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 11500,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 40,
+        "max_tool_calls": 12,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [
+        "the long history is read-only",
+        "required audit facts must survive compression"
+      ],
+      "schema_version": 1,
+      "task": "Inspect the long audit history, preserve the required facts, and run the repository tests."
+    },
+    {
+      "backend": {
+        "fixture": "eval_scripts/search_lab_no_search.json",
+        "kind": "scripted"
+      },
+      "case_id": "search-lab-content-location",
+      "case_type": "task",
+      "fixture": "mini_repos/search_lab",
+      "oracles": [
+        {
+          "kind": "test_profile",
+          "profile": "python_unittest"
+        },
+        {
+          "contains": "return amount * 1.12",
+          "kind": "file",
+          "path": "invoice/rules/rule_11.py"
+        },
+        {
+          "allow": [
+            "invoice/rules/rule_11.py"
+          ],
+          "deny": [
+            "test_invoice.py",
+            "README.md"
+          ],
+          "kind": "changed_paths"
+        }
+      ],
+      "policy": {
+        "allowed_permissions": [
+          "execute_command",
+          "execute_test",
+          "read",
+          "write"
+        ],
+        "max_model_calls": 8,
+        "max_output_tokens": 2048,
+        "max_retries": 2,
+        "max_retry_wait_seconds": 120.0,
+        "max_steps": 32,
+        "max_tool_calls": 8,
+        "retry_base_delay_seconds": 1.0,
+        "retry_jitter_seconds": 0.0,
+        "retry_max_delay_seconds": 30.0
+      },
+      "required_facts": [
+        "the EAST implementation must be located by repository content",
+        "only the responsible implementation file may change"
+      ],
+      "schema_version": 1,
+      "task": "Fix the EAST premium invoice total: an amount of 100 currently returns 102 but must return 112. The implementation location is not provided. Inspect the repository, make the smallest implementation-only change, and run tests."
+    }
+  ],
+  "schema_version": 1
+}

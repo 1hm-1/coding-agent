@@ -1,0 +1,1715 @@
+{
+  "candidate_additive_mappings": {
+    "historical_conversation": "one synthetic Conversation per legacy Session when no product conversation provenance exists",
+    "historical_turn": "one synthetic Turn representing the legacy one-shot task, linked to its RuntimeExecution",
+    "legacy_session": "RuntimeExecution identity retained as compatibility identifier; M1 decides whether the key is reused or related by an explicit mapping",
+    "rule": "never rewrite legacy payloads, traces, IPC v1, or evidence into target terminology"
+  },
+  "database_schema_version": 4,
+  "failure_contract": [
+    "each existing migration is BEGIN IMMEDIATE and rolls back the failing version atomically",
+    "already applied versions remain committed when a later version fails",
+    "rerun is idempotent",
+    "any recorded version above 4 raises FutureSchemaVersion before new migration work"
+  ],
+  "legacy_identifier_surfaces": {
+    "cli": [
+      "--session-id",
+      "sessions",
+      "show",
+      "resume",
+      "interrupt",
+      "resolve-call",
+      "replay",
+      "export-trace"
+    ],
+    "database": [
+      "sessions.id",
+      "messages.session_id",
+      "events.session_id",
+      "checkpoints.session_id",
+      "model_calls.session_id",
+      "tool_calls.session_id",
+      "summaries.session_id",
+      "memory_retrievals.session_id"
+    ],
+    "python_api": [
+      "RunResult.session_id",
+      "AgentApplication.resume_session(session_id)",
+      "AgentApplication.interrupt_session(session_id)"
+    ],
+    "runtime_ipc": [
+      "session_id in v1 requests, events, results, and error context"
+    ],
+    "trace_and_evidence": [
+      "JSONL event session_id",
+      "replay output session_id",
+      "eval run/result session_id when exported"
+    ]
+  },
+  "m1_owned_decisions": [
+    "physical Conversation/Turn/RuntimeExecution tables and keys",
+    "legacy Session-to-execution mapping cardinality and durable linkage",
+    "synthetic historical object provenance markers",
+    "backfill batching and mixed-version read/write sequencing",
+    "rollback/recovery checkpoint for additive backfill",
+    "public API naming and compatibility aliases outside frozen IPC v1"
+  ],
+  "migration_versions": {
+    "1": 4,
+    "2": 9,
+    "3": 3,
+    "4": 7
+  },
+  "preserve": [
+    "message order and tool_call_id uniqueness",
+    "event sequence and payload bytes/meaning",
+    "checkpoint RuntimeSnapshot and optimistic version",
+    "model request/response/error journals and attempts",
+    "tool arguments/results/errors, revisions, recovery mode, and attempts",
+    "summary lineage, source range/hash, revision, supersession, and staleness",
+    "lease owner/expiry, interrupt request, resume target, and context version",
+    "Memory records, lifecycle events, retrieval audit, scope, status, and provenance"
+  ],
+  "readers_to_preserve": [
+    "SQLiteRunJournal",
+    "run_task and resume_session",
+    "legacy CLI session commands",
+    "Runtime IPC v1",
+    "JSONL export/replay and semantic replay",
+    "evaluation reports/oracles",
+    "Memory store/governance readers"
+  ],
+  "required_fixtures": [
+    "terminal completed and failed",
+    "interrupted before and during calls",
+    "retrying model and tool calls",
+    "uncertain model and tool effects",
+    "WAITING_APPROVAL reconciliation",
+    "committed response reuse",
+    "mixed v1-v4 historical data including summaries and Memory records"
+  ],
+  "schema_version": 1,
+  "serialized_format_rule": "Formats without an embedded version are catalogued as legacy-unversioned-v0, not inferred as schema v1. M1 must preserve their raw content and current readers or introduce an explicit, tested compatibility mapping; the SQLite schema version alone is not a payload version.",
+  "serialized_format_versions": [
+    {
+      "accepted_read_versions": [
+        1,
+        2
+      ],
+      "columns": [
+        "checkpoints.snapshot_json"
+      ],
+      "compatibility_requirement": "M1 must retain v1 and v2 reads and write v2 until an independently authorized versioned migration changes the contract.",
+      "current_write_version": 2,
+      "format_id": "runtime_snapshot",
+      "reader": "RuntimeSnapshot.from_json/from_dict via SQLiteRunJournal.load_snapshot",
+      "version_field": "snapshot_version",
+      "writer": "RuntimeSnapshot.to_json/to_dict"
+    },
+    {
+      "accepted_read_versions": [
+        1
+      ],
+      "columns": [
+        "events.schema_version",
+        "events.payload_json"
+      ],
+      "compatibility_requirement": "Preserve event type, sequence, state, payload, and schema version; old events and JSONL exports remain replayable.",
+      "current_write_version": 1,
+      "format_id": "runtime_event",
+      "reader": "SQLiteRunJournal.list_events -> Event.from_dict; JsonlEventStore.load uses the same Event reader",
+      "version_field": "events.schema_version",
+      "writer": "SQLiteRunJournal._insert_event using EVENT_SCHEMA_VERSION"
+    },
+    {
+      "accepted_read_versions": [
+        1
+      ],
+      "columns": [
+        "summaries.schema_version",
+        "summaries.summary_json"
+      ],
+      "compatibility_requirement": "Preserve source ranges/hashes, workspace revision, fact records, supersession, staleness, and raw-event authority.",
+      "current_write_version": 1,
+      "format_id": "summary_record",
+      "reader": "SQLiteRunJournal.get_summary/get_latest_summary -> SummaryRecord.from_dict",
+      "version_field": "schema_version in both row and JSON",
+      "writer": "SummaryRecord.to_dict via SQLiteRunJournal summary mutation"
+    },
+    {
+      "accepted_read_versions": [
+        1
+      ],
+      "columns": [
+        "memory_records.schema_version",
+        "memory_records.source_event_refs_json"
+      ],
+      "compatibility_requirement": "Preserve v1 validation, provenance references, scope/status/version, and tombstone semantics; do not rewrite dormant records into Product terminology.",
+      "current_write_version": 1,
+      "format_id": "memory_record",
+      "reader": "SQLiteMemoryStore._record_from_row -> MemoryRecord.from_dict",
+      "version_field": "memory_records.schema_version",
+      "writer": "MemoryRecord fields/to_dict and SQLiteMemoryStore._insert_record"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "sessions.policy_json"
+      ],
+      "compatibility_requirement": "Preserve existing keys/defaults and normalized equality with the checkpoint; M1 must not require a future Product policy envelope to read legacy rows.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "session_policy",
+      "reader": "RunPolicy.from_dict in SQLiteRunJournal._assert_snapshot_matches_row",
+      "version_field": null,
+      "writer": "RunPolicy.to_dict"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "sessions.failure_json"
+      ],
+      "compatibility_requirement": "Preserve raw object and null distinction; no semantic reinterpretation during additive migration.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "session_failure",
+      "reader": "SQLiteRunJournal._assert_snapshot_matches_row JSON object comparison",
+      "version_field": null,
+      "writer": "Runtime failure object through snapshot/session persistence"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "messages.metadata_json"
+      ],
+      "compatibility_requirement": "Preserve message order, content, tool_call_id uniqueness, and metadata object byte meaning.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "message_metadata",
+      "reader": "SQLiteRunJournal.list_messages constructs Message",
+      "version_field": null,
+      "writer": "Message.metadata JSON object"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "model_calls.request_json"
+      ],
+      "compatibility_requirement": "Preserve exact historical request JSON and request ID. M3 may add frozen-request versioning but cannot retroactively claim legacy exact-retry identity.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "model_call_request",
+      "reader": "SQLiteRunJournal.get_model_call._decode_optional_object; retry/recovery consumes the returned mapping",
+      "version_field": null,
+      "writer": "ModelRequest.to_dict through ModelCallMutation"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "model_calls.response_json"
+      ],
+      "compatibility_requirement": "Preserve committed response reuse and tolerant defaults for usage, finish_reason, and provider_metadata.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "model_call_response",
+      "reader": "SQLiteRunJournal.get_model_call then ModelResponse.from_dict in AgentRuntime committed-response reuse",
+      "version_field": null,
+      "writer": "ModelResponse.to_dict"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "model_calls.error_json"
+      ],
+      "compatibility_requirement": "Preserve raw classified error object and null distinction for audit/recovery.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "model_call_error",
+      "reader": "SQLiteRunJournal.get_model_call._decode_optional_object",
+      "version_field": null,
+      "writer": "classified model error object"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "tool_calls.arguments_json"
+      ],
+      "compatibility_requirement": "Preserve normalized arguments, logical call ID/ordinal, recovery mode, and historical session-scoped/global call-ID compatibility.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "tool_call_arguments",
+      "reader": "SQLiteRunJournal.get_tool_call._decode_optional_object",
+      "version_field": null,
+      "writer": "ToolCall.arguments through ToolCallMutation"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "tool_calls.result_json"
+      ],
+      "compatibility_requirement": "Preserve committed-result reuse, status/data/error/duration/truncation, and unknown-effect reconciliation.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "tool_call_result",
+      "reader": "SQLiteRunJournal.get_tool_call then ToolResult.from_dict in AgentRuntime/application reconciliation",
+      "version_field": null,
+      "writer": "ToolResult.to_dict"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "tool_calls.error_json"
+      ],
+      "compatibility_requirement": "Preserve raw object and null distinction.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "tool_call_error",
+      "reader": "SQLiteRunJournal.get_tool_call._decode_optional_object",
+      "version_field": null,
+      "writer": "classified tool error object"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "memory_events.payload_json"
+      ],
+      "compatibility_requirement": "Preserve lifecycle event identity, transition columns, actor, timestamp, and payload.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "memory_audit_payload",
+      "reader": "SQLiteMemoryStore event listing JSON decoder",
+      "version_field": null,
+      "writer": "MemoryAuditEvent.payload via SQLiteMemoryStore._insert_event"
+    },
+    {
+      "accepted_read_versions": [
+        "legacy-unversioned-v0"
+      ],
+      "columns": [
+        "memory_retrievals.selected_json"
+      ],
+      "compatibility_requirement": "Preserve selection order/content, query identity, token cost, duration, and scope/revision fields.",
+      "current_write_version": "legacy-unversioned-v0",
+      "format_id": "memory_retrieval_selection",
+      "reader": "SQLiteMemoryStore.get_retrieval json.loads",
+      "version_field": null,
+      "writer": "stable JSON selected-record audit list"
+    }
+  ],
+  "serialized_records": {
+    "checkpoints": [
+      "snapshot_json"
+    ],
+    "events": [
+      "payload_json"
+    ],
+    "memory_events": [
+      "payload_json"
+    ],
+    "memory_records": [
+      "source_event_refs_json"
+    ],
+    "memory_retrievals": [
+      "selected_json"
+    ],
+    "messages": [
+      "metadata_json"
+    ],
+    "model_calls": [
+      "request_json",
+      "response_json",
+      "error_json"
+    ],
+    "sessions": [
+      "policy_json",
+      "failure_json"
+    ],
+    "summaries": [
+      "summary_json"
+    ],
+    "tool_calls": [
+      "arguments_json",
+      "result_json",
+      "error_json"
+    ]
+  },
+  "sqlite_authority": true,
+  "supported_migration_starts": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "tables": {
+    "checkpoints": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "session_id",
+          "notnull": 0,
+          "pk": 1,
+          "type": "TEXT"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "state",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 2,
+          "dflt_value": null,
+          "name": "snapshot_json",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 3,
+          "dflt_value": null,
+          "name": "updated_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE checkpoints (\n            session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,\n            state TEXT NOT NULL,\n            snapshot_json TEXT NOT NULL,\n            updated_at TEXT NOT NULL\n        )",
+      "foreign_keys": [
+        {
+          "from": "session_id",
+          "id": 0,
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "seq": 0,
+          "table": "sessions",
+          "to": "id"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "name": "sqlite_autoindex_checkpoints_1",
+          "origin": "pk",
+          "partial": 0,
+          "seq": 0,
+          "unique": 1
+        }
+      ]
+    },
+    "events": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "event_id",
+          "notnull": 0,
+          "pk": 1,
+          "type": "TEXT"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "session_id",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 2,
+          "dflt_value": null,
+          "name": "sequence",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 3,
+          "dflt_value": null,
+          "name": "schema_version",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 4,
+          "dflt_value": null,
+          "name": "event_type",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 5,
+          "dflt_value": null,
+          "name": "state",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 6,
+          "dflt_value": null,
+          "name": "payload_json",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 7,
+          "dflt_value": null,
+          "name": "created_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE events (\n            event_id TEXT PRIMARY KEY,\n            session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,\n            sequence INTEGER NOT NULL,\n            schema_version INTEGER NOT NULL,\n            event_type TEXT NOT NULL,\n            state TEXT NOT NULL,\n            payload_json TEXT NOT NULL,\n            created_at TEXT NOT NULL,\n            UNIQUE(session_id, sequence)\n        )",
+      "foreign_keys": [
+        {
+          "from": "session_id",
+          "id": 0,
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "seq": 0,
+          "table": "sessions",
+          "to": "id"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "session_id",
+            "sequence"
+          ],
+          "name": "sqlite_autoindex_events_2",
+          "origin": "u",
+          "partial": 0,
+          "seq": 0,
+          "unique": 1
+        },
+        {
+          "columns": [
+            "event_id"
+          ],
+          "name": "sqlite_autoindex_events_1",
+          "origin": "pk",
+          "partial": 0,
+          "seq": 1,
+          "unique": 1
+        }
+      ]
+    },
+    "memory_events": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "event_id",
+          "notnull": 0,
+          "pk": 1,
+          "type": "TEXT"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "memory_id",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 2,
+          "dflt_value": null,
+          "name": "event_type",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 3,
+          "dflt_value": null,
+          "name": "actor_id",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 4,
+          "dflt_value": null,
+          "name": "from_status",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 5,
+          "dflt_value": null,
+          "name": "to_status",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 6,
+          "dflt_value": null,
+          "name": "payload_json",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 7,
+          "dflt_value": null,
+          "name": "created_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE memory_events (\n            event_id TEXT PRIMARY KEY,\n            memory_id TEXT NOT NULL REFERENCES memory_records(memory_id),\n            event_type TEXT NOT NULL,\n            actor_id TEXT NOT NULL,\n            from_status TEXT,\n            to_status TEXT NOT NULL,\n            payload_json TEXT NOT NULL,\n            created_at TEXT NOT NULL\n        )",
+      "foreign_keys": [
+        {
+          "from": "memory_id",
+          "id": 0,
+          "match": "NONE",
+          "on_delete": "NO ACTION",
+          "on_update": "NO ACTION",
+          "seq": 0,
+          "table": "memory_records",
+          "to": "memory_id"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "memory_id",
+            "created_at",
+            "event_id"
+          ],
+          "name": "memory_events_record_time",
+          "origin": "c",
+          "partial": 0,
+          "seq": 0,
+          "unique": 0
+        },
+        {
+          "columns": [
+            "event_id"
+          ],
+          "name": "sqlite_autoindex_memory_events_1",
+          "origin": "pk",
+          "partial": 0,
+          "seq": 1,
+          "unique": 1
+        }
+      ]
+    },
+    "memory_records": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "memory_id",
+          "notnull": 0,
+          "pk": 1,
+          "type": "TEXT"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "schema_version",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 2,
+          "dflt_value": null,
+          "name": "scope",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 3,
+          "dflt_value": null,
+          "name": "scope_id",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 4,
+          "dflt_value": null,
+          "name": "kind",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 5,
+          "dflt_value": null,
+          "name": "content",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 6,
+          "dflt_value": null,
+          "name": "source_run_id",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 7,
+          "dflt_value": null,
+          "name": "source_agent_id",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 8,
+          "dflt_value": null,
+          "name": "source_event_refs_json",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 9,
+          "dflt_value": null,
+          "name": "repository_revision",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 10,
+          "dflt_value": null,
+          "name": "confidence",
+          "notnull": 1,
+          "pk": 0,
+          "type": "REAL"
+        },
+        {
+          "cid": 11,
+          "dflt_value": null,
+          "name": "created_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 12,
+          "dflt_value": null,
+          "name": "expires_at",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 13,
+          "dflt_value": null,
+          "name": "status",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 14,
+          "dflt_value": null,
+          "name": "supersedes",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 15,
+          "dflt_value": null,
+          "name": "content_hash",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 16,
+          "dflt_value": "0",
+          "name": "version",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 17,
+          "dflt_value": null,
+          "name": "updated_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE memory_records (\n            memory_id TEXT PRIMARY KEY,\n            schema_version INTEGER NOT NULL,\n            scope TEXT NOT NULL,\n            scope_id TEXT NOT NULL,\n            kind TEXT NOT NULL,\n            content TEXT NOT NULL,\n            source_run_id TEXT NOT NULL,\n            source_agent_id TEXT NOT NULL,\n            source_event_refs_json TEXT NOT NULL,\n            repository_revision TEXT,\n            confidence REAL NOT NULL,\n            created_at TEXT NOT NULL,\n            expires_at TEXT,\n            status TEXT NOT NULL,\n            supersedes TEXT REFERENCES memory_records(memory_id),\n            content_hash TEXT NOT NULL,\n            version INTEGER NOT NULL DEFAULT 0,\n            updated_at TEXT NOT NULL,\n            UNIQUE(scope, scope_id, kind, content_hash)\n        )",
+      "foreign_keys": [
+        {
+          "from": "supersedes",
+          "id": 0,
+          "match": "NONE",
+          "on_delete": "NO ACTION",
+          "on_update": "NO ACTION",
+          "seq": 0,
+          "table": "memory_records",
+          "to": "memory_id"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "status",
+            "expires_at"
+          ],
+          "name": "memory_records_expiry",
+          "origin": "c",
+          "partial": 0,
+          "seq": 0,
+          "unique": 0
+        },
+        {
+          "columns": [
+            "scope",
+            "scope_id",
+            "status",
+            "kind"
+          ],
+          "name": "memory_records_scope_status",
+          "origin": "c",
+          "partial": 0,
+          "seq": 1,
+          "unique": 0
+        },
+        {
+          "columns": [
+            "scope",
+            "scope_id",
+            "kind",
+            "content_hash"
+          ],
+          "name": "sqlite_autoindex_memory_records_2",
+          "origin": "u",
+          "partial": 0,
+          "seq": 2,
+          "unique": 1
+        },
+        {
+          "columns": [
+            "memory_id"
+          ],
+          "name": "sqlite_autoindex_memory_records_1",
+          "origin": "pk",
+          "partial": 0,
+          "seq": 3,
+          "unique": 1
+        }
+      ]
+    },
+    "memory_retrievals": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "retrieval_id",
+          "notnull": 0,
+          "pk": 1,
+          "type": "TEXT"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "query_hash",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 2,
+          "dflt_value": null,
+          "name": "session_id",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 3,
+          "dflt_value": null,
+          "name": "repository_id",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 4,
+          "dflt_value": null,
+          "name": "user_id",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 5,
+          "dflt_value": null,
+          "name": "repository_revision",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 6,
+          "dflt_value": null,
+          "name": "selected_json",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 7,
+          "dflt_value": null,
+          "name": "token_cost",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 8,
+          "dflt_value": null,
+          "name": "duration_ms",
+          "notnull": 1,
+          "pk": 0,
+          "type": "REAL"
+        },
+        {
+          "cid": 9,
+          "dflt_value": null,
+          "name": "created_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE memory_retrievals (\n            retrieval_id TEXT PRIMARY KEY,\n            query_hash TEXT NOT NULL,\n            session_id TEXT,\n            repository_id TEXT,\n            user_id TEXT,\n            repository_revision TEXT,\n            selected_json TEXT NOT NULL,\n            token_cost INTEGER NOT NULL,\n            duration_ms REAL NOT NULL,\n            created_at TEXT NOT NULL\n        )",
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "columns": [
+            "query_hash",
+            "created_at",
+            "retrieval_id"
+          ],
+          "name": "memory_retrievals_query_time",
+          "origin": "c",
+          "partial": 0,
+          "seq": 0,
+          "unique": 0
+        },
+        {
+          "columns": [
+            "retrieval_id"
+          ],
+          "name": "sqlite_autoindex_memory_retrievals_1",
+          "origin": "pk",
+          "partial": 0,
+          "seq": 1,
+          "unique": 1
+        }
+      ]
+    },
+    "messages": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "id",
+          "notnull": 0,
+          "pk": 1,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "session_id",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 2,
+          "dflt_value": null,
+          "name": "message_index",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 3,
+          "dflt_value": null,
+          "name": "role",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 4,
+          "dflt_value": null,
+          "name": "content",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 5,
+          "dflt_value": null,
+          "name": "tool_call_id",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 6,
+          "dflt_value": null,
+          "name": "metadata_json",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 7,
+          "dflt_value": null,
+          "name": "created_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE messages (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,\n            message_index INTEGER NOT NULL,\n            role TEXT NOT NULL,\n            content TEXT NOT NULL,\n            tool_call_id TEXT,\n            metadata_json TEXT NOT NULL,\n            created_at TEXT NOT NULL,\n            UNIQUE(session_id, message_index),\n            UNIQUE(session_id, tool_call_id)\n        )",
+      "foreign_keys": [
+        {
+          "from": "session_id",
+          "id": 0,
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "seq": 0,
+          "table": "sessions",
+          "to": "id"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "session_id",
+            "tool_call_id"
+          ],
+          "name": "sqlite_autoindex_messages_2",
+          "origin": "u",
+          "partial": 0,
+          "seq": 0,
+          "unique": 1
+        },
+        {
+          "columns": [
+            "session_id",
+            "message_index"
+          ],
+          "name": "sqlite_autoindex_messages_1",
+          "origin": "u",
+          "partial": 0,
+          "seq": 1,
+          "unique": 1
+        }
+      ]
+    },
+    "model_calls": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "request_id",
+          "notnull": 0,
+          "pk": 1,
+          "type": "TEXT"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "session_id",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 2,
+          "dflt_value": null,
+          "name": "ordinal",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 3,
+          "dflt_value": "1",
+          "name": "attempt",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 4,
+          "dflt_value": null,
+          "name": "backend",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 5,
+          "dflt_value": null,
+          "name": "status",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 6,
+          "dflt_value": null,
+          "name": "request_json",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 7,
+          "dflt_value": null,
+          "name": "response_json",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 8,
+          "dflt_value": null,
+          "name": "error_json",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 9,
+          "dflt_value": null,
+          "name": "started_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 10,
+          "dflt_value": null,
+          "name": "finished_at",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE model_calls (\n            request_id TEXT PRIMARY KEY,\n            session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,\n            ordinal INTEGER NOT NULL,\n            attempt INTEGER NOT NULL DEFAULT 1,\n            backend TEXT NOT NULL,\n            status TEXT NOT NULL,\n            request_json TEXT NOT NULL,\n            response_json TEXT,\n            error_json TEXT,\n            started_at TEXT NOT NULL,\n            finished_at TEXT,\n            UNIQUE(session_id, ordinal)\n        )",
+      "foreign_keys": [
+        {
+          "from": "session_id",
+          "id": 0,
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "seq": 0,
+          "table": "sessions",
+          "to": "id"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "session_id",
+            "ordinal"
+          ],
+          "name": "model_calls_session_ordinal",
+          "origin": "c",
+          "partial": 0,
+          "seq": 0,
+          "unique": 0
+        },
+        {
+          "columns": [
+            "session_id",
+            "ordinal"
+          ],
+          "name": "sqlite_autoindex_model_calls_2",
+          "origin": "u",
+          "partial": 0,
+          "seq": 1,
+          "unique": 1
+        },
+        {
+          "columns": [
+            "request_id"
+          ],
+          "name": "sqlite_autoindex_model_calls_1",
+          "origin": "pk",
+          "partial": 0,
+          "seq": 2,
+          "unique": 1
+        }
+      ]
+    },
+    "schema_migrations": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "version",
+          "notnull": 0,
+          "pk": 1,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "applied_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE schema_migrations (\n                version INTEGER PRIMARY KEY,\n                applied_at TEXT NOT NULL\n            )",
+      "foreign_keys": [],
+      "indexes": []
+    },
+    "sessions": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "id",
+          "notnull": 0,
+          "pk": 1,
+          "type": "TEXT"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "task",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 2,
+          "dflt_value": null,
+          "name": "source_path",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 3,
+          "dflt_value": null,
+          "name": "workspace_path",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 4,
+          "dflt_value": null,
+          "name": "state",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 5,
+          "dflt_value": null,
+          "name": "policy_json",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 6,
+          "dflt_value": null,
+          "name": "source_fingerprint",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 7,
+          "dflt_value": null,
+          "name": "final_answer",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 8,
+          "dflt_value": null,
+          "name": "failure_json",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 9,
+          "dflt_value": "0",
+          "name": "step_count",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 10,
+          "dflt_value": "0",
+          "name": "model_calls",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 11,
+          "dflt_value": "0",
+          "name": "tool_calls",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 12,
+          "dflt_value": "0",
+          "name": "last_event_sequence",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 13,
+          "dflt_value": "0",
+          "name": "version",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 14,
+          "dflt_value": null,
+          "name": "created_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 15,
+          "dflt_value": null,
+          "name": "updated_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 16,
+          "dflt_value": null,
+          "name": "lease_owner",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 17,
+          "dflt_value": null,
+          "name": "lease_expires_at",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 18,
+          "dflt_value": null,
+          "name": "interrupt_requested_at",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 19,
+          "dflt_value": null,
+          "name": "resume_target_state",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 20,
+          "dflt_value": "'1'",
+          "name": "context_version",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE sessions (\n            id TEXT PRIMARY KEY,\n            task TEXT NOT NULL,\n            source_path TEXT NOT NULL,\n            workspace_path TEXT,\n            state TEXT NOT NULL,\n            policy_json TEXT NOT NULL,\n            source_fingerprint TEXT NOT NULL,\n            final_answer TEXT,\n            failure_json TEXT,\n            step_count INTEGER NOT NULL DEFAULT 0,\n            model_calls INTEGER NOT NULL DEFAULT 0,\n            tool_calls INTEGER NOT NULL DEFAULT 0,\n            last_event_sequence INTEGER NOT NULL DEFAULT 0,\n            version INTEGER NOT NULL DEFAULT 0,\n            created_at TEXT NOT NULL,\n            updated_at TEXT NOT NULL\n        , lease_owner TEXT, lease_expires_at TEXT, interrupt_requested_at TEXT, resume_target_state TEXT, context_version TEXT NOT NULL DEFAULT '1')",
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "columns": [
+            "id"
+          ],
+          "name": "sqlite_autoindex_sessions_1",
+          "origin": "pk",
+          "partial": 0,
+          "seq": 0,
+          "unique": 1
+        }
+      ]
+    },
+    "summaries": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "summary_id",
+          "notnull": 0,
+          "pk": 1,
+          "type": "TEXT"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "session_id",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 2,
+          "dflt_value": null,
+          "name": "schema_version",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 3,
+          "dflt_value": null,
+          "name": "source_event_start",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 4,
+          "dflt_value": null,
+          "name": "source_event_end",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 5,
+          "dflt_value": null,
+          "name": "source_event_hash",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 6,
+          "dflt_value": null,
+          "name": "workspace_revision",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 7,
+          "dflt_value": null,
+          "name": "summary_json",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 8,
+          "dflt_value": null,
+          "name": "created_at",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 9,
+          "dflt_value": null,
+          "name": "superseded_by",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 10,
+          "dflt_value": "0",
+          "name": "stale",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        }
+      ],
+      "create_sql": "CREATE TABLE summaries (\n            summary_id TEXT PRIMARY KEY,\n            session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,\n            schema_version INTEGER NOT NULL,\n            source_event_start INTEGER NOT NULL,\n            source_event_end INTEGER NOT NULL,\n            source_event_hash TEXT NOT NULL,\n            workspace_revision TEXT NOT NULL,\n            summary_json TEXT NOT NULL,\n            created_at TEXT NOT NULL,\n            superseded_by TEXT,\n            stale INTEGER NOT NULL DEFAULT 0,\n            UNIQUE(session_id, summary_id)\n        )",
+      "foreign_keys": [
+        {
+          "from": "session_id",
+          "id": 0,
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "seq": 0,
+          "table": "sessions",
+          "to": "id"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "session_id",
+            "source_event_start",
+            "source_event_end"
+          ],
+          "name": "summaries_source_range",
+          "origin": "c",
+          "partial": 0,
+          "seq": 0,
+          "unique": 0
+        },
+        {
+          "columns": [
+            "session_id",
+            "created_at",
+            "summary_id"
+          ],
+          "name": "summaries_session_created",
+          "origin": "c",
+          "partial": 0,
+          "seq": 1,
+          "unique": 0
+        },
+        {
+          "columns": [
+            "session_id",
+            "summary_id"
+          ],
+          "name": "sqlite_autoindex_summaries_2",
+          "origin": "u",
+          "partial": 0,
+          "seq": 2,
+          "unique": 1
+        },
+        {
+          "columns": [
+            "summary_id"
+          ],
+          "name": "sqlite_autoindex_summaries_1",
+          "origin": "pk",
+          "partial": 0,
+          "seq": 3,
+          "unique": 1
+        }
+      ]
+    },
+    "tool_calls": {
+      "columns": [
+        {
+          "cid": 0,
+          "dflt_value": null,
+          "name": "call_id",
+          "notnull": 0,
+          "pk": 1,
+          "type": "TEXT"
+        },
+        {
+          "cid": 1,
+          "dflt_value": null,
+          "name": "session_id",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 2,
+          "dflt_value": null,
+          "name": "ordinal",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 3,
+          "dflt_value": "1",
+          "name": "attempt",
+          "notnull": 1,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "cid": 4,
+          "dflt_value": null,
+          "name": "tool_name",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 5,
+          "dflt_value": null,
+          "name": "arguments_json",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 6,
+          "dflt_value": null,
+          "name": "recovery_mode",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 7,
+          "dflt_value": null,
+          "name": "status",
+          "notnull": 1,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 8,
+          "dflt_value": null,
+          "name": "pre_revision",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 9,
+          "dflt_value": null,
+          "name": "planned_post_revision",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 10,
+          "dflt_value": null,
+          "name": "result_json",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 11,
+          "dflt_value": null,
+          "name": "error_json",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 12,
+          "dflt_value": null,
+          "name": "started_at",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "cid": 13,
+          "dflt_value": null,
+          "name": "finished_at",
+          "notnull": 0,
+          "pk": 0,
+          "type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE tool_calls (\n            call_id TEXT PRIMARY KEY,\n            session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,\n            ordinal INTEGER NOT NULL,\n            attempt INTEGER NOT NULL DEFAULT 1,\n            tool_name TEXT NOT NULL,\n            arguments_json TEXT NOT NULL,\n            recovery_mode TEXT NOT NULL,\n            status TEXT NOT NULL,\n            pre_revision TEXT,\n            planned_post_revision TEXT,\n            result_json TEXT,\n            error_json TEXT,\n            started_at TEXT,\n            finished_at TEXT,\n            UNIQUE(session_id, ordinal)\n        )",
+      "foreign_keys": [
+        {
+          "from": "session_id",
+          "id": 0,
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "seq": 0,
+          "table": "sessions",
+          "to": "id"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "session_id",
+            "ordinal"
+          ],
+          "name": "tool_calls_session_ordinal",
+          "origin": "c",
+          "partial": 0,
+          "seq": 0,
+          "unique": 0
+        },
+        {
+          "columns": [
+            "session_id",
+            "ordinal"
+          ],
+          "name": "sqlite_autoindex_tool_calls_2",
+          "origin": "u",
+          "partial": 0,
+          "seq": 1,
+          "unique": 1
+        },
+        {
+          "columns": [
+            "call_id"
+          ],
+          "name": "sqlite_autoindex_tool_calls_1",
+          "origin": "pk",
+          "partial": 0,
+          "seq": 2,
+          "unique": 1
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-09-21",
+  "repository": "/home/hmli/code/coding-agent",
+  "head": "b5f83ed713a22aa4c44834334c2edde3f921566b",
+  "branch": "main",
+  "note": "The file hashes and Git identity were captured before M0 editing. Only the execution date, not an authoritative wall-clock instant, was retained.",
+  "tracked_modified": [
+    {"path": "AGENTS.md", "sha256": "6cc1b380c6d8c639def63cc6fdfa8b30f3796ddb6396892bd3eef7dd29b29803"},
+    {"path": "README.md", "sha256": "5d8762759d0786013c264c556d777488e23a9819c2330e1663fb55376f82e87f"},
+    {"path": "docs/HANDOFF.md", "sha256": "800ea6ba6b2a3210e12175ca96b72f2946aee3c4a6bdfccc7b9873d81cb73f4e"},
+    {"path": "docs/README.md", "sha256": "0692b341fde31d7624805e7be02bb60afddf2d60e2fe8808861541ed909097a3"},
+    {"path": "docs/architecture.md", "sha256": "5a744544f7b8c02be5c81f127b09e2c65f4de869435ef7214c709b39eb29e50a"},
+    {"path": "docs/current-state.md", "sha256": "b39dc5d264277c531fa3ca137671170940689d8c4f84f10231090b5a3d5ef48a"},
+    {"path": "docs/module-design.md", "sha256": "f76853bbab9094e0ed66aaf627c65db2cf463dd19e815d605e09ed9dfaa79301"},
+    {"path": "docs/p2-implementation-plan.md", "sha256": "be9cbb81a38df025023032db4f947b0d3a8f170a1ee43ced99d5fe2765f97103"},
+    {"path": "docs/p2-m2-implementation-plan.md", "sha256": "b9fbcc18d84d72bf9d90e542c4e2094c47f4669c78eec932d0dabc8250d1457e"},
+    {"path": "docs/p2-m2-retrieval-optimization.md", "sha256": "2133fb0b0bff25fef8261a16e85e7d3af70844aa9cfd210ad862a333ea077211"},
+    {"path": "docs/requirements-traceability.md", "sha256": "ebe5be58d61c5da420cfd7fae81827798ea0ed106b8e3a7e6c1b8627ba8026e7"},
+    {"path": "docs/roadmap.md", "sha256": "d968ea7415d9cfcebaedabfce067e9a26c076dc2b4d14daef5cc8dfb35dd5314"},
+    {"path": "docs/v2-product-architecture.md", "sha256": "82451e35f147866ce2332d5c9d080bc7fe01fa7898dd3b9d2d7f440bd1fc8d3f"},
+    {"path": "src/coding_agent/memory/retrieval_backends.py", "sha256": "9ba396cede3098fbe3bf45af74a91fcc45612d444e1af08195927c2d511ae88e"},
+    {"path": "src/coding_agent/memory/retrieval_spike.py", "sha256": "4e3759dd801db68a86e897a5418d79ff61fb4d469125f127ab386cd3efb81b3c"},
+    {"path": "tests/test_memory_retrieval_backends.py", "sha256": "dd51a432a87ee00054501b2e4dff90c4118e0f68e3ede1b47b46d9811f894ca9"}
+  ],
+  "untracked_pre_existing": [
+    {"path": "docs/architecture-consistency-audit.md", "sha256": "6cd053f3ace5faf32a9287bf0869defef6457df5a0b9fdd521fdb6ddd98168d6"},
+    {"path": "docs/coding-agent-v1-implementation-roadmap.md", "sha256": "e5a42be34b0e25a3c134b7132c147866cb9028fc44fd72682f4d5b7fbae2352a"},
+    {"path": "docs/conversation-runtime-refactor-plan.md", "sha256": "1d2af0211eeae437e8b389b1516ea44b7436ad24d65c0e189359451c76dfdb6f"},
+    {"path": "docs/decisions/context-composition-compaction.md", "sha256": "b960483cfb6463986b4f6ef62f9d1b5866e86db6cc97e8c9a4b75418dbbf9f7d"},
+    {"path": "docs/decisions/conversation-turn-runtime-execution-lifecycle.md", "sha256": "b7f5373e79ce6bae5e8d148704a5cc97e604c1f3dbc05bf0ecad60c44fe617a9"},
+    {"path": "docs/decisions/diff-code-checkpoint-undo.md", "sha256": "d6d01e83a324cf32b5fd266958cb54479eefd77b22feb8993e012938582eac10"},
+    {"path": "docs/decisions/interactive-cli-product-workflow.md", "sha256": "27069f760c3035b8cb41625a55e9e482588297af94dcf5da400ab9c28c7cd2bd"},
+    {"path": "docs/decisions/memory-product-positioning.md", "sha256": "bfb305dbb4818b4936986903b976c8ff43a6fa7d182f7d0855a3b3f463752b97"},
+    {"path": "docs/decisions/project-instructions-repository-rules.md", "sha256": "78c176e090c0a0d156d888d6d9b04d437d1c59478df1978b9c49f8b72db31816"},
+    {"path": "docs/decisions/project-repository-workspace-conversation.md", "sha256": "64878f6ebe4ae395721a5f84d6e5090468dc1fc50a3ab33a10923de6ccfbbeb6"},
+    {"path": "docs/decisions/tool-capability-command-permission.md", "sha256": "4beb4b6e74d8f3486019be4d4822bfb69a3497c8d3900d7b28311650bf5b349e"},
+    {"path": "docs/evidence/memory-coverage-experiment-2026-09-18.json", "sha256": "336bef473245496c6d0d4bb951b42cdebaadc766bc35af5a418d4c49491133a1"},
+    {"path": "docs/evidence/memory-coverage-experiment-2026-09-18.md", "sha256": "42c2cf3922288803a40afcd4e9fbdf2c087f7312892feef1816b93aa601c1ff1"},
+    {"path": "docs/execution-contracts/m0-execution-contract.md", "sha256": "f0f15b13ebf2624da892bea22dc850f7085a1e9a5718a92c4119656d0ed7d65d"},
+    {"path": "docs/p2-r1-governed-agent-memory-redesign.md", "sha256": "647e1840d3b2649428c0428967e22aa5442d4e137f9ae60d3d2a9e307bb2db7a"},
+    {"path": "docs/target-architecture-snapshot.md", "sha256": "5d0aa0b5a2aa1b72afee4d187c7dc0d7f829e81de28d8751777601d8dfba25f6"},
+    {"path": "docs/v1-development-capability-matrix.md", "sha256": "5e354007613aeda460189dd4ef259f1a8a95c685c8566552dbd97138e504f0c6"}
+  ],
+  "m0_files_present_after_capture": [
+    "docs/evidence/v1-m0/",
+    "examples/v1_m0_collect_evidence.py",
+    "tests/fixtures/v1_m0/",
+    "tests/test_v1_m0_contract.py",
+    "tests/test_v1_m0_evidence.py",
+    "tests/test_v1_m0_uncertain_retry.py"
+  ]
+}

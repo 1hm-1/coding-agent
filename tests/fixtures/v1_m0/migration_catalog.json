@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "latest": 4,
+  "supported_starts": [0, 1, 2, 3, 4],
+  "versions": {
+    "1": ["sessions", "messages", "events", "checkpoints"],
+    "2": ["model_calls", "tool_calls"],
+    "3": ["summaries"],
+    "4": ["memory_records", "memory_events", "memory_retrievals"]
+  }
+}

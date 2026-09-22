@@ -1,0 +1,56 @@
+{
+  "artifacts": [
+    {
+      "file": "report.json",
+      "lane": "full-suite",
+      "original_sha256": "2426b0f9b1d9044e18318b233efd9b0bb63d627db5718dfce3319e71925b889b",
+      "redaction": "none required; scan found no absolute host paths or credential labels",
+      "stored_sha256": "2426b0f9b1d9044e18318b233efd9b0bb63d627db5718dfce3319e71925b889b"
+    },
+    {
+      "file": "manifest.snapshot.json",
+      "lane": "full-suite",
+      "original_sha256": "4304c789c00a34a0460636f4292f69ece31ee7c9401a110b953228393359e1cd",
+      "redaction": "none required; scan found no absolute host paths or credential labels",
+      "stored_sha256": "4304c789c00a34a0460636f4292f69ece31ee7c9401a110b953228393359e1cd"
+    },
+    {
+      "file": "runs.jsonl",
+      "lane": "full-suite",
+      "original_sha256": "a7d663b76932d4b679066337f162c057cf560e18716934fa20035133e08156f5",
+      "redaction": "absolute temporary trace_path replaced by traces/<session_id>.jsonl; all Session IDs, metrics, failures, and oracle results retained",
+      "run_count": 14,
+      "stored_sha256": "06b01395059a5da3ef369bb17bce5eb613535f341e4907c65aca43127d0c195e"
+    },
+    {
+      "file": "report.json",
+      "lane": "stability",
+      "original_sha256": "4645b2373f3e9bc04c527a737ad7a1724f41fe25c2e2a2216fd0ddd957a05f61",
+      "redaction": "none required; scan found no absolute host paths or credential labels",
+      "stored_sha256": "4645b2373f3e9bc04c527a737ad7a1724f41fe25c2e2a2216fd0ddd957a05f61"
+    },
+    {
+      "file": "manifest.snapshot.json",
+      "lane": "stability",
+      "original_sha256": "9e8a150f4371a9495eacbff5dd9174fc25ab401c58106f80ec00aa01c8dc74d5",
+      "redaction": "none required; scan found no absolute host paths or credential labels",
+      "stored_sha256": "9e8a150f4371a9495eacbff5dd9174fc25ab401c58106f80ec00aa01c8dc74d5"
+    },
+    {
+      "file": "runs.jsonl",
+      "lane": "stability",
+      "original_sha256": "e4eca9be961ea9d7a66aa667c0e508be2c1b9cb407c19601b825400ba461602b",
+      "redaction": "absolute temporary trace_path replaced by traces/<session_id>.jsonl; all Session IDs, metrics, failures, and oracle results retained",
+      "run_count": 25,
+      "stored_sha256": "028b69ad2afbdf7f65518b4502c17f8c0d51464d3b8a68d8ac0391b555de2463"
+    }
+  ],
+  "live_provider_data": false,
+  "sanitization_guarantees": [
+    "no /tmp or /home absolute paths remain",
+    "Session IDs remain available for report/run/journal correlation",
+    "tool/model counts, durations, failure reasons, oracle results, and populations are unchanged"
+  ],
+  "schema_version": 1,
+  "source_execution_root": "redacted temporary M0 root"
+}

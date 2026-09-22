@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "date": "2026-09-21",
+  "head_before_and_after": "b5f83ed713a22aa4c44834334c2edde3f921566b",
+  "committed_or_pushed": false,
+  "production_changes": [],
+  "schema_changes": [],
+  "accepted_adr_changes": [],
+  "before": {
+    "command": "PYTHONPATH=src python3 -m unittest discover -v",
+    "exit_code": 0,
+    "tests": 169,
+    "failures": 0,
+    "skips": 0,
+    "expected_failures": 0,
+    "seconds": 18.491
+  },
+  "after": {
+    "command": "PYTHONPATH=src python3 -m unittest discover -v",
+    "exit_code": 0,
+    "tests": 183,
+    "failures": 0,
+    "skips": 0,
+    "expected_failures": 1,
+    "passed": 182,
+    "seconds": 18.840,
+    "expected_failure": "tests.test_v1_m0_uncertain_retry.M0UncertainRetryCharacterizationTest.test_future_m3_invariant_reuses_exact_frozen_request"
+  },
+  "focused": [
+    {
+      "command": "PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_v1_m0_*.py' -v",
+      "exit_code": 0,
+      "tests": 14,
+      "passed": 13,
+      "expected_failures": 1,
+      "seconds": 0.589
+    },
+    {
+      "command": "PYTHONPATH=src python3 -m unittest tests.test_hardening tests.test_m2_recovery tests.test_persistence tests.test_protocol -v",
+      "exit_code": 0,
+      "tests": 42,
+      "expected_failures": 0,
+      "seconds": 5.100
+    }
+  ],
+  "quality": {
+    "ruff": {"exit_code": 0, "result": "all checks passed", "version": "0.16.6"},
+    "mypy": {"exit_code": 0, "result": "no issues in 36 source files", "version": "1.20.2"},
+    "compileall": {"exit_code": 0},
+    "git_diff_check": {"exit_code": 0},
+    "markdown": {"files": 6, "fences_balanced": true, "relative_links_resolve": true},
+    "json": {"m0_json_and_jsonl_files": 15, "valid": true}
+  },
+  "coverage": {
+    "command": "PYTHONPATH=src .venv/bin/coverage run -m unittest discover -v; .venv/bin/coverage combine; .venv/bin/coverage report",
+    "exit_code": 0,
+    "statements": 7898,
+    "missed": 1624,
+    "percent": 79.4,
+    "raw_report_sha256": "cb783e0532d7aae5d98db5738ac88b3ba1423a157bfb250a2878c3d79c12e167",
+    "unittest_stderr_sha256": "8c7a8355e20845e0d30f8b84760a7db97ab9c7c1a838de71d88ecaa38b214b48"
+  },
+  "sandbox": {
+    "available": true,
+    "backend": "linux_user_mount_pid_net",
+    "version": "6.18.33.2-microsoft-standard-WSL2",
+    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+    "network_default": "none",
+    "missing": [],
+    "features": [
+      "chroot_rootfs",
+      "env_allowlist",
+      "mount_namespace",
+      "network_disabled",
+      "network_namespace",
+      "output_limits",
+      "pid_namespace",
+      "process_cleanup",
+      "read_only_rootfs",
+      "resource_limits",
+      "workspace_bind"
+    ],
+    "raw_probe_sha256": "8da000da723582be4df191bb038a635752a2840e00c645348e09dfeb97aa6dea"
+  },
+  "compatibility": {
+    "protected_file_count": 14,
+    "protected_hashes_match": true,
+    "semantic_goldens": 4,
+    "ipc_schemas_vectors_and_goldens": 10,
+    "schema_version": 4,
+    "migration_starts_passed": [0, 1, 2, 3, 4],
+    "memory_defaults_off": true,
+    "legacy_cli_and_ipc_pass": true
+  },
+  "baseline": {
+    "full_suite": {"valid": 14, "normal_success": 10, "negative_controls_observed": 4, "infrastructure_failures": 0},
+    "stability": {"valid": 25, "task_success": 25, "infrastructure_failures": 0},
+    "calculator_smoke": {"event_count": 48, "source_unchanged": true},
+    "todo_smoke": {"event_count": 72, "test_outcomes": [false, true], "source_unchanged": true},
+    "memory_regression": {"cases": 12, "cold_success": 8, "warm_success": 12, "defaults_off": true}
+  },
+  "closure_evidence": {
+    "durable_raw_baseline": {
+      "manifest": "docs/evidence/v1-m0/raw/manifest-v1.json",
+      "manifest_sha256": "f462a898ec8a831799588298fbfeac222acd65a96b580058ad3b28a7b6202bed",
+      "projection_sha256": "2466d87f54c6457fd09e33a57bb4dff7ac3d5cf6909cf7d522b68a92ad3c4139",
+      "artifacts": 6,
+      "runs": 39,
+      "session_ids_present": 39,
+      "aggregate_distributions_recalculated": 18,
+      "aggregate_distributions_matching": 18,
+      "sanitization_scope": "absolute temporary trace_path only"
+    },
+    "representative_tasks": {
+      "tasks": 6,
+      "repositories": 2,
+      "task_types": 3,
+      "isolated_reference_snapshots": 6,
+      "offline_oracles_passed": 6,
+      "offline_oracle_unavailable_prerequisites": 0,
+      "provider_runs": 0,
+      "manifest_sha256": "eaf42a22020ebb2a359be3d0deb3c1c1192cb86982abfbc516f2dec930852622"
+    },
+    "timing_semantics": {
+      "legacy_eval_wall_time_labeled": true,
+      "canonical_durable_acceptance_to_terminal": "unknown",
+      "production_instrumentation_changed": false,
+      "dictionary_sha256": "8b6d659b9f1d411bb3ec7a569a0f947e53d0d97919e09ede213b386746341593"
+    },
+    "serialized_formats": {
+      "catalogued": 15,
+      "runtime_snapshot_writer_version": 2,
+      "runtime_snapshot_reader_versions": [1, 2],
+      "sqlite_schema_added": false,
+      "inventory_sha256": "7dc9c4633caa05833a4363598e5a992dcd383282874cb1dff1c1e5f3b08ef997"
+    }
+  },
+  "pre_existing_files_intentionally_amended_by_m0": [
+    "docs/HANDOFF.md",
+    "docs/README.md",
+    "docs/current-state.md",
+    "docs/roadmap.md"
+  ],
+  "m0_new_files": [
+    "docs/coding-agent-v1-m0-characterization.md",
+    "docs/evidence/v1-m0/README.md",
+    "docs/evidence/v1-m0/baseline-manifest-v1.json",
+    "docs/evidence/v1-m0/m1-migration-inventory-v1.json",
+    "docs/evidence/v1-m0/metric-dictionary-v1.json",
+    "docs/evidence/v1-m0/offline-baseline-v1.json",
+    "docs/evidence/v1-m0/pre-change-provenance.json",
+    "docs/evidence/v1-m0/raw/full-suite/manifest.snapshot.json",
+    "docs/evidence/v1-m0/raw/full-suite/report.json",
+    "docs/evidence/v1-m0/raw/full-suite/runs.jsonl",
+    "docs/evidence/v1-m0/raw/manifest-v1.json",
+    "docs/evidence/v1-m0/raw/stability/manifest.snapshot.json",
+    "docs/evidence/v1-m0/raw/stability/report.json",
+    "docs/evidence/v1-m0/raw/stability/runs.jsonl",
+    "docs/evidence/v1-m0/representative-tasks-v1.json",
+    "docs/evidence/v1-m0/uncertain-retry-v1.json",
+    "docs/evidence/v1-m0/verification-v1.json",
+    "examples/v1_m0_collect_evidence.py",
+    "examples/v1_m0_verify_release_snapshot.py",
+    "tests/fixtures/v1_m0/expected_gaps.json",
+    "tests/fixtures/v1_m0/migration_catalog.json",
+    "tests/fixtures/v1_m0/protected_hashes.json",
+    "tests/test_v1_m0_contract.py",
+    "tests/test_v1_m0_evidence.py",
+    "tests/test_v1_m0_uncertain_retry.py"
+  ],
+  "unmet_exit_criteria": []
+}

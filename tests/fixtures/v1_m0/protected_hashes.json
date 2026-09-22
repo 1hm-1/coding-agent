@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "files": {
+    "protocol/v1/capabilities.schema.json": "a643b894b327a67ce061533c373939eaa044610326735e9a6b7be5ec43fed310",
+    "protocol/v1/event-envelope.schema.json": "cd405d4f2069b22510d2b69a0ae8a0613e4201f878c5ceb291cfd7c6d636e53f",
+    "protocol/v1/execution-request.schema.json": "126813779d24f842a8b4bd9772bbf8c1c01beb06b1ba36189e4859e465d3ca82",
+    "protocol/v1/execution-request.vector.json": "faa0523ee0a0572d009988d574dd80dc6f9c669505e74d2def0bcebdb0a6ddbe",
+    "protocol/v1/terminal-result.schema.json": "18ad1c3e73be2f6a919d9e212977d009c4dbc644d4206df2d7212dd55293bb3a",
+    "protocol/v1/v0.1-kernel.vector.json": "be19a6c774a4bdcded297e2be5b4c9eb9e0109fe795a7914394e8eab0c188d2e",
+    "protocol/v1/v0.2-bridge.vector.json": "a8799215d7e50cfcb90f1ae4643aad9ee288d8bbde07ebf00589267965a0d1cb",
+    "tests/golden/bugfix_success.json": "037cdee158761ac78649f39925f74680816a27c319b5691c5f4e409a8e4d50c4",
+    "tests/golden/permission_denied.json": "baf2bd99ad87c7b9cb7528c9402be58fde6938c6ea4fd94396c3bbb31cf1f3a1",
+    "tests/golden/runtime_failure.json": "d923ce7ea30cfad82d89fb16e029c2edc3a7f1da92415a212d2f107a6b940f1e",
+    "tests/golden/runtime_ipc_cancelled.json": "42262edc784f661750f5f96d5ef8b2aaff10c5caf01264668feee52650fe9cd0",
+    "tests/golden/runtime_ipc_failure.json": "869630683031a3bf7162eb0fd736445a0706a42d10012a63ddae7e6bff001cea",
+    "tests/golden/runtime_ipc_success.json": "a2e8efce575c9ee2a5f7bc6f723e3e8771d1d8d13d5ca86a402b4190855fc049",
+    "tests/golden/test_failure_recovery.json": "5a9eff79490b7140b2094a272e5326d777b864762c22311adaaac941bf9c36b8"
+  }
+}

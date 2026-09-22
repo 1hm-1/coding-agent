@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "status": "m0-frozen-measurement-contract",
+  "classification_values": ["measured", "estimated", "unknown", "synthetic"],
+  "identity_rule": "Use existing Session/request/call identifiers for M0; never fabricate future Product IDs.",
+  "metrics": [
+    {
+      "id": "task_oracle_success",
+      "unit": "boolean and population rate",
+      "boundary": "trusted oracle evaluation after a run",
+      "formula": "passed normal-task oracles / valid normal-task runs",
+      "population": "normal tasks; negative controls and infrastructure-invalid runs separate",
+      "source": "Eval oracle results",
+      "classification": "measured",
+      "aggregation": "counts and rate with denominator",
+      "unknown_handling": "oracle infrastructure failure is invalid, not failure"
+    },
+    {
+      "id": "runtime_completion",
+      "unit": "boolean and population rate",
+      "boundary": "Runtime terminal state",
+      "formula": "COMPLETED runs / valid runs",
+      "population": "all valid runs, with normal and negative-control projections separate",
+      "source": "Runtime journal",
+      "classification": "measured",
+      "aggregation": "counts and rate",
+      "unknown_handling": "missing terminal evidence is unknown/invalid"
+    },
+    {
+      "id": "end_to_end_elapsed_ms",
+      "unit": "milliseconds",
+      "boundary": "durable request acceptance to terminal outcome; all waits included",
+      "formula": "wall-clock endpoint difference within covered segments",
+      "population": "every accepted run including failure/cancel/timeout",
+      "source": "process monotonic segments plus durable wall-clock anchors",
+      "classification": "measured per process segment; cross-restart gaps estimated or unknown",
+      "aggregation": "distribution with coverage",
+      "unknown_handling": "never subtract unrelated monotonic clocks across restart",
+      "m0_baseline_mapping": "unknown: the legacy evaluator does not anchor durable request acceptance or terminal commit and its end_to_end_latency_ms must not be used for this metric"
+    },
+    {
+      "id": "legacy_eval_wall_time_ms",
+      "unit": "milliseconds",
+      "boundary": "EvaluationRunner._run_case entry through fixture resolution and fingerprint, application/workspace setup, Runtime execution, source-invariant check, and oracle execution",
+      "formula": "single-process perf_counter at metrics projection minus perf_counter at _run_case entry",
+      "population": "current valid scripted eval runs, with negative controls and infrastructure-invalid runs separated",
+      "source": "legacy evaluator metrics.end_to_end_latency_ms; evaluation.py lines 694 and 815-828 at M0 HEAD",
+      "classification": "measured legacy harness wall time",
+      "aggregation": "nearest-rank P50/P95 plus count, total, and mean; descriptive within the frozen environment",
+      "unknown_handling": "never relabel or compare this as durable-acceptance-to-terminal end_to_end_elapsed_ms; cross-restart product latency remains unknown"
+    },
+    {
+      "id": "model_attempt_latency_ms",
+      "unit": "milliseconds per attempt",
+      "boundary": "provider attempt start to end",
+      "formula": "attempt end - attempt start",
+      "population": "all started attempts including failed, retried, cancelled, and uncertain",
+      "source": "model attempt journal",
+      "classification": "current evaluator measured only for MODEL_CALL_SUCCEEDED; other coverage unknown",
+      "aggregation": "distribution and censored count",
+      "unknown_handling": "missing end is censored/unknown, never omitted"
+    },
+    {
+      "id": "tool_attempt_latency_ms",
+      "unit": "milliseconds per execution attempt",
+      "boundary": "ToolHarness/sandbox execution start to end",
+      "formula": "attempt end - attempt start",
+      "population": "admitted executions including nonzero, timeout, crash, and cancellation; denial excluded",
+      "source": "tool journal and ToolResult duration",
+      "classification": "measured when both attempt boundaries exist",
+      "aggregation": "distribution by tool/outcome",
+      "unknown_handling": "uncertain end retained as unknown"
+    },
+    {
+      "id": "context_compaction_latency_ms",
+      "unit": "milliseconds per operation",
+      "boundary": "context build or compaction attempt start to end",
+      "formula": "operation end - operation start",
+      "population": "all context/compaction attempts including fallback/failure",
+      "source": "context and compression events",
+      "classification": "compaction success latency currently partial; context-build latency unknown",
+      "aggregation": "separate context and auxiliary compaction distributions",
+      "unknown_handling": "unobserved operations remain unknown"
+    },
+    {
+      "id": "machine_active_ms",
+      "unit": "milliseconds",
+      "boundary": "union of attributable model, tool, local compute, and labeled recovery-compute spans",
+      "formula": "interval union, not sum",
+      "population": "covered runs",
+      "source": "versioned span projection",
+      "classification": "unknown in M0 where local compute boundaries are absent",
+      "aggregation": "interval union with coverage",
+      "unknown_handling": "permission/user wait, retry backoff, and host downtime excluded"
+    },
+    {
+      "id": "permission_user_wait_ms",
+      "unit": "milliseconds",
+      "boundary": "durable typed request to decision/cancel/terminal resolution",
+      "formula": "resolution anchor - request anchor",
+      "population": "permission and other user waits reported separately",
+      "source": "future typed durable records",
+      "classification": "unknown/unavailable in current legacy Runtime",
+      "aggregation": "separate distributions",
+      "unknown_handling": "never infer from WAITING_APPROVAL reconciliation"
+    },
+    {
+      "id": "retry_recovery_overhead_ms",
+      "unit": "milliseconds and counts",
+      "boundary": "backoff, restart, reconciliation, replay/reuse",
+      "formula": "labeled intervals and event counts",
+      "population": "all retries and recoveries",
+      "source": "retry metadata and recovery journal",
+      "classification": "measured where boundaries exist; otherwise unknown",
+      "aggregation": "separate from end-to-end and machine-active",
+      "unknown_handling": "host downtime and missing anchors explicit"
+    },
+    {
+      "id": "token_usage",
+      "unit": "input/output/cache/compaction tokens per attempt",
+      "boundary": "one provider or auxiliary compaction attempt",
+      "formula": "provider-reported units or versioned local estimate",
+      "population": "all attempts including failures/retries",
+      "source": "provider usage, tokenizer, or scripted fixture",
+      "classification": "provider reported measured; tokenizer estimated; scripted synthetic; absent unknown",
+      "aggregation": "totals only when component coverage is complete",
+      "unknown_handling": "legacy zero without provenance is unknown, not measured zero"
+    },
+    {
+      "id": "derived_cost",
+      "unit": "currency",
+      "boundary": "classified usage times versioned effective rate",
+      "formula": "sum(usage unit * rate assumption)",
+      "population": "attempts with classified usage and a named rate",
+      "source": "metric projection rate table",
+      "classification": "estimated unless independently billing-reconciled",
+      "aggregation": "incomplete when usage or rate is unknown",
+      "unknown_handling": "no silent zero or current-price substitution"
+    },
+    {
+      "id": "permission_outcome_and_safety_violation",
+      "unit": "counts",
+      "boundary": "policy request/decision versus independently proven boundary-crossing effect",
+      "formula": "outcomes and effects counted separately",
+      "population": "all requests/ALLOW/ASK/DENY/UNAVAILABLE and proven effects",
+      "source": "policy journal and independent effect evidence",
+      "classification": "legacy permission_violations is a denial count, not a measured violation",
+      "aggregation": "counts by outcome/tool",
+      "unknown_handling": "denial, invalid call, and negative-control success never imply an effect"
+    },
+    {
+      "id": "local_control_ack_ms",
+      "unit": "milliseconds",
+      "boundary": "input receipt to durable acknowledgement; status request to response enqueue; stop receipt to durable cancel acknowledgement",
+      "formula": "process-local monotonic end - start",
+      "population": "100 observations per operation per idle/active load condition after 10 excluded warmups",
+      "source": "future M5 attachment/controller instrumentation",
+      "classification": "unavailable in M0",
+      "aggregation": "P50/P95/max; target P95 <= 500 ms and every observation <= 2000 ms",
+      "unknown_handling": "provider latency, tool completion, and safe cancellation completion excluded"
+    }
+  ]
+}
