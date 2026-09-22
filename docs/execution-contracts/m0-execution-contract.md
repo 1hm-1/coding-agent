@@ -9,6 +9,11 @@ Completion status (2026-09-21): **ACCEPTED / COMPLETE**
 > its present-tense authorization clauses do not reactivate M0. M1–M7 remain inactive, and M1
 > requires a separately issued and activated formal execution contract.
 
+> Later activation annotation (2026-09-22): the formal
+> [`M1 execution contract`](./m1-execution-contract.md) has been issued and M1 is now **ACTIVE**.
+> The preceding text remains the historical M0-issued state; this publication turn starts no M1
+> implementation, leaving current code and Schema v4 at the M0-characterized legacy baseline.
+
 Executor: **Sol High Codex session**
 
 Milestone owner: the coordinating/review session

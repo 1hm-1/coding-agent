@@ -21,7 +21,7 @@
 | Phase 2 P2-M1 Headless Runtime IPC | 已完成 | [`p2-implementation-plan.md`](./p2-implementation-plan.md) |
 | Phase 2 P2-M2 Layered Memory | 已完成 | [`p2-m2-implementation-plan.md`](./p2-m2-implementation-plan.md) |
 | P2-M2 Retrieval/Token 优化 | 已完成 | [`p2-m2-retrieval-optimization.md`](./p2-m2-retrieval-optimization.md) |
-| Coding Agent V1 横向产品架构 | 已冻结；Product-Layer M0 Accepted/完成；M1–M7 inactive；当前无 active 实施 milestone | [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)、[`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、[`architecture-consistency-audit.md`](./architecture-consistency-audit.md)、[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)、[`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)、[已完成的 M0 milestone execution contract](./execution-contracts/m0-execution-contract.md) |
+| Coding Agent V1 横向产品架构 | 已冻结；Product-Layer M0 Accepted/完成；M1 ACTIVE；M2–M7 inactive；本发布轮未开始实现 | [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)、[`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、[`architecture-consistency-audit.md`](./architecture-consistency-audit.md)、[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)、[`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)、[已完成的 M0 milestone execution contract](./execution-contracts/m0-execution-contract.md)、[active M1 milestone execution contract](./execution-contracts/m1-execution-contract.md) |
 | CR-R1 Conversation-Centered Runtime Realignment | **SUPERSEDED；从未激活** | [`conversation-runtime-refactor-plan.md`](./conversation-runtime-refactor-plan.md) |
 | P2-R1 Governed Agent Memory Redesign | 原默认 serving 假设已被 M2-lite ADR 取代；实施未激活 | [`decisions/memory-product-positioning.md`](./decisions/memory-product-positioning.md)、[`p2-r1-governed-agent-memory-redesign.md`](./p2-r1-governed-agent-memory-redesign.md) |
 
@@ -52,17 +52,18 @@
 3. [`target-architecture-snapshot.md`](./target-architecture-snapshot.md)：冻结后的产品主干与 authority；
 4. [`architecture-consistency-audit.md`](./architecture-consistency-audit.md)：旧假设与 accepted ADR 的冲突及 supersession；
 5. [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)：M0 的当前到目标、迁移、重试、指标、baseline 与退出证据；
-6. [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)：M0 已 Accepted/完成、M1–M7 未激活的实施 DAG；
+6. [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)：M0 已 Accepted/完成、M1 ACTIVE、M2–M7 未激活的实施 DAG；
 7. [已完成的 M0 milestone execution contract](./execution-contracts/m0-execution-contract.md)：M0 executor 的历史授权范围、禁区、证据与退出条件；
-8. [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)：V1 能力承诺、权限结果、M3+M4 real-tree mutation gate 与明确 non-goals；
-9. 本页列出的全部 accepted ADR；
-10. [`development-guide.md`](./development-guide.md)：环境、命令和开发流程；
-11. [`contracts.md`](./contracts.md)：当前接口、事件和失败语义；
-12. [`testing-strategy.md`](./testing-strategy.md)：测试与 golden 更新规则；
-13. [`architecture.md`](./architecture.md) 与 [`module-design.md`](./module-design.md)：当前 Runtime Kernel 架构；
-14. [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md)：当前 Runtime producer 与未来 Agent Platform consumer 的进程契约；
-15. [`requirements-traceability.md`](./requirements-traceability.md)：原始目标与面试能力的证据边界；
-16. 已完成的 P2-M1/P2-M2 实施文档与冻结评测证据。
+8. [active M1 milestone execution contract](./execution-contracts/m1-execution-contract.md)：M1 executor 可实施的领域主干/持久化迁移范围、禁区、验收与停机条件；
+9. [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)：V1 能力承诺、权限结果、M3+M4 real-tree mutation gate 与明确 non-goals；
+10. 本页列出的全部 accepted ADR；
+11. [`development-guide.md`](./development-guide.md)：环境、命令和开发流程；
+12. [`contracts.md`](./contracts.md)：当前接口、事件和失败语义；
+13. [`testing-strategy.md`](./testing-strategy.md)：测试与 golden 更新规则；
+14. [`architecture.md`](./architecture.md) 与 [`module-design.md`](./module-design.md)：当前 Runtime Kernel 架构；
+15. [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md)：当前 Runtime producer 与未来 Agent Platform consumer 的进程契约；
+16. [`requirements-traceability.md`](./requirements-traceability.md)：原始目标与面试能力的证据边界；
+17. 已完成的 P2-M1/P2-M2 实施文档与冻结评测证据。
 
 做代码评审：先读 `contracts.md` 和 `testing-strategy.md`，再对照当前里程碑退出条件。
 
@@ -80,6 +81,7 @@
 | `coding-agent-v1-implementation-roadmap.md` | 如何按依赖从 M0 增量迁移到 M7，且让 Memory 不阻塞 critical path？ |
 | `coding-agent-v1-m0-characterization.md` | M0 验证了哪些现状、迁移输入、缺陷、指标与退出条件？ |
 | `execution-contracts/m0-execution-contract.md` | 已完成的 M0 milestone execution contract 曾授权 executor 做什么、禁止什么、必须提交哪些证据？ |
+| `execution-contracts/m1-execution-contract.md` | active M1 milestone execution contract 现在授权什么、禁止什么、必须如何验证和停机？ |
 | `v1-development-capability-matrix.md` | V1 具体承诺哪些 filesystem/Git/Python/command 能力，哪些为 DENY/UNAVAILABLE，何时允许 real-tree mutation？ |
 | `v2-product-architecture.md` | Phase 2 成熟终端 Coding Agent 如何扩展，哪些仍未实现？ |
 | `protocol/runtime-ipc-v1.md` | Runtime producer 对 Platform consumer 暴露什么稳定进程协议？ |

@@ -1,7 +1,7 @@
 # Coding Agent V1 Product-Layer Implementation Roadmap
 
 Date: 2026-09-20
-Status: **Architecture frozen; Product-Layer M0 Accepted and complete; M1–M7 inactive**
+Status: **Architecture frozen; Product-Layer M0 Accepted and complete; M1 ACTIVE; M2–M7 inactive**
 
 ## Purpose
 
@@ -15,9 +15,10 @@ The milestone names M0–M7 in this document are scoped to the Product-Layer mig
 the historical Runtime M0–M5 milestones.
 
 The user explicitly activated Product-Layer M0 for architecture freeze and characterization and
-accepted it as complete on 2026-09-21. M1–M7 remain inactive and require a separately issued and
-activated formal execution contract; no product implementation milestone is currently active.
-None of the target product behavior described by those milestones was implemented by M0. This
+accepted it as complete on 2026-09-21. The formal
+[`M1 execution contract`](./execution-contracts/m1-execution-contract.md) was issued on 2026-09-22,
+so M1 is ACTIVE; M2–M7 remain inactive. This contract-publication turn starts no M1 implementation,
+and none of the target product behavior described by those milestones was implemented by M0. This
 Product-Layer M0 must not be confused with the completed historical Runtime M0 milestone in
 [`roadmap.md`](./roadmap.md).
 
@@ -280,6 +281,12 @@ accepted.
 - every migration, old trace reader, CLI command, JSONL path, and IPC v1 adapter.
 
 ## M1 — Domain spine and persistence migration
+
+Formal milestone execution contract: [`execution-contracts/m1-execution-contract.md`](./execution-contracts/m1-execution-contract.md).
+
+**Current activation boundary:** M1 is ACTIVE, but the 2026-09-22 publication turn releases only
+the contract and state/navigation updates. It makes no production, schema, migration, test,
+fixture, scaffold, or semantic change. M2–M7 remain inactive.
 
 ### Scope
 

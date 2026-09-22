@@ -1,6 +1,6 @@
 # Coding Agent V1 Product-Layer M0 Characterization
 
-Status: **M0 Accepted and complete; M1–M7 remain inactive**
+Status: **M0 Accepted and complete; historical M0 record**
 
 Date: 2026-09-21
 
@@ -255,5 +255,8 @@ They are evidence boundaries, not placeholder implementation or activated work.
 - [x] Required tests, quality gates, coverage, native sandbox probe, Markdown validation, hash checks, and diff checks passed.
 - [x] Evidence and reproduction instructions are durable and traceable.
 
-M0 was accepted by the owner on 2026-09-21 and is complete. This acceptance does not activate M1;
-M1 requires a separately issued and activated formal execution contract.
+M0 was accepted by the owner on 2026-09-21 and is complete. The preceding sentence recorded the
+then-current activation boundary. **Later activation annotation (2026-09-22):** the formal
+[`M1 execution contract`](./execution-contracts/m1-execution-contract.md) is now published and M1
+is ACTIVE. This publication turn makes no M1 implementation change, so this M0 report and its
+evidence remain historical rather than being rewritten as Product behavior.

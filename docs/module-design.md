@@ -3,7 +3,9 @@
 > 文档类型：代码边界与依赖规则
 > 当前基线：M5.1
 > 当前变化：Phase 2 P2-M1 producer 与 P2-M2 Memory governance 已完成；Coding Agent V1 产品层
-> 架构已冻结，Product-Layer M0 已 Accepted/完成，M1–M7 尚未激活
+> 架构已冻结，Product-Layer M0 已 Accepted/完成；正式
+> [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) 已发布且 M1 ACTIVE，M2–M7
+> 尚未激活。本发布轮没有代码/Schema 改动，本文描述的当前模块仍为 legacy 基线。
 
 本文回答当前 v0.1 Runtime 的三个问题：功能应该放在哪个模块、模块之间允许传递什么、错误由谁处理。
 当前可执行契约见 [`contracts.md`](./contracts.md)，Runtime 架构与安全边界见

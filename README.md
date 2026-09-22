@@ -23,8 +23,9 @@ P2-M2 的 Memory governance lifecycle 已实现，但 P2-M2.3 没有合格的 Dy
 当前 lexical 仅供显式实验性 Python composition。默认 `AgentApplication`/headless/IPC 不查询或
 注入 Memory。Coding Agent V1 横向产品架构已经冻结，Memory 收敛为 optional M2-lite：默认
 Core Snapshot 和 generic auto top-k 保持关闭，V1 只要求显式 UserPreference，且不阻塞核心路径。
-Product-Layer M0 已 Accepted/完成；M1–M7 仍未激活，当前没有 active 产品实施里程碑。M1 必须等待
-正式 execution contract 发布与激活。当前实现仍是 one-shot Session 与 copied workspace。
+Product-Layer M0 已 Accepted/完成；正式 [M1 execution contract](docs/execution-contracts/m1-execution-contract.md)
+已发布且 M1 ACTIVE，M2–M7 仍未激活。本发布轮只发布契约和状态文档，当前实现仍是 one-shot
+Session、copied workspace 与 Schema v4 legacy 基线。
 
 The current baseline completes M1—M4, Release/Evidence Hardening, M5.1 read-only search approved
 by live Eval failure coverage, and Phase 2 P2-M1 Headless Runtime IPC plus P2-M2 Layered Memory.
@@ -33,9 +34,10 @@ backend; the current lexical retriever is for explicit experimental composition 
 entrypoints do not serve Memory. The Coding Agent V1 product architecture is now frozen with
 Memory as optional M2-lite: default Core Snapshot and generic automatic top-k remain off, V1 only
 requires explicit UserPreference, and Memory does not block the critical path. Product-Layer M0 is
-Accepted and complete; M1–M7 remain inactive, with no active product implementation milestone. M1
-requires an issued and activated formal execution contract. The current code still uses one-shot
-Sessions and copied workspaces.
+Accepted and complete; the formal [M1 execution contract](docs/execution-contracts/m1-execution-contract.md)
+is published and M1 is ACTIVE, while M2–M7 remain inactive. This publication turn starts no M1
+implementation; the current code still uses one-shot Sessions, copied workspaces, and the legacy
+Schema v4 baseline.
 
 ## 验证结果 / Evidence at a glance
 
@@ -345,7 +347,8 @@ the compression A/B did not save tokens and remains a small local benchmark.
 | [开发交接 / Handoff](docs/HANDOFF.md) | 新开发窗口的唯一入口 / Entry point for a new development session |
 | [架构快照 / Target architecture](docs/target-architecture-snapshot.md) | 冻结后的产品主干与 authority / Frozen product spine and authority |
 | [一致性审计 / Consistency audit](docs/architecture-consistency-audit.md) | 旧假设的 supersession / Supersession of legacy assumptions |
-| [实施路线 / Implementation roadmap](docs/coding-agent-v1-implementation-roadmap.md) | M0 Accepted；M1–M7 未激活 / M0 Accepted; M1–M7 inactive |
+| [实施路线 / Implementation roadmap](docs/coding-agent-v1-implementation-roadmap.md) | M0 Accepted；M1 ACTIVE；M2–M7 未激活 / M0 Accepted; M1 ACTIVE; M2–M7 inactive |
+| [M1 执行契约 / M1 execution contract](docs/execution-contracts/m1-execution-contract.md) | active M1 范围、禁区、验收与停机条件 / Active M1 scope, prohibitions, acceptance, and stop conditions |
 | [Runtime 架构 / Runtime architecture](docs/architecture.md) | 当前内核与安全边界 / Current kernel and safety boundaries |
 | [开发指南 / Development guide](docs/development-guide.md) | 安装、命令与变更流程 / Setup, commands, and change workflow |
 | [测试策略 / Testing strategy](docs/testing-strategy.md) | 测试层次、golden 与 CI / Test layers, goldens, and CI |

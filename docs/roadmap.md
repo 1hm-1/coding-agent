@@ -1,10 +1,11 @@
 # 开发路线图
 
-> 路线图状态基线：2026-09-21
+> 路线图状态基线：2026-09-22
 > 当前完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Release/Evidence Hardening
 > 当前实施项：**Product-Layer M0 Architecture Freeze + Characterization 已获 owner
-> Accepted 并完成；M1–M7 inactive；当前无 active 产品实施里程碑。** M1 必须等待正式
-> execution contract 发布与激活。不要与本文已完成的历史 Runtime M0 混淆。
+> Accepted 并完成；[正式 M1 execution contract](./execution-contracts/m1-execution-contract.md) 已发布，
+> M1 ACTIVE；M2–M7 inactive。** 本发布轮未开始 M1 实现，当前代码与 Schema 仍为 legacy 基线。
+> 不要与本文已完成的历史 Runtime M0 混淆。
 > 当前前向路线：[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。
 > V1 capability、measurement 与 interactive responsiveness acceptance 已冻结；具体能力矩阵见
 > [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)。这些不是当前实现声明。
@@ -30,7 +31,7 @@
 | Release/Evidence Hardening | 已完成 | 交付证据、质量门禁和评测范围是否可复核 | Git/CI/coverage/mypy/live-smoke/eval evidence |
 | M5 Capability Expansion | M5.1 完成，其余条件阶段 | 哪些新工具真正提高任务覆盖率 | eval-driven decision record |
 | Phase 2 Product Runtime | P2-D0、P2-M1、P2-M2 完成 | 如何在保留单任务 Runtime 内核的前提下形成成熟终端产品 | v2 architecture + versioned IPC + Layered Memory；后续逐阶段 contract/eval evidence |
-| Coding Agent V1 Product Layer | M0 Accepted/完成；M1–M7 inactive；target behavior 未实现 | 如何把长期 Conversation/Turn 与一次 RuntimeExecution 分离，并在真实 working tree 上复用可靠内核 | [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)、[`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)、[`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md) |
+| Coding Agent V1 Product Layer | M0 Accepted/完成；M1 ACTIVE；M2–M7 inactive；本发布轮未实现 target behavior | 如何把长期 Conversation/Turn 与一次 RuntimeExecution 分离，并在真实 working tree 上复用可靠内核 | [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)、[`execution-contracts/m1-execution-contract.md`](./execution-contracts/m1-execution-contract.md)、[`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)、[`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md) |
 | CR-R1 Conversation Runtime Realignment | **SUPERSEDED；从未激活** | 历史草案，不再提供 target authority | [`conversation-runtime-refactor-plan.md`](./conversation-runtime-refactor-plan.md) |
 
 ## 2. 全局里程碑门禁
@@ -450,6 +451,7 @@ Phase 2 的详细边界以 [`v2-product-architecture.md`](./v2-product-architect
 上述 Phase 2 表保留历史阶段与已完成证据。2026-09-20 后的产品层实施 authority 是
 [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md) 中的
 M0–M7 DAG。该路线增量复用 Runtime Kernel，Memory 的 M6 支线不阻塞 M0–M5 或 M7 的
-Memory-off 核心验收。Product-Layer M0 characterization 已获 owner Accepted 并完成；M1–M7
-仍未激活，当前无 active 产品实施里程碑，M1 需等待正式 execution contract；P2-R1 不是下一候选。
+Memory-off 核心验收。Product-Layer M0 characterization 已获 owner Accepted 并完成；正式
+[`M1 execution contract`](./execution-contracts/m1-execution-contract.md) 已发布且 M1 ACTIVE，M2–M7
+仍未激活。本发布轮未开始 M1 实现，P2-R1 不是下一候选。
 本文第 3 节的历史 Runtime M0 已完成记录不得与 Product-Layer M0 混淆。

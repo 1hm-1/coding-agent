@@ -1,13 +1,17 @@
 # Target Architecture Snapshot
 
 Date: 2026-09-20
-Status: **Architecture frozen; Product-Layer M0 Accepted and complete; target product implementation inactive**
+Status: **Architecture frozen; Product-Layer M0 Accepted and complete; M1 ACTIVE; M2–M7 inactive; this publication turn has not implemented target behavior**
 
 ## Purpose and authority
 
 This document is the concise target view of the finalized Coding Agent product ADRs. It is a map,
 not a replacement for the individual decisions. Current implementation facts remain documented in
 [`current-state.md`](./current-state.md) and [`architecture.md`](./architecture.md).
+
+The formal [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) is active.
+Its 2026-09-22 publication turn changes only documentation: current code and Schema v4 remain the
+M0-characterized legacy baseline, and M2–M7 remain inactive.
 
 The product target is a Claude Code-like local Coding Agent with a simple product model above a
 reliable, recoverable RuntimeExecution kernel.

@@ -1,7 +1,7 @@
 # V1 Development Capability Matrix
 
 Date: 2026-09-20
-Status: **Acceptance contract frozen; Product-Layer M0 Accepted and complete; capability implementation inactive**
+Status: **Acceptance contract frozen; Product-Layer M0 Accepted and complete; M1 ACTIVE; M2–M7 inactive; capability implementation remains inactive**
 
 ## Purpose and authority
 
@@ -9,6 +9,10 @@ This matrix freezes the development capability promised by Coding Agent V1. It i
 input to M4 and M7, not a claim about the current five-tool implementation. The eight accepted ADRs
 remain the product and domain authority; this document narrows their permitted future capability
 space to a testable V1 delivery slice.
+
+The active [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) does not
+implement any matrix capability in its publication turn. The M3+M4 real-tree mutation gate remains
+closed, and the current code/Schema v4 baseline is unchanged.
 
 V1 targets a local, single-user Linux host with POSIX process semantics and a preprovisioned
 pure-Python/package development workflow, using sandbox capabilities that the implementation can

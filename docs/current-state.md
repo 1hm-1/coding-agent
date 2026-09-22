@@ -1,6 +1,6 @@
 # 当前实现状态
 
-> 基线日期：2026-09-21
+> 基线日期：2026-09-22
 > 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Phase 2 P2-M1/P2-M2
 > 当前阶段：Phase 2 P2-M2.3 已 **completed with no qualifying Dynamic Recall backend**；
 > P2-R1 原默认 serving 假设已被 M2-lite Memory ADR 取代；Memory 实施仍未激活；P2-M3 顺延
@@ -8,13 +8,14 @@
 > [`target-architecture-snapshot.md`](./target-architecture-snapshot.md) 和
 > [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。
 > **Product-Layer M0 Architecture Freeze + Characterization 已获 owner Accepted 并完成；不要与
-> 已完成的历史 Runtime M0 混淆。M1–M7 仍未激活，当前无 active 产品实施 milestone；
-> M1 必须等待正式 execution contract 发布与激活。** 当前 Session、copied workspace、Schema v4、
-> Runtime IPC、Memory wiring 和所有未来 target product behavior 均未因激活记录而改变。
+> 已完成的历史 Runtime M0 混淆。正式 [`M1 execution contract`](./execution-contracts/m1-execution-contract.md)
+> 已发布，M1 为 ACTIVE；M2–M7 仍未激活。** 本发布轮只落契约和状态文档，尚未开始 M1 实现；当前
+> Session、copied workspace、Schema v4、Runtime IPC、Memory wiring 和所有 target product behavior
+> 均保持 M0 characterization 的 legacy 基线。
 > V1 开发能力与验收范围已冻结在
 > [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)，但这只是未来 M4/M7
 > acceptance contract，不表示其中的 direct-tree、Git、delete、完整 Python workflow 或 interactive
-> responsiveness 已实现。P2-R1 不再是下一候选；M1 只能在正式 execution contract 发布并明确激活后实施。
+> responsiveness 已实现。P2-R1 不再是下一候选；后续 M1 实施只能按已发布契约的封闭范围进行。
 > M0 报告与证据见 [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)：
 > M0 证据收口后的测试总数为 183：182 pass、1 个 M3-owned expected failure；14-run 完整 scripted baseline 与
 > 25-run stability baseline 均无 infrastructure failure。未运行 live Provider，未改生产代码或 Schema。

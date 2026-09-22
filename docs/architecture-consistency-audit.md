@@ -1,7 +1,7 @@
 # Cross-ADR Architecture Consistency Audit
 
 Date: 2026-09-20
-Status: **Architecture frozen; Product-Layer M0 Accepted and complete; target product implementation inactive**
+Status: **Architecture frozen; Product-Layer M0 Accepted and complete; M1 ACTIVE; M2–M7 inactive; this publication turn has not implemented target behavior**
 
 ## Purpose
 
@@ -185,3 +185,10 @@ already run.
 That activation paragraph is also historical. Product-Layer M0 was accepted and completed on
 2026-09-21; M1–M7 remain inactive, and no product implementation milestone is active until a new
 formal execution contract is issued and activated. All eight Accepted ADR texts remain unchanged.
+
+**Later activation annotation (2026-09-22):** the formal
+[`M1 execution contract`](./execution-contracts/m1-execution-contract.md) has now been issued and
+M1 is ACTIVE. The preceding paragraph records the status at the end of M0 and is not rewritten as
+though M1 had already been active. This contract-publication turn implements no M1 behavior;
+current code and Schema v4 remain the legacy baseline, M2–M7 remain inactive, and all eight
+Accepted ADR texts remain unchanged.
