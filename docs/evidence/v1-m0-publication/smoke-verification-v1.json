@@ -1,0 +1,36 @@
+{
+  "calculator": {
+    "event_count": 48,
+    "session_id": "7cc86427-fcfa-4c2a-b3ae-7fd9c437a3b6",
+    "source_fingerprint_matches_current_fixture": true,
+    "test_outcomes": [
+      {
+        "call_id": "call-test-calculator",
+        "exit_code": 0,
+        "passed": true
+      }
+    ],
+    "trace_event_count": 48
+  },
+  "kind": "v1_m0_publication_smoke_verification",
+  "schema_version": 1,
+  "source": "fresh SQLite journals and JSONL traces",
+  "todo": {
+    "event_count": 72,
+    "session_id": "00ba60d1-4eec-476a-88f0-43e638d3d128",
+    "source_fingerprint_matches_current_fixture": true,
+    "test_outcomes": [
+      {
+        "call_id": "todo-first-test",
+        "exit_code": 1,
+        "passed": false
+      },
+      {
+        "call_id": "todo-final-test",
+        "exit_code": 0,
+        "passed": true
+      }
+    ],
+    "trace_event_count": 72
+  }
+}

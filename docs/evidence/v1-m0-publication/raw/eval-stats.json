@@ -1,0 +1,361 @@
+{
+  "distributions": {
+    "full-suite": {
+      "metrics": {
+        "compression_calls": {
+          "count": 14,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "compression_input_tokens": {
+          "count": 14,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "compression_latency_ms": {
+          "count": 14,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "compression_output_tokens": {
+          "count": 14,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "end_to_end_latency_ms": {
+          "count": 14,
+          "mean": 368.20718271441626,
+          "p50": 249.03127498691902,
+          "p95": 771.9002390222158,
+          "total": 5154.900558001827
+        },
+        "input_tokens": {
+          "count": 14,
+          "mean": 473.92857142857144,
+          "p50": 400.0,
+          "p95": 1620.0,
+          "total": 6635.0
+        },
+        "invalid_tool_calls": {
+          "count": 14,
+          "mean": 0.14285714285714285,
+          "p50": 0.0,
+          "p95": 1.0,
+          "total": 2.0
+        },
+        "latency_ms": {
+          "count": 14,
+          "mean": 272.69468988691057,
+          "p50": 173.74396324157715,
+          "p95": 609.9960803985596,
+          "total": 3817.725658416748
+        },
+        "model_calls": {
+          "count": 14,
+          "mean": 4.0,
+          "p50": 4.0,
+          "p95": 8.0,
+          "total": 56.0
+        },
+        "model_latency_ms": {
+          "count": 14,
+          "mean": 6.865382194519043,
+          "p50": 5.625009536743164,
+          "p95": 15.12289047241211,
+          "total": 96.1153507232666
+        },
+        "output_tokens": {
+          "count": 14,
+          "mean": 62.0,
+          "p50": 60.0,
+          "p95": 142.0,
+          "total": 868.0
+        },
+        "repeated_failure_batches": {
+          "count": 14,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "test_latency_ms": {
+          "count": 14,
+          "mean": 106.23564285714284,
+          "p50": 0.0,
+          "p95": 301.243,
+          "total": 1487.2989999999998
+        },
+        "tool_attempts": {
+          "count": 14,
+          "mean": 3.0,
+          "p50": 3.0,
+          "p95": 7.0,
+          "total": 42.0
+        },
+        "tool_calls": {
+          "count": 14,
+          "mean": 3.0,
+          "p50": 3.0,
+          "p95": 7.0,
+          "total": 42.0
+        },
+        "tool_executions": {
+          "count": 14,
+          "mean": 2.857142857142857,
+          "p50": 3.0,
+          "p95": 7.0,
+          "total": 40.0
+        },
+        "tool_latency_ms": {
+          "count": 14,
+          "mean": 124.2495,
+          "p50": 103.171,
+          "p95": 318.647,
+          "total": 1739.493
+        },
+        "total_model_calls": {
+          "count": 14,
+          "mean": 4.0,
+          "p50": 4.0,
+          "p95": 8.0,
+          "total": 56.0
+        },
+        "total_tokens": {
+          "count": 14,
+          "mean": 535.9285714285714,
+          "p50": 460.0,
+          "p95": 1750.0,
+          "total": 7503.0
+        }
+      },
+      "run_count": 14,
+      "unique_session_ids": 14,
+      "valid_run_count": 14
+    },
+    "stability": {
+      "metrics": {
+        "compression_calls": {
+          "count": 25,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "compression_input_tokens": {
+          "count": 25,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "compression_latency_ms": {
+          "count": 25,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "compression_output_tokens": {
+          "count": 25,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "end_to_end_latency_ms": {
+          "count": 25,
+          "mean": 576.9363330793567,
+          "p50": 577.3204969882499,
+          "p95": 725.5274700000882,
+          "total": 14423.408326983918
+        },
+        "input_tokens": {
+          "count": 25,
+          "mean": 891.0,
+          "p50": 885.0,
+          "p95": 1620.0,
+          "total": 22275.0
+        },
+        "invalid_tool_calls": {
+          "count": 25,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "latency_ms": {
+          "count": 25,
+          "mean": 436.13929748535156,
+          "p50": 433.8879585266113,
+          "p95": 584.6340656280518,
+          "total": 10903.482437133789
+        },
+        "model_calls": {
+          "count": 25,
+          "mean": 5.8,
+          "p50": 6.0,
+          "p95": 8.0,
+          "total": 145.0
+        },
+        "model_latency_ms": {
+          "count": 25,
+          "mean": 10.584993362426758,
+          "p50": 9.428024291992188,
+          "p95": 13.536214828491211,
+          "total": 264.62483406066895
+        },
+        "output_tokens": {
+          "count": 25,
+          "mean": 101.6,
+          "p50": 92.0,
+          "p95": 142.0,
+          "total": 2540.0
+        },
+        "repeated_failure_batches": {
+          "count": 25,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "total": 0.0
+        },
+        "test_latency_ms": {
+          "count": 25,
+          "mean": 212.30903999999995,
+          "p50": 186.206,
+          "p95": 302.587,
+          "total": 5307.725999999999
+        },
+        "tool_attempts": {
+          "count": 25,
+          "mean": 4.8,
+          "p50": 5.0,
+          "p95": 7.0,
+          "total": 120.0
+        },
+        "tool_calls": {
+          "count": 25,
+          "mean": 4.8,
+          "p50": 5.0,
+          "p95": 7.0,
+          "total": 120.0
+        },
+        "tool_executions": {
+          "count": 25,
+          "mean": 4.8,
+          "p50": 5.0,
+          "p95": 7.0,
+          "total": 120.0
+        },
+        "tool_latency_ms": {
+          "count": 25,
+          "mean": 228.26620000000003,
+          "p50": 197.638,
+          "p95": 324.095,
+          "total": 5706.655000000001
+        },
+        "total_model_calls": {
+          "count": 25,
+          "mean": 5.8,
+          "p50": 6.0,
+          "p95": 8.0,
+          "total": 145.0
+        },
+        "total_tokens": {
+          "count": 25,
+          "mean": 992.6,
+          "p50": 969.0,
+          "p95": 1750.0,
+          "total": 24815.0
+        }
+      },
+      "run_count": 25,
+      "unique_session_ids": 25,
+      "valid_run_count": 25
+    }
+  },
+  "raw": [
+    {
+      "bytes": 60867,
+      "path": "full-suite/report/report.json",
+      "sha256": "c4fab284084083bfcb5d6c792bac5f7d306021168fde73687e8c772783485d95"
+    },
+    {
+      "bytes": 40127,
+      "path": "full-suite/report/runs.jsonl",
+      "sha256": "85cb1e17a4497731b7c6ec5094ea2bec1582a6b4ed2430b3c2bd4a07e9bcbb1d"
+    },
+    {
+      "bytes": 19034,
+      "path": "full-suite/report/manifest.snapshot.json",
+      "sha256": "4304c789c00a34a0460636f4292f69ece31ee7c9401a110b953228393359e1cd"
+    },
+    {
+      "bytes": 140477,
+      "path": "stability/report/report.json",
+      "sha256": "febb43782ea9e684b1ee755aa6aba22bf8f5bd7c35c0350d6a5868527e29a5a5"
+    },
+    {
+      "bytes": 94832,
+      "path": "stability/report/runs.jsonl",
+      "sha256": "cd97ad969ca7c5680edaa505e516deec81906e94c5410cc4e9fe373a58578d5f"
+    },
+    {
+      "bytes": 7030,
+      "path": "stability/report/manifest.snapshot.json",
+      "sha256": "9e8a150f4371a9495eacbff5dd9174fc25ab401c58106f80ec00aa01c8dc74d5"
+    }
+  ],
+  "session_ids": {
+    "count": 39,
+    "ids": [
+      "c3906771-3972-441e-bcc8-85a489253e76",
+      "6e326624-dc75-46ba-93f9-4c3694ea197d",
+      "dc6106d9-8319-46ef-969b-ae587a25fb7a",
+      "fdf6e780-e1fd-432b-bd8b-02f9bd0594f0",
+      "1198f8c5-1e0c-40a7-b36e-851019a018d1",
+      "1d1e8585-a644-4202-87e8-544342480b51",
+      "5a40d821-57c5-4b37-ba73-0c2c748bda65",
+      "a5c12f35-80c2-49d2-97a1-0809c3213d17",
+      "1aa2c1b9-016c-43a3-98fb-45b7fe762989",
+      "096cd3a5-faed-495a-b43c-b0e0d983411e",
+      "2c195b3e-6e5f-4f03-bfdf-e8111242fb53",
+      "a8c20c9a-d331-495d-951e-34fb97ae00d8",
+      "e7e8885c-b661-4544-a7b8-3f12312b6199",
+      "410443b4-9125-478d-ae38-058814f0d779",
+      "e6fd102a-4dcb-46d6-a702-76702e65f66a",
+      "277e33f9-8486-4c10-a697-6bc9daa46422",
+      "ed5407b0-0e2e-401e-b745-95178afd0833",
+      "ef7fafd8-a581-4608-8c2a-3cbf68649ede",
+      "635bb077-b69f-4d03-9358-ae6bc480d172",
+      "22fe343f-73f9-47b9-b5d1-98df263e5413",
+      "71b30f23-60b1-4e99-89be-71bd1f218f73",
+      "2f10cee0-1506-467a-9a98-eea03cfd8fa4",
+      "7d935472-a5c4-4d73-97f2-9c1f01fb4d27",
+      "642923f7-9f3d-4e4e-8515-0a34a01d7441",
+      "43b192c0-5582-45ea-b4fb-8fb9d17acc03",
+      "9568bbfc-89a3-4482-a016-f7ce3a776178",
+      "d487ef23-a0a8-4363-955c-7c0be0e61f0d",
+      "4ac8b3d7-d222-447b-b6e8-4c301919dd66",
+      "0913a9e6-5ff4-4b22-8823-6cdd0a53a84b",
+      "31bcae1e-b964-4dc4-a11d-fe43de09ccae",
+      "aa355f41-18e3-46ca-b1f6-06459886b55f",
+      "8990377e-6d4a-4cc8-8ae5-e1271c0bcf6f",
+      "65a1abf7-742a-4445-a7c4-0d1c88a783e3",
+      "b49f5a97-f739-4bdc-93a6-8ffc02b46f56",
+      "294aa026-d186-4680-8ca9-c8c040398be3",
+      "95b9319f-382b-43bb-a2d0-f11415cd0712",
+      "0fcd429d-9d82-4832-9cb7-39b9bb6394e1",
+      "92f4bd1e-ef8a-4ec3-9efc-988b3a1ce8e3",
+      "d47062e6-2e29-4e28-b751-c4849188e054"
+    ],
+    "unique": 39
+  }
+}

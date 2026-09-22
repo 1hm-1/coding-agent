@@ -1,0 +1,3965 @@
+{
+  "capability_run_count": 25,
+  "case_count": 5,
+  "end_to_end_success_rate": 1.0,
+  "failure_reasons": {},
+  "infrastructure_failure_count": 0,
+  "infrastructure_failure_reasons": {},
+  "metrics": {
+    "compression_calls": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "compression_input_tokens": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "compression_latency_ms": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "compression_output_tokens": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "end_to_end_latency_ms": {
+      "count": 25,
+      "mean": 576.9363330793567,
+      "p50": 577.3204969882499,
+      "p95": 725.5274700000882,
+      "total": 14423.408326983918
+    },
+    "input_tokens": {
+      "count": 25,
+      "mean": 891.0,
+      "p50": 885.0,
+      "p95": 1620.0,
+      "total": 22275.0
+    },
+    "invalid_tool_calls": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "latency_ms": {
+      "count": 25,
+      "mean": 436.13929748535156,
+      "p50": 433.8879585266113,
+      "p95": 584.6340656280518,
+      "total": 10903.482437133789
+    },
+    "model_calls": {
+      "count": 25,
+      "mean": 5.8,
+      "p50": 6.0,
+      "p95": 8.0,
+      "total": 145.0
+    },
+    "model_latency_ms": {
+      "count": 25,
+      "mean": 10.584993362426758,
+      "p50": 9.428024291992188,
+      "p95": 13.536214828491211,
+      "total": 264.62483406066895
+    },
+    "output_tokens": {
+      "count": 25,
+      "mean": 101.6,
+      "p50": 92.0,
+      "p95": 142.0,
+      "total": 2540.0
+    },
+    "repeated_failure_batches": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "test_latency_ms": {
+      "count": 25,
+      "mean": 212.30903999999995,
+      "p50": 186.206,
+      "p95": 302.587,
+      "total": 5307.725999999999
+    },
+    "tool_attempts": {
+      "count": 25,
+      "mean": 4.8,
+      "p50": 5.0,
+      "p95": 7.0,
+      "total": 120.0
+    },
+    "tool_calls": {
+      "count": 25,
+      "mean": 4.8,
+      "p50": 5.0,
+      "p95": 7.0,
+      "total": 120.0
+    },
+    "tool_executions": {
+      "count": 25,
+      "mean": 4.8,
+      "p50": 5.0,
+      "p95": 7.0,
+      "total": 120.0
+    },
+    "tool_latency_ms": {
+      "count": 25,
+      "mean": 228.26620000000003,
+      "p50": 197.638,
+      "p95": 324.095,
+      "total": 5706.655000000001
+    },
+    "total_model_calls": {
+      "count": 25,
+      "mean": 5.8,
+      "p50": 6.0,
+      "p95": 8.0,
+      "total": 145.0
+    },
+    "total_tokens": {
+      "count": 25,
+      "mean": 992.6,
+      "p50": 969.0,
+      "p95": 1750.0,
+      "total": 24815.0
+    }
+  },
+  "negative_control_runs": {
+    "excluded_from_capability_metrics": true,
+    "observed_failure_rate": null,
+    "runtime_completion_rate": null,
+    "valid_run_count": 0
+  },
+  "oracle_success_rate": 1.0,
+  "permission_violations": {
+    "by_run": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "by_tool": {},
+    "total": 0
+  },
+  "recovery_rate": null,
+  "requested_run_count": 25,
+  "runs": [
+    {
+      "case_id": "calculator-success",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 459.3520640046336,
+        "failure_reasons": {},
+        "input_tokens": 400,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 322.0391273498535,
+        "model_calls": 4,
+        "model_latency_ms": 5.741119384765625,
+        "output_tokens": 60,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 186.845,
+        "tool_attempts": 3,
+        "tool_calls": 3,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 1,
+          "restricted_test": 1
+        },
+        "tool_executions": 3,
+        "tool_latency_ms": 195.416,
+        "total_model_calls": 4,
+        "total_tokens": 460
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-f5e0a683-ad72-4a0b-a89a-13b05f192d94",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.814,
+                "execution_id": "sandbox-f5e0a683-ad72-4a0b-a89a-13b05f192d94",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_adds_two_numbers (test_calculator.CalculatorTest) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "c164c3f9647af7e0c7a6e6679f0193a9a8a50f5daa413906f81546c2557b9eb2",
+              "workspace_revision_before": "c164c3f9647af7e0c7a6e6679f0193a9a8a50f5daa413906f81546c2557b9eb2"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "calculator.py"
+            ],
+            "changed_paths": [
+              "calculator.py"
+            ],
+            "deny": []
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 1,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "calculator-success",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 429.7761750058271,
+        "failure_reasons": {},
+        "input_tokens": 400,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 288.36917877197266,
+        "model_calls": 4,
+        "model_latency_ms": 5.632877349853516,
+        "output_tokens": 60,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 153.946,
+        "tool_attempts": 3,
+        "tool_calls": 3,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 1,
+          "restricted_test": 1
+        },
+        "tool_executions": 3,
+        "tool_latency_ms": 161.696,
+        "total_model_calls": 4,
+        "total_tokens": 460
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-ce2b0636-b147-4289-92c5-c70ea29bf399",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.913,
+                "execution_id": "sandbox-ce2b0636-b147-4289-92c5-c70ea29bf399",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_adds_two_numbers (test_calculator.CalculatorTest) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "c164c3f9647af7e0c7a6e6679f0193a9a8a50f5daa413906f81546c2557b9eb2",
+              "workspace_revision_before": "c164c3f9647af7e0c7a6e6679f0193a9a8a50f5daa413906f81546c2557b9eb2"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "calculator.py"
+            ],
+            "changed_paths": [
+              "calculator.py"
+            ],
+            "deny": []
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 2,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "calculator-success",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 521.5665740252007,
+        "failure_reasons": {},
+        "input_tokens": 400,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 382.71498680114746,
+        "model_calls": 4,
+        "model_latency_ms": 8.70203971862793,
+        "output_tokens": 60,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 186.614,
+        "tool_attempts": 3,
+        "tool_calls": 3,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 1,
+          "restricted_test": 1
+        },
+        "tool_executions": 3,
+        "tool_latency_ms": 197.638,
+        "total_model_calls": 4,
+        "total_tokens": 460
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-4a8a2501-55ae-4c75-8cc6-94667ef024d8",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.822,
+                "execution_id": "sandbox-4a8a2501-55ae-4c75-8cc6-94667ef024d8",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_adds_two_numbers (test_calculator.CalculatorTest) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "c164c3f9647af7e0c7a6e6679f0193a9a8a50f5daa413906f81546c2557b9eb2",
+              "workspace_revision_before": "c164c3f9647af7e0c7a6e6679f0193a9a8a50f5daa413906f81546c2557b9eb2"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "calculator.py"
+            ],
+            "changed_paths": [
+              "calculator.py"
+            ],
+            "deny": []
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 3,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "calculator-success",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 447.5320630008355,
+        "failure_reasons": {},
+        "input_tokens": 400,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 309.2010021209717,
+        "model_calls": 4,
+        "model_latency_ms": 6.549835205078125,
+        "output_tokens": 60,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 152.689,
+        "tool_attempts": 3,
+        "tool_calls": 3,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 1,
+          "restricted_test": 1
+        },
+        "tool_executions": 3,
+        "tool_latency_ms": 161.809,
+        "total_model_calls": 4,
+        "total_tokens": 460
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-99ad7d41-4da4-4445-aa2f-9e2cd14a86a6",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.811,
+                "execution_id": "sandbox-99ad7d41-4da4-4445-aa2f-9e2cd14a86a6",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_adds_two_numbers (test_calculator.CalculatorTest) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "8cbea24e3c3e9ceca16c275a2ca7636c705f6709e4e405312690e6eb9b413cb9",
+              "workspace_revision_before": "8cbea24e3c3e9ceca16c275a2ca7636c705f6709e4e405312690e6eb9b413cb9"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "calculator.py"
+            ],
+            "changed_paths": [
+              "calculator.py"
+            ],
+            "deny": []
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 4,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "calculator-success",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 457.7529259840958,
+        "failure_reasons": {},
+        "input_tokens": 400,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 321.48289680480957,
+        "model_calls": 4,
+        "model_latency_ms": 6.7310333251953125,
+        "output_tokens": 60,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 153.007,
+        "tool_attempts": 3,
+        "tool_calls": 3,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 1,
+          "restricted_test": 1
+        },
+        "tool_executions": 3,
+        "tool_latency_ms": 162.63400000000001,
+        "total_model_calls": 4,
+        "total_tokens": 460
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-62b6ba79-adb7-4633-bce2-2df7e7a0ef25",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.653,
+                "execution_id": "sandbox-62b6ba79-adb7-4633-bce2-2df7e7a0ef25",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_adds_two_numbers (test_calculator.CalculatorTest) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "8cbea24e3c3e9ceca16c275a2ca7636c705f6709e4e405312690e6eb9b413cb9",
+              "workspace_revision_before": "8cbea24e3c3e9ceca16c275a2ca7636c705f6709e4e405312690e6eb9b413cb9"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "calculator.py"
+            ],
+            "changed_paths": [
+              "calculator.py"
+            ],
+            "deny": []
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 5,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "pipeline-multi-file-recovery",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 725.5274700000882,
+        "failure_reasons": {},
+        "input_tokens": 950,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 584.6340656280518,
+        "model_calls": 8,
+        "model_latency_ms": 12.789249420166016,
+        "output_tokens": 142,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 301.607,
+        "tool_attempts": 7,
+        "tool_calls": 7,
+        "tool_calls_by_name": {
+          "edit_file": 2,
+          "read_file": 3,
+          "restricted_test": 2
+        },
+        "tool_executions": 7,
+        "tool_latency_ms": 323.158,
+        "total_model_calls": 8,
+        "total_tokens": 1092
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-a47ffad3-2936-4086-9a0d-98e7ef738b67",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.948,
+                "execution_id": "sandbox-a47ffad3-2936-4086-9a0d-98e7ef738b67",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_report_normalizes_and_formats_amount (test_pipeline.PipelineTest) ... ok\ntest_zero_amount_is_explicit (test_pipeline.PipelineTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "5ae64da1c35cbc403e0bf130e88ec7867edd5fd8f20cc0d259bc83c5f278620b",
+              "workspace_revision_before": "5ae64da1c35cbc403e0bf130e88ec7867edd5fd8f20cc0d259bc83c5f278620b"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "contains_any_matched": [
+              "return value.strip().lower()"
+            ],
+            "exists": true,
+            "path": "normalization.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "formatting.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "formatting.py",
+              "normalization.py"
+            ],
+            "changed_paths": [
+              "formatting.py",
+              "normalization.py"
+            ],
+            "deny": [
+              "README.md",
+              "test_pipeline.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 1,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "pipeline-multi-file-recovery",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 691.4189690141939,
+        "failure_reasons": {},
+        "input_tokens": 950,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 549.7269630432129,
+        "model_calls": 8,
+        "model_latency_ms": 12.150049209594727,
+        "output_tokens": 142,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 269.478,
+        "tool_attempts": 7,
+        "tool_calls": 7,
+        "tool_calls_by_name": {
+          "edit_file": 2,
+          "read_file": 3,
+          "restricted_test": 2
+        },
+        "tool_executions": 7,
+        "tool_latency_ms": 291.568,
+        "total_model_calls": 8,
+        "total_tokens": 1092
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-f0da3a42-e979-4aed-8b78-dc367a3748c3",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.72,
+                "execution_id": "sandbox-f0da3a42-e979-4aed-8b78-dc367a3748c3",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_report_normalizes_and_formats_amount (test_pipeline.PipelineTest) ... ok\ntest_zero_amount_is_explicit (test_pipeline.PipelineTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "6f2dd8045ff3e1e56776a0e86bb99f1f1df6fa60fe3d54327469c2854662bcc3",
+              "workspace_revision_before": "6f2dd8045ff3e1e56776a0e86bb99f1f1df6fa60fe3d54327469c2854662bcc3"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "contains_any_matched": [
+              "return value.strip().lower()"
+            ],
+            "exists": true,
+            "path": "normalization.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "formatting.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "formatting.py",
+              "normalization.py"
+            ],
+            "changed_paths": [
+              "formatting.py",
+              "normalization.py"
+            ],
+            "deny": [
+              "README.md",
+              "test_pipeline.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 2,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "pipeline-multi-file-recovery",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 772.5976340007037,
+        "failure_reasons": {},
+        "input_tokens": 950,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 630.824089050293,
+        "model_calls": 8,
+        "model_latency_ms": 13.536214828491211,
+        "output_tokens": 142,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 301.145,
+        "tool_attempts": 7,
+        "tool_calls": 7,
+        "tool_calls_by_name": {
+          "edit_file": 2,
+          "read_file": 3,
+          "restricted_test": 2
+        },
+        "tool_executions": 7,
+        "tool_latency_ms": 323.33500000000004,
+        "total_model_calls": 8,
+        "total_tokens": 1092
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-901a9695-e82b-43f5-83b1-a3bca51ce217",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.631,
+                "execution_id": "sandbox-901a9695-e82b-43f5-83b1-a3bca51ce217",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_report_normalizes_and_formats_amount (test_pipeline.PipelineTest) ... ok\ntest_zero_amount_is_explicit (test_pipeline.PipelineTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "2546086054204431e89e9bff82e6fd58d892f83b3fdbc6f143df0b9c2cadb132",
+              "workspace_revision_before": "2546086054204431e89e9bff82e6fd58d892f83b3fdbc6f143df0b9c2cadb132"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "contains_any_matched": [
+              "return value.strip().lower()"
+            ],
+            "exists": true,
+            "path": "normalization.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "formatting.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "formatting.py",
+              "normalization.py"
+            ],
+            "changed_paths": [
+              "formatting.py",
+              "normalization.py"
+            ],
+            "deny": [
+              "README.md",
+              "test_pipeline.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 3,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "pipeline-multi-file-recovery",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 699.334472999908,
+        "failure_reasons": {},
+        "input_tokens": 950,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 555.5269718170166,
+        "model_calls": 8,
+        "model_latency_ms": 12.087821960449219,
+        "output_tokens": 142,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 269.123,
+        "tool_attempts": 7,
+        "tool_calls": 7,
+        "tool_calls_by_name": {
+          "edit_file": 2,
+          "read_file": 3,
+          "restricted_test": 2
+        },
+        "tool_executions": 7,
+        "tool_latency_ms": 290.88,
+        "total_model_calls": 8,
+        "total_tokens": 1092
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-556736fd-2a9c-469c-8043-25093b849dd8",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.499,
+                "execution_id": "sandbox-556736fd-2a9c-469c-8043-25093b849dd8",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_report_normalizes_and_formats_amount (test_pipeline.PipelineTest) ... ok\ntest_zero_amount_is_explicit (test_pipeline.PipelineTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "e9fc7a19c752b49b2dded9a409fcb3b7693f4a45187b0693960e23e7efc80430",
+              "workspace_revision_before": "e9fc7a19c752b49b2dded9a409fcb3b7693f4a45187b0693960e23e7efc80430"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "contains_any_matched": [
+              "return value.strip().lower()"
+            ],
+            "exists": true,
+            "path": "normalization.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "formatting.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "formatting.py",
+              "normalization.py"
+            ],
+            "changed_paths": [
+              "formatting.py",
+              "normalization.py"
+            ],
+            "deny": [
+              "README.md",
+              "test_pipeline.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 4,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "pipeline-multi-file-recovery",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 714.3374929728452,
+        "failure_reasons": {},
+        "input_tokens": 950,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 571.1159706115723,
+        "model_calls": 8,
+        "model_latency_ms": 11.678218841552734,
+        "output_tokens": 142,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 302.587,
+        "tool_attempts": 7,
+        "tool_calls": 7,
+        "tool_calls_by_name": {
+          "edit_file": 2,
+          "read_file": 3,
+          "restricted_test": 2
+        },
+        "tool_executions": 7,
+        "tool_latency_ms": 324.095,
+        "total_model_calls": 8,
+        "total_tokens": 1092
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-03098951-7d01-4c53-ba5b-86e824f507ac",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.928,
+                "execution_id": "sandbox-03098951-7d01-4c53-ba5b-86e824f507ac",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_report_normalizes_and_formats_amount (test_pipeline.PipelineTest) ... ok\ntest_zero_amount_is_explicit (test_pipeline.PipelineTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "697cbaa41e36fd8fb6b95794a8ad19dddeba621094d1e822d7ab59cbdadac043",
+              "workspace_revision_before": "697cbaa41e36fd8fb6b95794a8ad19dddeba621094d1e822d7ab59cbdadac043"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "contains_any_matched": [
+              "return value.strip().lower()"
+            ],
+            "exists": true,
+            "path": "normalization.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "formatting.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "formatting.py",
+              "normalization.py"
+            ],
+            "changed_paths": [
+              "formatting.py",
+              "normalization.py"
+            ],
+            "deny": [
+              "README.md",
+              "test_pipeline.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 5,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "search-lab-content-location",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 598.0419630068354,
+        "failure_reasons": {},
+        "input_tokens": 1620,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 449.65505599975586,
+        "model_calls": 6,
+        "model_latency_ms": 11.161088943481445,
+        "output_tokens": 130,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 154.423,
+        "tool_attempts": 5,
+        "tool_calls": 5,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 3,
+          "restricted_test": 1
+        },
+        "tool_executions": 5,
+        "tool_latency_ms": 178.77,
+        "total_model_calls": 6,
+        "total_tokens": 1750
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-46add7bc-b881-4bca-b389-c14c321e1b8a",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.77,
+                "execution_id": "sandbox-46add7bc-b881-4bca-b389-c14c321e1b8a",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_east_premium_total (test_invoice.InvoiceTest) ... ok\ntest_west_total_is_unchanged (test_invoice.InvoiceTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "0a3ea4a0f4e39020ce15156031d84e7f622dd6167ea9bd8da16c8cf3761a323a",
+              "workspace_revision_before": "0a3ea4a0f4e39020ce15156031d84e7f622dd6167ea9bd8da16c8cf3761a323a"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "invoice/rules/rule_11.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "invoice/rules/rule_11.py"
+            ],
+            "changed_paths": [
+              "invoice/rules/rule_11.py"
+            ],
+            "deny": [
+              "README.md",
+              "test_invoice.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 1,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "search-lab-content-location",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 595.4215840029065,
+        "failure_reasons": {},
+        "input_tokens": 1620,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 451.43604278564453,
+        "model_calls": 6,
+        "model_latency_ms": 11.189937591552734,
+        "output_tokens": 130,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 156.992,
+        "tool_attempts": 5,
+        "tool_calls": 5,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 3,
+          "restricted_test": 1
+        },
+        "tool_executions": 5,
+        "tool_latency_ms": 176.099,
+        "total_model_calls": 6,
+        "total_tokens": 1750
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-87958863-18d5-4379-a6cf-a2a5ea7b9081",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.849,
+                "execution_id": "sandbox-87958863-18d5-4379-a6cf-a2a5ea7b9081",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_east_premium_total (test_invoice.InvoiceTest) ... ok\ntest_west_total_is_unchanged (test_invoice.InvoiceTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "9a0307c2efe6f6d18466172f409c3bd596a8c14fb2d66de7e51575dd4ceee2a2",
+              "workspace_revision_before": "9a0307c2efe6f6d18466172f409c3bd596a8c14fb2d66de7e51575dd4ceee2a2"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "invoice/rules/rule_11.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "invoice/rules/rule_11.py"
+            ],
+            "changed_paths": [
+              "invoice/rules/rule_11.py"
+            ],
+            "deny": [
+              "README.md",
+              "test_invoice.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 2,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "search-lab-content-location",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 557.4232260114513,
+        "failure_reasons": {},
+        "input_tokens": 1620,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 415.4229164123535,
+        "model_calls": 6,
+        "model_latency_ms": 39.11995887756348,
+        "output_tokens": 130,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 154.467,
+        "tool_attempts": 5,
+        "tool_calls": 5,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 3,
+          "restricted_test": 1
+        },
+        "tool_executions": 5,
+        "tool_latency_ms": 172.00400000000002,
+        "total_model_calls": 6,
+        "total_tokens": 1750
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-05f508f4-fa54-4dea-af0b-9d2c592052b3",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.792,
+                "execution_id": "sandbox-05f508f4-fa54-4dea-af0b-9d2c592052b3",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_east_premium_total (test_invoice.InvoiceTest) ... ok\ntest_west_total_is_unchanged (test_invoice.InvoiceTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "9a0307c2efe6f6d18466172f409c3bd596a8c14fb2d66de7e51575dd4ceee2a2",
+              "workspace_revision_before": "9a0307c2efe6f6d18466172f409c3bd596a8c14fb2d66de7e51575dd4ceee2a2"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "invoice/rules/rule_11.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "invoice/rules/rule_11.py"
+            ],
+            "changed_paths": [
+              "invoice/rules/rule_11.py"
+            ],
+            "deny": [
+              "README.md",
+              "test_invoice.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 3,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "search-lab-content-location",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 539.1951089841314,
+        "failure_reasons": {},
+        "input_tokens": 1620,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 395.99108695983887,
+        "model_calls": 6,
+        "model_latency_ms": 9.271860122680664,
+        "output_tokens": 130,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 153.827,
+        "tool_attempts": 5,
+        "tool_calls": 5,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 3,
+          "restricted_test": 1
+        },
+        "tool_executions": 5,
+        "tool_latency_ms": 173.023,
+        "total_model_calls": 6,
+        "total_tokens": 1750
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-f879c6e9-30e7-48a9-b690-92726f2664d1",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.826,
+                "execution_id": "sandbox-f879c6e9-30e7-48a9-b690-92726f2664d1",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_east_premium_total (test_invoice.InvoiceTest) ... ok\ntest_west_total_is_unchanged (test_invoice.InvoiceTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "b72ba2291e3c8a4c5ba1df61fd8f34b098f771e386f5945b4c4cbca639b4f9e7",
+              "workspace_revision_before": "b72ba2291e3c8a4c5ba1df61fd8f34b098f771e386f5945b4c4cbca639b4f9e7"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "invoice/rules/rule_11.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "invoice/rules/rule_11.py"
+            ],
+            "changed_paths": [
+              "invoice/rules/rule_11.py"
+            ],
+            "deny": [
+              "README.md",
+              "test_invoice.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 4,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "search-lab-content-location",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 577.3204969882499,
+        "failure_reasons": {},
+        "input_tokens": 1620,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 433.8879585266113,
+        "model_calls": 6,
+        "model_latency_ms": 9.652137756347656,
+        "output_tokens": 130,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 186.206,
+        "tool_attempts": 5,
+        "tool_calls": 5,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 3,
+          "restricted_test": 1
+        },
+        "tool_executions": 5,
+        "tool_latency_ms": 205.553,
+        "total_model_calls": 6,
+        "total_tokens": 1750
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-c39d62a5-4890-4e76-bb35-4f225abfe2da",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 115.129,
+                "execution_id": "sandbox-c39d62a5-4890-4e76-bb35-4f225abfe2da",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_east_premium_total (test_invoice.InvoiceTest) ... ok\ntest_west_total_is_unchanged (test_invoice.InvoiceTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "1125574ebd000f141a35283c865b26e7e64c22b4cd9442cba9db2b8c287fb421",
+              "workspace_revision_before": "1125574ebd000f141a35283c865b26e7e64c22b4cd9442cba9db2b8c287fb421"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "invoice/rules/rule_11.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "invoice/rules/rule_11.py"
+            ],
+            "changed_paths": [
+              "invoice/rules/rule_11.py"
+            ],
+            "deny": [
+              "README.md",
+              "test_invoice.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 5,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "settings-scoped-edit",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 469.0509059873875,
+        "failure_reasons": {},
+        "input_tokens": 600,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 327.15797424316406,
+        "model_calls": 5,
+        "model_latency_ms": 7.375001907348633,
+        "output_tokens": 92,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 152.805,
+        "tool_attempts": 4,
+        "tool_calls": 4,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 2,
+          "restricted_test": 1
+        },
+        "tool_executions": 4,
+        "tool_latency_ms": 166.498,
+        "total_model_calls": 5,
+        "total_tokens": 692
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-cee9dc78-1c62-42d1-aa4c-cae23f3469fe",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.948,
+                "execution_id": "sandbox-cee9dc78-1c62-42d1-aa4c-cae23f3469fe",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_mode_parser_trims_and_normalizes (test_settings.SettingsTest) ... ok\ntest_unknown_mode_is_rejected (test_settings.SettingsTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "c56f4c4f080cf1451f93f5257a5471f60db8301881c217d69d45bebc21f7a2bb",
+              "workspace_revision_before": "c56f4c4f080cf1451f93f5257a5471f60db8301881c217d69d45bebc21f7a2bb"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "settings.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "settings.py"
+            ],
+            "changed_paths": [
+              "settings.py"
+            ],
+            "deny": [
+              "README.md",
+              "service.py",
+              "test_settings.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 1,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "settings-scoped-edit",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 467.4480860121548,
+        "failure_reasons": {},
+        "input_tokens": 600,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 327.517032623291,
+        "model_calls": 5,
+        "model_latency_ms": 7.842779159545898,
+        "output_tokens": 92,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 152.517,
+        "tool_attempts": 4,
+        "tool_calls": 4,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 2,
+          "restricted_test": 1
+        },
+        "tool_executions": 4,
+        "tool_latency_ms": 165.626,
+        "total_model_calls": 5,
+        "total_tokens": 692
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-c4c3e511-cecf-42c2-9559-b42775bde2c7",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.959,
+                "execution_id": "sandbox-c4c3e511-cecf-42c2-9559-b42775bde2c7",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_mode_parser_trims_and_normalizes (test_settings.SettingsTest) ... ok\ntest_unknown_mode_is_rejected (test_settings.SettingsTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "c56f4c4f080cf1451f93f5257a5471f60db8301881c217d69d45bebc21f7a2bb",
+              "workspace_revision_before": "c56f4c4f080cf1451f93f5257a5471f60db8301881c217d69d45bebc21f7a2bb"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "settings.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "settings.py"
+            ],
+            "changed_paths": [
+              "settings.py"
+            ],
+            "deny": [
+              "README.md",
+              "service.py",
+              "test_settings.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 2,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "settings-scoped-edit",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 526.0414440126624,
+        "failure_reasons": {},
+        "input_tokens": 600,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 388.11302185058594,
+        "model_calls": 5,
+        "model_latency_ms": 9.20724868774414,
+        "output_tokens": 92,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 185.304,
+        "tool_attempts": 4,
+        "tool_calls": 4,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 2,
+          "restricted_test": 1
+        },
+        "tool_executions": 4,
+        "tool_latency_ms": 198.507,
+        "total_model_calls": 5,
+        "total_tokens": 692
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-235c7977-4ad3-4296-8117-7f1df40beaf0",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.695,
+                "execution_id": "sandbox-235c7977-4ad3-4296-8117-7f1df40beaf0",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_mode_parser_trims_and_normalizes (test_settings.SettingsTest) ... ok\ntest_unknown_mode_is_rejected (test_settings.SettingsTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "190ff50d6e91f1ce23cde50f1254a639ca948c79f08fefdb0fb009fb7b4d897c",
+              "workspace_revision_before": "190ff50d6e91f1ce23cde50f1254a639ca948c79f08fefdb0fb009fb7b4d897c"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "settings.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "settings.py"
+            ],
+            "changed_paths": [
+              "settings.py"
+            ],
+            "deny": [
+              "README.md",
+              "service.py",
+              "test_settings.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 3,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "settings-scoped-edit",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 475.85953102679923,
+        "failure_reasons": {},
+        "input_tokens": 600,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 337.74590492248535,
+        "model_calls": 5,
+        "model_latency_ms": 7.849931716918945,
+        "output_tokens": 92,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 152.709,
+        "tool_attempts": 4,
+        "tool_calls": 4,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 2,
+          "restricted_test": 1
+        },
+        "tool_executions": 4,
+        "tool_latency_ms": 167.473,
+        "total_model_calls": 5,
+        "total_tokens": 692
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-f31b6028-365b-4b97-96c5-d2f946a87451",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.768,
+                "execution_id": "sandbox-f31b6028-365b-4b97-96c5-d2f946a87451",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_mode_parser_trims_and_normalizes (test_settings.SettingsTest) ... ok\ntest_unknown_mode_is_rejected (test_settings.SettingsTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "190ff50d6e91f1ce23cde50f1254a639ca948c79f08fefdb0fb009fb7b4d897c",
+              "workspace_revision_before": "190ff50d6e91f1ce23cde50f1254a639ca948c79f08fefdb0fb009fb7b4d897c"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "settings.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "settings.py"
+            ],
+            "changed_paths": [
+              "settings.py"
+            ],
+            "deny": [
+              "README.md",
+              "service.py",
+              "test_settings.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 4,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "settings-scoped-edit",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 474.9382789887022,
+        "failure_reasons": {},
+        "input_tokens": 600,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 335.88314056396484,
+        "model_calls": 5,
+        "model_latency_ms": 7.381916046142578,
+        "output_tokens": 92,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 152.597,
+        "tool_attempts": 4,
+        "tool_calls": 4,
+        "tool_calls_by_name": {
+          "edit_file": 1,
+          "read_file": 2,
+          "restricted_test": 1
+        },
+        "tool_executions": 4,
+        "tool_latency_ms": 168.01000000000002,
+        "total_model_calls": 5,
+        "total_tokens": 692
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-0f49aa33-5d02-4372-90f8-a6a8f6e2a45d",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 115.702,
+                "execution_id": "sandbox-0f49aa33-5d02-4372-90f8-a6a8f6e2a45d",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_mode_parser_trims_and_normalizes (test_settings.SettingsTest) ... ok\ntest_unknown_mode_is_rejected (test_settings.SettingsTest) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "76fd30e91200a050fd1a58abe91b483b9409131ab8cb39dc496760ef09221489",
+              "workspace_revision_before": "76fd30e91200a050fd1a58abe91b483b9409131ab8cb39dc496760ef09221489"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "settings.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "settings.py"
+            ],
+            "changed_paths": [
+              "settings.py"
+            ],
+            "deny": [
+              "README.md",
+              "service.py",
+              "test_settings.py"
+            ]
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 5,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "todo-recovery",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 610.1501619850751,
+        "failure_reasons": {},
+        "input_tokens": 885,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 471.52185440063477,
+        "model_calls": 6,
+        "model_latency_ms": 8.533716201782227,
+        "output_tokens": 84,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 268.27500000000003,
+        "tool_attempts": 5,
+        "tool_calls": 5,
+        "tool_calls_by_name": {
+          "edit_file": 2,
+          "read_file": 1,
+          "restricted_test": 2
+        },
+        "tool_executions": 5,
+        "tool_latency_ms": 282.344,
+        "total_model_calls": 6,
+        "total_tokens": 969
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-0763cfd3-6cd0-48db-87c2-f10cf17474fc",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.911,
+                "execution_id": "sandbox-0763cfd3-6cd0-48db-87c2-f10cf17474fc",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_empty_input_is_ignored (test_todo_parser.TodoParserTest) ... ok\ntest_parses_add_command (test_todo_parser.TodoParserTest) ... ok\ntest_rejects_unknown_command (test_todo_parser.TodoParserTest) ... ok\ntest_whitespace_input_is_ignored (test_todo_parser.TodoParserTest) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "7dac3ff474056333fd37a2d4aa855dc47dda88a80662aee6ad52d651d480812f",
+              "workspace_revision_before": "7dac3ff474056333fd37a2d4aa855dc47dda88a80662aee6ad52d651d480812f"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "todo_parser.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "todo_parser.py"
+            ],
+            "changed_paths": [
+              "todo_parser.py"
+            ],
+            "deny": []
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 1,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "todo-recovery",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 700.8215019886848,
+        "failure_reasons": {},
+        "input_tokens": 885,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 558.5579872131348,
+        "model_calls": 6,
+        "model_latency_ms": 9.428024291992188,
+        "output_tokens": 84,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 354.295,
+        "tool_attempts": 5,
+        "tool_calls": 5,
+        "tool_calls_by_name": {
+          "edit_file": 2,
+          "read_file": 1,
+          "restricted_test": 2
+        },
+        "tool_executions": 5,
+        "tool_latency_ms": 367.997,
+        "total_model_calls": 6,
+        "total_tokens": 969
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-8297dba5-e2a5-43f8-849a-9108c8b8903f",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.938,
+                "execution_id": "sandbox-8297dba5-e2a5-43f8-849a-9108c8b8903f",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_empty_input_is_ignored (test_todo_parser.TodoParserTest) ... ok\ntest_parses_add_command (test_todo_parser.TodoParserTest) ... ok\ntest_rejects_unknown_command (test_todo_parser.TodoParserTest) ... ok\ntest_whitespace_input_is_ignored (test_todo_parser.TodoParserTest) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "ad61aa4a871e45c191a8b01c1d878e14adcba5148cd176a9e49b28c8ec8f5bbe",
+              "workspace_revision_before": "ad61aa4a871e45c191a8b01c1d878e14adcba5148cd176a9e49b28c8ec8f5bbe"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "todo_parser.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "todo_parser.py"
+            ],
+            "changed_paths": [
+              "todo_parser.py"
+            ],
+            "deny": []
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 2,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "todo-recovery",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 643.6795280023944,
+        "failure_reasons": {},
+        "input_tokens": 885,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 505.6881904602051,
+        "model_calls": 6,
+        "model_latency_ms": 10.916709899902344,
+        "output_tokens": 84,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 268.514,
+        "tool_attempts": 5,
+        "tool_calls": 5,
+        "tool_calls_by_name": {
+          "edit_file": 2,
+          "read_file": 1,
+          "restricted_test": 2
+        },
+        "tool_executions": 5,
+        "tool_latency_ms": 282.948,
+        "total_model_calls": 6,
+        "total_tokens": 969
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-b2c61710-7daa-40ac-abd6-9b69b2cb2879",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.794,
+                "execution_id": "sandbox-b2c61710-7daa-40ac-abd6-9b69b2cb2879",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_empty_input_is_ignored (test_todo_parser.TodoParserTest) ... ok\ntest_parses_add_command (test_todo_parser.TodoParserTest) ... ok\ntest_rejects_unknown_command (test_todo_parser.TodoParserTest) ... ok\ntest_whitespace_input_is_ignored (test_todo_parser.TodoParserTest) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "ad61aa4a871e45c191a8b01c1d878e14adcba5148cd176a9e49b28c8ec8f5bbe",
+              "workspace_revision_before": "ad61aa4a871e45c191a8b01c1d878e14adcba5148cd176a9e49b28c8ec8f5bbe"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "todo_parser.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "todo_parser.py"
+            ],
+            "changed_paths": [
+              "todo_parser.py"
+            ],
+            "deny": []
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 3,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "todo-recovery",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 617.5959829997737,
+        "failure_reasons": {},
+        "input_tokens": 885,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 479.68006134033203,
+        "model_calls": 6,
+        "model_latency_ms": 9.464025497436523,
+        "output_tokens": 84,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 269.546,
+        "tool_attempts": 5,
+        "tool_calls": 5,
+        "tool_calls_by_name": {
+          "edit_file": 2,
+          "read_file": 1,
+          "restricted_test": 2
+        },
+        "tool_executions": 5,
+        "tool_latency_ms": 285.614,
+        "total_model_calls": 6,
+        "total_tokens": 969
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-e1692f5c-1a14-4ea6-a97b-bd1af4d7fa57",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.694,
+                "execution_id": "sandbox-e1692f5c-1a14-4ea6-a97b-bd1af4d7fa57",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_empty_input_is_ignored (test_todo_parser.TodoParserTest) ... ok\ntest_parses_add_command (test_todo_parser.TodoParserTest) ... ok\ntest_rejects_unknown_command (test_todo_parser.TodoParserTest) ... ok\ntest_whitespace_input_is_ignored (test_todo_parser.TodoParserTest) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "843f4348ca90097938b5d924b18e016b85b9c989a5ec00729c5f5da170a62476",
+              "workspace_revision_before": "843f4348ca90097938b5d924b18e016b85b9c989a5ec00729c5f5da170a62476"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "todo_parser.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "todo_parser.py"
+            ],
+            "changed_paths": [
+              "todo_parser.py"
+            ],
+            "deny": []
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 4,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    },
+    {
+      "case_id": "todo-recovery",
+      "case_type": "task",
+      "end_to_end_success": true,
+      "failure_reason": null,
+      "infrastructure_failure": false,
+      "metrics": {
+        "compression_calls": 0,
+        "compression_input_tokens": 0,
+        "compression_latency_ms": 0,
+        "compression_output_tokens": 0,
+        "compression_rejections": {},
+        "end_to_end_latency_ms": 651.2246859783772,
+        "failure_reasons": {},
+        "input_tokens": 885,
+        "invalid_tool_calls": 0,
+        "invalid_tool_calls_by_kind": {},
+        "latency_ms": 509.58895683288574,
+        "model_calls": 6,
+        "model_latency_ms": 10.632038116455078,
+        "output_tokens": 84,
+        "permission_violations": 0,
+        "permission_violations_by_tool": {},
+        "recovery_events": 0,
+        "recovery_triggered": false,
+        "repeated_failure_batches": 0,
+        "test_latency_ms": 268.20799999999997,
+        "tool_attempts": 5,
+        "tool_calls": 5,
+        "tool_calls_by_name": {
+          "edit_file": 2,
+          "read_file": 1,
+          "restricted_test": 2
+        },
+        "tool_executions": 5,
+        "tool_latency_ms": 283.96000000000004,
+        "total_model_calls": 6,
+        "total_tokens": 969
+      },
+      "oracle_success": true,
+      "oracles": [
+        {
+          "details": {
+            "data": {
+              "execution_id": "sandbox-12c065e1-6ef6-4c67-b583-1f4b8e97c37d",
+              "exit_code": 0,
+              "limit_hit": null,
+              "passed": true,
+              "process_group_terminated": false,
+              "profile": "python_unittest",
+              "sandbox": {
+                "backend": "linux_user_mount_pid_net",
+                "backend_version": "6.18.33.2-microsoft-standard-WSL2",
+                "capability_snapshot": {
+                  "available": true,
+                  "backend": "linux_user_mount_pid_net",
+                  "features": [
+                    "chroot_rootfs",
+                    "env_allowlist",
+                    "mount_namespace",
+                    "network_disabled",
+                    "network_namespace",
+                    "output_limits",
+                    "pid_namespace",
+                    "process_cleanup",
+                    "read_only_rootfs",
+                    "resource_limits",
+                    "workspace_bind"
+                  ],
+                  "metadata": {
+                    "identity_kind": "native_runtime_sample_fingerprint",
+                    "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                    "network_default": "none"
+                  },
+                  "missing": [],
+                  "version": "6.18.33.2-microsoft-standard-WSL2"
+                },
+                "cleanup_verified": true,
+                "duration_ms": 114.704,
+                "execution_id": "sandbox-12c065e1-6ef6-4c67-b583-1f4b8e97c37d",
+                "image": "linux-namespace-rootfs",
+                "image_digest": "sha256:d7ebf3d20ece57bead318f6f57483c896787edeb127061a2254c6ff23b60c19c",
+                "limits": {
+                  "cpu_seconds": 20.0,
+                  "memory_bytes": 536870912,
+                  "pids": 64,
+                  "stderr_bytes": 10000,
+                  "stdout_bytes": 10000,
+                  "wall_seconds": 30.0,
+                  "writable_bytes": 134217728
+                },
+                "network": "none",
+                "profile_name": "python_unittest",
+                "rootfs_read_only": true,
+                "runner_cleanup_verified": true,
+                "status": "exited",
+                "stderr_truncated": false,
+                "stdout_truncated": false,
+                "tmpfs_bytes": 134217728,
+                "workspace_mount": "/workspace:rw"
+              },
+              "stderr": "test_empty_input_is_ignored (test_todo_parser.TodoParserTest) ... ok\ntest_parses_add_command (test_todo_parser.TodoParserTest) ... ok\ntest_rejects_unknown_command (test_todo_parser.TodoParserTest) ... ok\ntest_whitespace_input_is_ignored (test_todo_parser.TodoParserTest) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+              "stdout": "",
+              "workspace_revision_after": "c64f3a236ca63e0b23e1624b730aa33a84116e6fb499dd84d10e885e0ce5a6a3",
+              "workspace_revision_before": "c64f3a236ca63e0b23e1624b730aa33a84116e6fb499dd84d10e885e0ce5a6a3"
+            },
+            "status": "success"
+          },
+          "infrastructure_failure": false,
+          "kind": "test_profile",
+          "passed": true
+        },
+        {
+          "details": {
+            "exists": true,
+            "path": "todo_parser.py"
+          },
+          "infrastructure_failure": false,
+          "kind": "file",
+          "passed": true
+        },
+        {
+          "details": {
+            "allow": [
+              "todo_parser.py"
+            ],
+            "changed_paths": [
+              "todo_parser.py"
+            ],
+            "deny": []
+          },
+          "infrastructure_failure": false,
+          "kind": "changed_paths",
+          "passed": true
+        }
+      ],
+      "repetition": 5,
+      "runtime_completed": true,
+      "source_invariant": true,
+      "state": "completed",
+      "task_success": true,
+      "valid": true
+    }
+  ],
+  "runtime_completion_rate": 1.0,
+  "schema_version": 1,
+  "source_invariant_rate": 1.0,
+  "source_invariant_unknown_count": 0,
+  "suite_schema_version": 1,
+  "task_metrics": {
+    "compression_calls": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "compression_input_tokens": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "compression_latency_ms": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "compression_output_tokens": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "end_to_end_latency_ms": {
+      "count": 25,
+      "mean": 576.9363330793567,
+      "p50": 577.3204969882499,
+      "p95": 725.5274700000882,
+      "total": 14423.408326983918
+    },
+    "input_tokens": {
+      "count": 25,
+      "mean": 891.0,
+      "p50": 885.0,
+      "p95": 1620.0,
+      "total": 22275.0
+    },
+    "invalid_tool_calls": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "latency_ms": {
+      "count": 25,
+      "mean": 436.13929748535156,
+      "p50": 433.8879585266113,
+      "p95": 584.6340656280518,
+      "total": 10903.482437133789
+    },
+    "model_calls": {
+      "count": 25,
+      "mean": 5.8,
+      "p50": 6.0,
+      "p95": 8.0,
+      "total": 145.0
+    },
+    "model_latency_ms": {
+      "count": 25,
+      "mean": 10.584993362426758,
+      "p50": 9.428024291992188,
+      "p95": 13.536214828491211,
+      "total": 264.62483406066895
+    },
+    "output_tokens": {
+      "count": 25,
+      "mean": 101.6,
+      "p50": 92.0,
+      "p95": 142.0,
+      "total": 2540.0
+    },
+    "repeated_failure_batches": {
+      "count": 25,
+      "mean": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "total": 0.0
+    },
+    "test_latency_ms": {
+      "count": 25,
+      "mean": 212.30903999999995,
+      "p50": 186.206,
+      "p95": 302.587,
+      "total": 5307.725999999999
+    },
+    "tool_attempts": {
+      "count": 25,
+      "mean": 4.8,
+      "p50": 5.0,
+      "p95": 7.0,
+      "total": 120.0
+    },
+    "tool_calls": {
+      "count": 25,
+      "mean": 4.8,
+      "p50": 5.0,
+      "p95": 7.0,
+      "total": 120.0
+    },
+    "tool_executions": {
+      "count": 25,
+      "mean": 4.8,
+      "p50": 5.0,
+      "p95": 7.0,
+      "total": 120.0
+    },
+    "tool_latency_ms": {
+      "count": 25,
+      "mean": 228.26620000000003,
+      "p50": 197.638,
+      "p95": 324.095,
+      "total": 5706.655000000001
+    },
+    "total_model_calls": {
+      "count": 25,
+      "mean": 5.8,
+      "p50": 6.0,
+      "p95": 8.0,
+      "total": 145.0
+    },
+    "total_tokens": {
+      "count": 25,
+      "mean": 992.6,
+      "p50": 969.0,
+      "p95": 1750.0,
+      "total": 24815.0
+    }
+  },
+  "task_runs": {
+    "end_to_end_success_rate": 1.0,
+    "oracle_success_rate": 1.0,
+    "runtime_completion_rate": 1.0,
+    "task_success_rate": 1.0,
+    "valid_run_count": 25
+  },
+  "task_success_rate": 1.0,
+  "valid_run_count": 25,
+  "variant": "budgeted"
+}

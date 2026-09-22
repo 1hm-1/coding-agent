@@ -1,0 +1,107 @@
+[
+  {
+    "path": "raw/logs/calculator-smoke.log",
+    "sha256": "9d02883394aeaa0779d28af6444a3dea082704e636f2c07f4718f797db1eb11e",
+    "bytes": 499
+  },
+  {
+    "path": "raw/logs/collect-evidence.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "path": "raw/logs/compileall.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "path": "raw/logs/coverage-report.log",
+    "sha256": "cb783e0532d7aae5d98db5738ac88b3ba1423a157bfb250a2878c3d79c12e167",
+    "bytes": 7866
+  },
+  {
+    "path": "raw/logs/coverage-unittest.log",
+    "sha256": "d59ddf7773da3b7ab50a8c1f02b3537cab2080ba83178d30581e3f725d4ff402",
+    "bytes": 30849
+  },
+  {
+    "path": "raw/logs/focused-m0.log",
+    "sha256": "d3671ed2608f8cd0db701d60f9b2660fdbb51e9f9e32e80a893004b5993c2a2b",
+    "bytes": 1817
+  },
+  {
+    "path": "raw/logs/full-eval.log",
+    "sha256": "16ebc3baffd33f5b2ce8011fc1238fd3362ad9371e0374b3196ac54d12f8d75b",
+    "bytes": 60952
+  },
+  {
+    "path": "raw/logs/full-unittest.log",
+    "sha256": "d95284a5de529f367d6a929bbed74d2c6fe823dd313f8414f6c2c81188fce57d",
+    "bytes": 21042
+  },
+  {
+    "path": "raw/logs/kernel-42.log",
+    "sha256": "5187dc7137e4a8a26b79d55b7f2a57dde203a4a34ec19a35e74e12bd169abd11",
+    "bytes": 4611
+  },
+  {
+    "path": "raw/logs/memory-cold-warm.log",
+    "sha256": "736bf6ac5a65aa7cbd234cb22757b78bc9163360a50d21b8b340ad93da918f44",
+    "bytes": 45754
+  },
+  {
+    "path": "raw/logs/mypy.log",
+    "sha256": "60f28b94716a9681d0ca533e2fe42680ae0961635c17d3110675fc53df4ea115",
+    "bytes": 44
+  },
+  {
+    "path": "raw/logs/native-capability.json",
+    "sha256": "8da000da723582be4df191bb038a635752a2840e00c645348e09dfeb97aa6dea",
+    "bytes": 526
+  },
+  {
+    "path": "raw/logs/python-import-path.log",
+    "sha256": "2e7a24b552cc42fac4d49e6b7f5378f495cf6fc62f43ab9a02b0e6e1c82294ec",
+    "bytes": 74
+  },
+  {
+    "path": "raw/logs/ruff.log",
+    "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "bytes": 19
+  },
+  {
+    "path": "raw/logs/semantic-comparison.log",
+    "sha256": "60da2728e1d2b153b5e55b2001329abf0af232bbdc6d46edc7302efb5d77842d",
+    "bytes": 50
+  },
+  {
+    "path": "raw/logs/stability-eval.log",
+    "sha256": "dfc75fb283b900ed518f05a4609c2cb2b0994db78e44855c38b94405e16d95d8",
+    "bytes": 140561
+  },
+  {
+    "path": "raw/logs/todo-smoke.log",
+    "sha256": "33830b0a92912706fc0de4dad5161b435093c490998d58f96b37b247d9fa2ba7",
+    "bytes": 509
+  },
+  {
+    "path": "offline-publication-baseline-v1.json",
+    "sha256": "4e4ca413117b20f3cb8bc5ea7e1fd28f156dd7b5e8d41b4cad274eeec2ff3027",
+    "bytes": 264464
+  },
+  {
+    "path": "smoke-verification-v1.json",
+    "sha256": "04da9f889b7d1bb84a3ef3751f739db8a4d47b88ab3e26d7ba8d275474d36949",
+    "bytes": 870
+  },
+  {
+    "path": "protected-adr-hashes-v1.json",
+    "sha256": "cb489a92ca9cb4ab813b893de630d9370bce287558c6e25302d6a3e53dcfe4f1",
+    "bytes": 2265
+  },
+  {
+    "path": "raw/eval-stats.json",
+    "sha256": "965a009b742d5c7e38bbd976eb4af6ddc2562ddefa914fd6d6d3dfda74eef32d",
+    "bytes": 9655
+  }
+]

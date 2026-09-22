@@ -1,0 +1,50 @@
+[
+  {
+    "path": "docs/decisions/context-composition-compaction.md",
+    "sha256": "b960483cfb6463986b4f6ef62f9d1b5866e86db6cc97e8c9a4b75418dbbf9f7d",
+    "pre_change_sha256": "b960483cfb6463986b4f6ef62f9d1b5866e86db6cc97e8c9a4b75418dbbf9f7d",
+    "matches_pre_change": true
+  },
+  {
+    "path": "docs/decisions/conversation-turn-runtime-execution-lifecycle.md",
+    "sha256": "b7f5373e79ce6bae5e8d148704a5cc97e604c1f3dbc05bf0ecad60c44fe617a9",
+    "pre_change_sha256": "b7f5373e79ce6bae5e8d148704a5cc97e604c1f3dbc05bf0ecad60c44fe617a9",
+    "matches_pre_change": true
+  },
+  {
+    "path": "docs/decisions/diff-code-checkpoint-undo.md",
+    "sha256": "d6d01e83a324cf32b5fd266958cb54479eefd77b22feb8993e012938582eac10",
+    "pre_change_sha256": "d6d01e83a324cf32b5fd266958cb54479eefd77b22feb8993e012938582eac10",
+    "matches_pre_change": true
+  },
+  {
+    "path": "docs/decisions/interactive-cli-product-workflow.md",
+    "sha256": "27069f760c3035b8cb41625a55e9e482588297af94dcf5da400ab9c28c7cd2bd",
+    "pre_change_sha256": "27069f760c3035b8cb41625a55e9e482588297af94dcf5da400ab9c28c7cd2bd",
+    "matches_pre_change": true
+  },
+  {
+    "path": "docs/decisions/memory-product-positioning.md",
+    "sha256": "bfb305dbb4818b4936986903b976c8ff43a6fa7d182f7d0855a3b3f463752b97",
+    "pre_change_sha256": "bfb305dbb4818b4936986903b976c8ff43a6fa7d182f7d0855a3b3f463752b97",
+    "matches_pre_change": true
+  },
+  {
+    "path": "docs/decisions/project-instructions-repository-rules.md",
+    "sha256": "78c176e090c0a0d156d888d6d9b04d437d1c59478df1978b9c49f8b72db31816",
+    "pre_change_sha256": "78c176e090c0a0d156d888d6d9b04d437d1c59478df1978b9c49f8b72db31816",
+    "matches_pre_change": true
+  },
+  {
+    "path": "docs/decisions/project-repository-workspace-conversation.md",
+    "sha256": "64878f6ebe4ae395721a5f84d6e5090468dc1fc50a3ab33a10923de6ccfbbeb6",
+    "pre_change_sha256": "64878f6ebe4ae395721a5f84d6e5090468dc1fc50a3ab33a10923de6ccfbbeb6",
+    "matches_pre_change": true
+  },
+  {
+    "path": "docs/decisions/tool-capability-command-permission.md",
+    "sha256": "4beb4b6e74d8f3486019be4d4822bfb69a3497c8d3900d7b28311650bf5b349e",
+    "pre_change_sha256": "4beb4b6e74d8f3486019be4d4822bfb69a3497c8d3900d7b28311650bf5b349e",
+    "matches_pre_change": true
+  }
+]

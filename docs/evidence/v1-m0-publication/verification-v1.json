@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "kind": "v1_m0_publication_verification",
+  "tested_commit": "c08621d45d72ac8b470b5810b68060839eb433dd",
+  "tested_tree": "cc7f6db852636e826c8787b8bac391763557630c",
+  "execution_environment": {
+    "clone": "clean full-history clone",
+    "venv_source": "/home/hmli/code/coding-agent/.venv",
+    "dependency_installation": "none",
+    "python_import_path": "/tmp/coding-agent-m0-publication.DXSf3v/repo/src/coding_agent/__init__.py"
+  },
+  "protected_assets": {
+    "accepted_adrs": 8,
+    "semantic_goldens": 4,
+    "ipc_protected_assets": 10,
+    "m0_evidence": "unchanged",
+    "verification": {
+      "golden_and_ipc": "tests.test_v1_m0_contract.M0ProtectedCompatibilityTest",
+      "adr_sha256_pre_change_comparison": "protected-adr-hashes-v1.json: 8/8 match",
+      "m0_evidence_and_fixture_tree": "git diff --exit-code c08621d45d72ac8b470b5810b68060839eb433dd -- docs/evidence/v1-m0 tests/fixtures/v1_m0; exit 0"
+    }
+  },
+  "tests": {
+    "full_suite": {
+      "fresh": false,
+      "count": 183,
+      "passed": 182,
+      "expected_failures": 1,
+      "skips": 0,
+      "exit_code": 0,
+      "raw_log": "raw/logs/full-unittest.log"
+    },
+    "focused_m0": {"count": 14, "passed": 13, "expected_failures": 1, "exit_code": 0},
+    "runtime_kernel": {"count": 42, "passed": 42, "exit_code": 0},
+    "coverage_suite": {"count": 183, "passed": 182, "expected_failures": 1, "exit_code": 0}
+  },
+  "command_index": [
+    {"name": "focused_m0", "exit_code": 0, "log": "raw/logs/focused-m0.log"},
+    {"name": "runtime_kernel", "exit_code": 0, "log": "raw/logs/kernel-42.log"},
+    {"name": "coverage_unittest", "exit_code": 0, "log": "raw/logs/coverage-unittest.log"},
+    {"name": "coverage_report", "exit_code": 0, "log": "raw/logs/coverage-report.log"},
+    {"name": "ruff", "exit_code": 0, "log": "raw/logs/ruff.log"},
+    {"name": "mypy", "exit_code": 0, "log": "raw/logs/mypy.log"},
+    {"name": "compileall", "exit_code": 0, "log": "raw/logs/compileall.log"},
+    {"name": "native_capability", "exit_code": 0, "log": "raw/logs/native-capability.json"},
+    {"name": "full_scripted_eval", "exit_code": 0, "log": "raw/logs/full-eval.log"},
+    {"name": "stability_scripted_eval", "exit_code": 0, "log": "raw/logs/stability-eval.log"},
+    {"name": "calculator_smoke", "exit_code": 0, "log": "raw/logs/calculator-smoke.log"},
+    {"name": "todo_smoke", "exit_code": 0, "log": "raw/logs/todo-smoke.log"},
+    {"name": "memory_cold_warm", "exit_code": 0, "log": "raw/logs/memory-cold-warm.log"}
+  ],
+  "quality": {
+    "ruff": "passed",
+    "mypy": "passed: 36 source files",
+    "compileall": "passed",
+    "coverage_percent": 79.4,
+    "native_capability": "available; see raw/logs/native-capability.json"
+  },
+  "publication_worktree": {
+    "git_diff_check_exit_code": 0,
+    "scope": "before-stage tracked diff; untracked publication artifacts were not included",
+    "cached_diff_check": {
+      "exit_code": 2,
+      "only_path": "docs/evidence/v1-m0-publication/raw/logs/full-unittest.log",
+      "lines": "2-189 (188 lines)",
+      "reason": "verbatim inherited CRLF raw log reported as trailing whitespace",
+      "owner_explicit_waiver": "preserve raw bytes; do not rewrite log or change global configuration"
+    }
+  },
+  "offline_evaluation": {
+    "provider": "none; scripted only",
+    "full_suite": {"runs": 14, "valid": 14, "unique_session_ids": 14},
+    "stability": {"runs": 25, "valid": 25, "unique_session_ids": 25},
+    "combined": {"runs": 39, "unique_session_ids": 39},
+    "comparison_key": ["case_id", "repetition"],
+    "semantic_pair_check": {
+      "pairs": 39,
+      "fresh_ids_disjoint_from_m0_raw": true,
+      "fields": ["case_type", "valid", "state", "task_success", "oracle_success", "end_to_end_success", "runtime_completed", "source_invariant", "infrastructure_failure", "failure_reason", "model_calls", "tool_attempts", "tool_calls", "tool_executions", "input_tokens", "output_tokens"],
+      "raw_log": "raw/logs/semantic-comparison.log"
+    },
+    "projection": "offline-publication-baseline-v1.json",
+    "raw_stats": "raw/eval-stats.json"
+  },
+  "smokes": {
+    "verification": "smoke-verification-v1.json",
+    "calculator": "completed; 48 SQLite/trace events; fixture source fingerprint matches; test passed",
+    "todo": "completed; 72 SQLite/trace events; fixture source fingerprint matches; test false then true",
+    "memory_cold_warm": "passed; see raw/logs/memory-cold-warm.log"
+  },
+  "known_whitespace_exceptions": {
+    "second_partition_cached_check": {
+      "exit_code": 2,
+      "path": "docs/conversation-runtime-refactor-plan.md",
+      "lines": "3-6",
+      "meaning": "intentional pre-existing Markdown hard breaks retained byte-for-byte under explicit owner waiver"
+    },
+    "older_outgoing_range": {
+      "paths": ["docs/evidence/s3-7-memory-retrieval-backend-spike-2026-09-18.md:3-5", "docs/evidence/s3-8-retrieval-route-closure-2026-09-18.md:3-4"],
+      "meaning": "pre-existing Markdown hard-break warnings retained; historical text not rewritten"
+    }
+  }
+}

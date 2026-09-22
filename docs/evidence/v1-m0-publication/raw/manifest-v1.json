@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "kind": "v1_m0_publication_raw_manifest",
+  "tested_commit": "c08621d45d72ac8b470b5810b68060839eb433dd",
+  "lanes": {
+    "full_suite": {
+      "runs": 14,
+      "raw": {
+        "report.json": {"sha256": "c4fab284084083bfcb5d6c792bac5f7d306021168fde73687e8c772783485d95", "bytes": 60867},
+        "runs.jsonl": {"sha256": "85cb1e17a4497731b7c6ec5094ea2bec1582a6b4ed2430b3c2bd4a07e9bcbb1d", "bytes": 40127},
+        "manifest.snapshot.json": {"sha256": "4304c789c00a34a0460636f4292f69ece31ee7c9401a110b953228393359e1cd", "bytes": 19034}
+      }
+    },
+    "stability": {
+      "runs": 25,
+      "case_ids": ["calculator-success", "todo-recovery", "pipeline-multi-file-recovery", "settings-scoped-edit", "search-lab-content-location"],
+      "raw": {
+        "report.json": {"sha256": "febb43782ea9e684b1ee755aa6aba22bf8f5bd7c35c0350d6a5868527e29a5a5", "bytes": 140477},
+        "runs.jsonl": {"sha256": "cd97ad969ca7c5680edaa505e516deec81906e94c5410cc4e9fe373a58578d5f", "bytes": 94832},
+        "manifest.snapshot.json": {"sha256": "9e8a150f4371a9495eacbff5dd9174fc25ab401c58106f80ec00aa01c8dc74d5", "bytes": 7030}
+      }
+    }
+  },
+  "session_ids": {"count": 39, "unique": 39, "location": "eval-stats.json"},
+  "recomputed_distributions": {"count": 18, "location": "../offline-publication-baseline-v1.json"},
+  "projection": "../offline-publication-baseline-v1.json",
+  "durable_artifacts": {
+    "count": 21,
+    "location_relative_to_bundle_root": "raw/durable-artifacts-v1.json",
+    "includes": ["all raw/logs files", "projection", "smoke verification", "ADR hashes", "eval stats"],
+    "self_hash": "intentionally omitted to avoid a manifest hash cycle"
+  },
+  "redaction": "no provider credentials or user database data; absolute temporary roots are retained only where evaluator records them"
+}

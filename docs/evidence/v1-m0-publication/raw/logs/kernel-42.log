@@ -1,0 +1,47 @@
+test_invalid_backend_response_matches_runtime_failure_golden (tests.test_hardening.EngineeringHardeningTest) ... ok
+test_permission_denial_is_observed_without_runtime_crash (tests.test_hardening.EngineeringHardeningTest) ... ok
+test_success_trajectory_matches_semantic_golden (tests.test_hardening.EngineeringHardeningTest) ... ok
+test_test_failure_is_observed_then_recovered_in_todo_demo (tests.test_hardening.EngineeringHardeningTest) ... ok
+test_unexpected_handler_exception_is_structured_and_audited (tests.test_hardening.EngineeringHardeningTest) ... ok
+test_lease_takeover_rejects_old_owner_writes (tests.test_m2_recovery.RecoveryTest) ... ok
+test_model_message_crash_reuses_response_without_duplicate_message (tests.test_m2_recovery.RecoveryTest) ... ok
+test_model_running_crash_is_marked_uncertain_before_retry (tests.test_m2_recovery.RecoveryTest) ... ok
+test_non_retryable_backend_error_does_not_enter_retry_wait (tests.test_m2_recovery.RecoveryTest) ... ok
+test_provider_tool_ids_can_repeat_across_sessions (tests.test_m2_recovery.RecoveryTest) ... ok
+test_resume_rejects_changed_source_or_missing_workspace (tests.test_m2_recovery.RecoveryTest) ... ok
+test_retry_and_fallback_are_bounded_and_persisted (tests.test_m2_recovery.RecoveryTest) ... ok
+test_saved_model_response_is_reused_after_interrupt (tests.test_m2_recovery.RecoveryTest) ... ok
+test_search_read_only_result_is_reused_after_crash (tests.test_m2_recovery.RecoveryTest) ... ok
+test_sigint_persists_interrupted_before_run_returns (tests.test_m2_recovery.RecoveryTest) ... ok
+test_tool_crash_windows_resume_without_duplicate_logical_call (tests.test_m2_recovery.RecoveryTest) ... ok
+test_unknown_edit_effect_requires_explicit_resolution (tests.test_m2_recovery.RecoveryTest) ... ok
+test_application_replays_from_sqlite_after_jsonl_is_deleted (tests.test_persistence.PersistenceFoundationTest) ... ok
+test_atomic_transition_and_message_mutation (tests.test_persistence.PersistenceFoundationTest) ... ok
+test_crash_before_commit_rolls_back_everything (tests.test_persistence.PersistenceFoundationTest) ... ok
+test_db_events_export_and_rebuild_jsonl_projection (tests.test_persistence.PersistenceFoundationTest) ... ok
+test_expected_state_and_version_conflict_does_not_write (tests.test_persistence.PersistenceFoundationTest) ... ok
+test_memory_schema_migration_rolls_back_partial_version (tests.test_persistence.PersistenceFoundationTest) ... ok
+test_migration_is_fresh_idempotent_and_configured (tests.test_persistence.PersistenceFoundationTest) ... ok
+test_snapshot_and_session_message_event_round_trip (tests.test_persistence.PersistenceFoundationTest) ... ok
+test_unknown_future_schema_is_rejected (tests.test_persistence.PersistenceFoundationTest) ... ok
+test_backend_capability_revision_and_containment_fail_closed (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_cancel_before_start_commits_checkpoint_before_single_result (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_cancel_during_model_and_tool_boundaries (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_cli_exit_mappings_have_no_protocol_stdout_on_start_failure (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_crash_after_events_before_result_is_recognizable (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_final_output_redacts_secret_and_absolute_paths (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_repeated_cancel_is_idempotent (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_repeated_sigint_during_tool_cleans_child_before_cancelled_result (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_request_json_size_permissions_protocol_and_secret_fail_without_stdout (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_request_schema_is_strict_for_missing_unknown_and_wrong_type (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_runtime_deadline_returns_timed_out_after_safe_boundary (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_runtime_failure_has_one_failed_result_and_matches_golden (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_schema_bundle_capability_document_and_contract_vectors (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_scripted_success_stream_is_contiguous_schema_valid_and_matches_golden (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_unknown_internal_event_is_not_projected (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+test_writer_rejects_oversize_duplicate_result_and_io_failure (tests.test_protocol.RuntimeIPCProducerTest) ... ok
+
+----------------------------------------------------------------------
+Ran 42 tests in 5.035s
+
+OK

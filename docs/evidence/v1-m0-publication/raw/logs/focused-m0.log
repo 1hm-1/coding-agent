@@ -1,0 +1,19 @@
+test_every_committed_schema_start_migrates_idempotently_to_v4 (test_v1_m0_contract.M0MigrationStartingPointTest) ... ok
+test_permission_denial_is_observation_without_typed_permission_tables (test_v1_m0_contract.M0OneShotAndDefaultsTest) ... ok
+test_two_tasks_create_distinct_sessions_and_copied_workspaces (test_v1_m0_contract.M0OneShotAndDefaultsTest) ... ok
+test_cli_remains_legacy_one_shot_surface (test_v1_m0_contract.M0ProtectedCompatibilityTest) ... ok
+test_expected_gap_catalog_is_complete_and_milestone_owned (test_v1_m0_contract.M0ProtectedCompatibilityTest) ... ok
+test_semantic_goldens_ipc_goldens_schemas_and_vectors_are_unchanged (test_v1_m0_contract.M0ProtectedCompatibilityTest) ... ok
+test_baseline_is_scripted_and_representative_manifest_is_pinned (test_v1_m0_evidence.M0EvidenceContractTest) ... ok
+test_metric_dictionary_has_required_classification_and_metrics (test_v1_m0_evidence.M0EvidenceContractTest) ... ok
+test_migration_inventory_versions_every_serialized_format (test_v1_m0_evidence.M0EvidenceContractTest) ... ok
+test_projection_keeps_populations_and_unknown_usage_explicit (test_v1_m0_evidence.M0EvidenceContractTest) ... ok
+test_projection_uses_runs_jsonl_for_identity_oracles_and_recalculation (test_v1_m0_evidence.M0EvidenceContractTest) ... ok
+test_committed_response_is_reused_without_another_provider_call (test_v1_m0_uncertain_retry.M0UncertainRetryCharacterizationTest) ... ok
+test_current_behavior_reconstructs_and_overwrites_uncertain_request (test_v1_m0_uncertain_retry.M0UncertainRetryCharacterizationTest) ... ok
+test_future_m3_invariant_reuses_exact_frozen_request (test_v1_m0_uncertain_retry.M0UncertainRetryCharacterizationTest) ... expected failure
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.571s
+
+OK (expected failures=1)
