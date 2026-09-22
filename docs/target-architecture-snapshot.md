@@ -1,7 +1,7 @@
 # Target Architecture Snapshot
 
 Date: 2026-09-22
-Status: **Architecture frozen; Product-Layer M0 Accepted and complete; M1 Accepted/complete with its additive Product persistence spine implemented; M2–M7 inactive**
+Status: **Architecture frozen; Product-Layer M0–M2 Accepted and complete; M3–M7 inactive; M3 not issued**
 
 ## Purpose and authority
 
@@ -11,8 +11,9 @@ not a replacement for the individual decisions. Current implementation facts rem
 
 The formal [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) is Accepted and complete.
 M1 has implemented its additive Schema v5 Product persistence spine and compatibility mappings;
-the legacy Runtime Kernel remains authoritative for existing one-shot execution and M2–M7 remain
-inactive.
+the legacy Runtime Kernel remains authoritative for existing one-shot execution. The formal
+[`M2 execution contract`](./execution-contracts/m2-execution-contract.md) was accepted and completed
+on 2026-09-23. M3–M7 remain inactive, and M3 has not been issued.
 
 The product target is a Claude Code-like local Coding Agent with a simple product model above a
 reliable, recoverable RuntimeExecution kernel.

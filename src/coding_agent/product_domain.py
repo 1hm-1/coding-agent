@@ -7,7 +7,8 @@ registry; descriptors are discovery evidence only.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclass_field
+from typing import Mapping
 
 
 def _require_text(value: str, field: str) -> None:
@@ -119,3 +120,106 @@ class ConversationSemanticEvent:
             _require_text(str(getattr(self, field)), field)
         if self.sequence < 1:
             raise ValueError("semantic event sequence must be positive")
+
+
+# M2 lifecycle records are Product projections and commands.  In particular,
+# they intentionally do not encode RuntimeState: ``sessions`` remains the
+# Runtime FSM authority throughout the compatibility window.
+@dataclass(frozen=True)
+class ProductInput:
+    input_id: str
+    operation_id: str
+    payload_digest: str
+    conversation_id: str
+    sequence: int
+    input_kind: str
+    payload: Mapping[str, object]
+    turn_id: str | None = None
+    correlation_id: str | None = None
+
+    def __post_init__(self) -> None:
+        for field in (
+            "input_id", "operation_id", "payload_digest", "conversation_id", "input_kind",
+        ):
+            _require_text(str(getattr(self, field)), field)
+        if self.sequence < 1:
+            raise ValueError("input sequence must be positive")
+        if self.input_kind not in {"initial_request", "ordinary_input_request", "steering", "reply", "cancel"}:
+            raise ValueError("unsupported M2 input kind")
+
+
+@dataclass(frozen=True)
+class TurnStartCodeCheckpoint:
+    checkpoint_id: str
+    observation_digest: str
+    coverage_state: str
+    excluded_state: str
+    observation_frontier: str = "pre_admission_read_only"
+    baseline_references: Mapping[str, object] = dataclass_field(default_factory=dict)
+    exclusions: Mapping[str, object] = dataclass_field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        for field in ("checkpoint_id", "observation_digest", "coverage_state", "excluded_state"):
+            _require_text(str(getattr(self, field)), field)
+        if self.coverage_state != "m2_observation_only":
+            raise ValueError("M2 checkpoint must remain observation-only")
+        if not self.excluded_state or "m4" not in self.excluded_state:
+            raise ValueError("M2 checkpoint must explicitly exclude M4 mutation coverage")
+
+
+@dataclass(frozen=True)
+class InstructionManifest:
+    instruction_manifest_id: str
+    placeholder_kind: str
+
+    def __post_init__(self) -> None:
+        _require_text(self.instruction_manifest_id, "instruction_manifest_id")
+        if self.placeholder_kind != "m2_placeholder_no_discovery":
+            raise ValueError("M2 cannot claim instruction discovery")
+
+
+@dataclass(frozen=True)
+class PolicyEpoch:
+    policy_epoch_id: str
+    mode: str
+
+    def __post_init__(self) -> None:
+        _require_text(self.policy_epoch_id, "policy_epoch_id")
+        if self.mode != "m2_read_only_direct_tree":
+            raise ValueError("M2 policy epoch must keep direct trees read-only")
+
+
+@dataclass(frozen=True)
+class TurnAdmission:
+    operation_id: str
+    payload_digest: str
+    conversation_id: str
+    turn_id: str
+    runtime_execution_id: str
+    legacy_session_id: str
+    checkpoint: TurnStartCodeCheckpoint
+    instruction_manifest: InstructionManifest
+    policy_epoch: PolicyEpoch
+    idempotent: bool = False
+
+    def __post_init__(self) -> None:
+        for field in (
+            "operation_id", "payload_digest", "conversation_id", "turn_id",
+            "runtime_execution_id", "legacy_session_id",
+        ):
+            _require_text(str(getattr(self, field)), field)
+
+
+@dataclass(frozen=True)
+class WorkspaceWriterClaim:
+    claim_id: str
+    workspace_binding_id: str
+    owner_id: str
+    claim_epoch: int
+    expires_at: str
+
+    def __post_init__(self) -> None:
+        for field in ("claim_id", "workspace_binding_id", "owner_id", "expires_at"):
+            _require_text(str(getattr(self, field)), field)
+        if self.claim_epoch < 1:
+            raise ValueError("claim epoch must be positive")

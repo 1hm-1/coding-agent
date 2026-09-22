@@ -1,6 +1,6 @@
 # 当前实现状态
 
-> 基线日期：2026-09-22
+> 基线日期：2026-09-23
 > 已完成：M0、M1、M1.5、M2.1、M2.2、M2.3、M3.1、M3.2、M3.3、M4.1、M4.2、Phase 2 P2-M1/P2-M2
 > 当前阶段：Phase 2 P2-M2.3 已 **completed with no qualifying Dynamic Recall backend**；
 > P2-R1 原默认 serving 假设已被 M2-lite Memory ADR 取代；Memory 实施仍未激活；P2-M3 顺延
@@ -9,8 +9,10 @@
 > [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。
 > **Product-Layer M0 Architecture Freeze + Characterization 已获 owner Accepted 并完成；不要与
 > 已完成的历史 Runtime M0 混淆。正式 [`M1 execution contract`](./execution-contracts/m1-execution-contract.md)
-> 已 Accepted/完成；M2–M7 仍未激活。** M1 已实现 additive Schema v5 product identity/
-> legacy mapping；`sessions`、copied workspace、Runtime IPC、Memory wiring 与所有 M2–M7 target
+> 已 Accepted/完成；正式 [`M2 execution contract`](./execution-contracts/m2-execution-contract.md)
+> 已于 2026-09-23 Accepted/完成，M3–M7 仍未激活且 M3 未发布。M2 已实现 additive Schema v6 的
+> direct read-only WorkspaceBinding、Conversation/Turn admission、typed input、rebind 与 writer/recovery
+> coordination；** M1 已实现 additive Schema v5 product identity/legacy mapping；`sessions`、copied workspace、Runtime IPC、Memory wiring 与所有 M3–M7 target
 > product behavior 仍保持 legacy compatibility boundary，详见 [`m1-product-persistence-design.md`](./m1-product-persistence-design.md)。
 > M1 verification 为 197 run：196 passed、1 个保留 M3 expected failure，coverage 79.9%（高于 70%
 > 门槛），owner acceptance 已完成；完整证据见
@@ -18,7 +20,7 @@
 > V1 开发能力与验收范围已冻结在
 > [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)，但这只是未来 M4/M7
 > acceptance contract，不表示其中的 direct-tree、Git、delete、完整 Python workflow 或 interactive
-> responsiveness 已实现。P2-R1 不再是下一候选；后续 Product work 必须等待明确激活的 M2+ 契约。
+> responsiveness 已实现。P2-R1 不再是下一候选；M3+ 必须等待各自正式契约发布与明确激活。
 > M0 报告与证据见 [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)：
 > M0 证据收口后的测试总数为 183：182 pass、1 个 M3-owned expected failure；14-run 完整 scripted baseline 与
 > 25-run stability baseline 均无 infrastructure failure。未运行 live Provider，未改生产代码或 Schema。
@@ -33,7 +35,10 @@
 ### Runtime
 
 - `AgentRuntime` 使用显式 handler map 和 `ALLOWED_TRANSITIONS` 推进状态。
-- 当前状态：`CREATED`、`PREPARING_WORKSPACE`、`BUILDING_CONTEXT`、`CALLING_MODEL`、`DISPATCHING_TOOL`、`RECORDING_OBSERVATION`、`INTERRUPTED`、`WAITING_APPROVAL`、`RETRY_WAIT`、`COMPLETED`、`FAILED`。
+- 当前状态：`CREATED`、`PREPARING_WORKSPACE`、`BUILDING_CONTEXT`、`CALLING_MODEL`、
+  `DISPATCHING_TOOL`、`RECORDING_OBSERVATION`、`INTERRUPTED`、`RETRY_WAIT`、`COMPLETED`、
+  `FAILED`，以及 M2 明确区分的 `CANCELLED`、`WAITING_USER_INPUT`、`WAITING_PERMISSION`、
+  `WAITING_RECONCILIATION`；legacy `WAITING_APPROVAL` 只表示不确定副作用 reconciliation，不能解释为普通权限批准。
 - `step()` 执行一个状态动作；`run()` 只负责驱动到终态。
 - 有 step、model call、tool call 三类预算。
 - Runtime 失败会进入 `FAILED` 并尽量记录 `run_finished`；中断会先提交 `INTERRUPTED` checkpoint，未知写副作用会停在 `WAITING_APPROVAL`。

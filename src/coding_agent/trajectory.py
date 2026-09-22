@@ -121,6 +121,16 @@ class TrajectoryRecorder:
     def current_version(self) -> int:
         return self._version
 
+    def refresh_from_journal(self) -> RuntimeSnapshot:
+        """Synchronize after an M2 input transaction on the same authority."""
+        if self.journal is None:
+            raise InvariantViolation("journal refresh requires SQLite authority")
+        snapshot = self.journal.load_snapshot(self.session_id)
+        self._sequence = self.journal.last_event_sequence(self.session_id)  # type: ignore[attr-defined]
+        self._version = self.journal.session_version(self.session_id)  # type: ignore[attr-defined]
+        self._state = snapshot.state
+        return snapshot
+
     def create_session(
         self,
         snapshot: RuntimeSnapshot,

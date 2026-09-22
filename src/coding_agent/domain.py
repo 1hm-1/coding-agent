@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Mapping, Sequence
@@ -21,6 +21,12 @@ class RuntimeState(str, Enum):
     CALLING_MODEL = "calling_model"
     DISPATCHING_TOOL = "dispatching_tool"
     RECORDING_OBSERVATION = "recording_observation"
+    # Product-Layer M2 wait/cancellation states.  These are intentionally
+    # distinct from the legacy uncertain-effect ``WAITING_APPROVAL`` state.
+    CANCELLED = "cancelled"
+    WAITING_USER_INPUT = "waiting_user_input"
+    WAITING_PERMISSION = "waiting_permission"
+    WAITING_RECONCILIATION = "waiting_reconciliation"
     INTERRUPTED = "interrupted"
     WAITING_APPROVAL = "waiting_approval"
     RETRY_WAIT = "retry_wait"
@@ -28,28 +34,37 @@ class RuntimeState(str, Enum):
     FAILED = "failed"
 
 
-TERMINAL_STATES = frozenset({RuntimeState.COMPLETED, RuntimeState.FAILED})
+TERMINAL_STATES = frozenset({RuntimeState.COMPLETED, RuntimeState.FAILED, RuntimeState.CANCELLED})
 
 
 ALLOWED_TRANSITIONS: Mapping[RuntimeState, frozenset[RuntimeState]] = {
     RuntimeState.CREATED: frozenset(
         {
             RuntimeState.PREPARING_WORKSPACE,
+            RuntimeState.CANCELLED,
+            RuntimeState.WAITING_USER_INPUT,
+            RuntimeState.WAITING_RECONCILIATION,
             RuntimeState.INTERRUPTED,
             RuntimeState.FAILED,
         }
     ),
     RuntimeState.PREPARING_WORKSPACE: frozenset(
-        {RuntimeState.BUILDING_CONTEXT, RuntimeState.INTERRUPTED, RuntimeState.FAILED}
+        {RuntimeState.BUILDING_CONTEXT, RuntimeState.INTERRUPTED, RuntimeState.CANCELLED,
+         RuntimeState.WAITING_USER_INPUT, RuntimeState.WAITING_RECONCILIATION, RuntimeState.FAILED}
     ),
     RuntimeState.BUILDING_CONTEXT: frozenset(
-        {RuntimeState.CALLING_MODEL, RuntimeState.INTERRUPTED, RuntimeState.FAILED}
+        {RuntimeState.CALLING_MODEL, RuntimeState.INTERRUPTED, RuntimeState.CANCELLED,
+         RuntimeState.WAITING_USER_INPUT, RuntimeState.WAITING_RECONCILIATION, RuntimeState.FAILED}
     ),
     RuntimeState.CALLING_MODEL: frozenset(
         {
             RuntimeState.DISPATCHING_TOOL,
             RuntimeState.COMPLETED,
             RuntimeState.RETRY_WAIT,
+            RuntimeState.CANCELLED,
+            RuntimeState.WAITING_USER_INPUT,
+            RuntimeState.WAITING_PERMISSION,
+            RuntimeState.WAITING_RECONCILIATION,
             RuntimeState.INTERRUPTED,
             RuntimeState.FAILED,
         }
@@ -58,7 +73,11 @@ ALLOWED_TRANSITIONS: Mapping[RuntimeState, frozenset[RuntimeState]] = {
         {
             RuntimeState.RECORDING_OBSERVATION,
             RuntimeState.WAITING_APPROVAL,
+            RuntimeState.WAITING_PERMISSION,
+            RuntimeState.WAITING_RECONCILIATION,
+            RuntimeState.CANCELLED,
             RuntimeState.INTERRUPTED,
+            RuntimeState.WAITING_USER_INPUT,
             RuntimeState.FAILED,
         }
     ),
@@ -67,6 +86,9 @@ ALLOWED_TRANSITIONS: Mapping[RuntimeState, frozenset[RuntimeState]] = {
             RuntimeState.DISPATCHING_TOOL,
             RuntimeState.BUILDING_CONTEXT,
             RuntimeState.INTERRUPTED,
+            RuntimeState.CANCELLED,
+            RuntimeState.WAITING_USER_INPUT,
+            RuntimeState.WAITING_RECONCILIATION,
             RuntimeState.FAILED,
         }
     ),
@@ -80,7 +102,20 @@ ALLOWED_TRANSITIONS: Mapping[RuntimeState, frozenset[RuntimeState]] = {
             RuntimeState.DISPATCHING_TOOL,
             RuntimeState.RECORDING_OBSERVATION,
             RuntimeState.FAILED,
+            RuntimeState.CANCELLED,
         }
+    ),
+    RuntimeState.WAITING_USER_INPUT: frozenset(
+        {RuntimeState.BUILDING_CONTEXT, RuntimeState.INTERRUPTED, RuntimeState.CANCELLED,
+         RuntimeState.FAILED}
+    ),
+    RuntimeState.WAITING_PERMISSION: frozenset(
+        {RuntimeState.DISPATCHING_TOOL, RuntimeState.RECORDING_OBSERVATION,
+         RuntimeState.INTERRUPTED, RuntimeState.CANCELLED, RuntimeState.FAILED}
+    ),
+    RuntimeState.WAITING_RECONCILIATION: frozenset(
+        {RuntimeState.DISPATCHING_TOOL, RuntimeState.RECORDING_OBSERVATION,
+         RuntimeState.INTERRUPTED, RuntimeState.CANCELLED, RuntimeState.FAILED}
     ),
     RuntimeState.WAITING_APPROVAL: frozenset(
         {
@@ -90,11 +125,26 @@ ALLOWED_TRANSITIONS: Mapping[RuntimeState, frozenset[RuntimeState]] = {
         }
     ),
     RuntimeState.RETRY_WAIT: frozenset(
-        {RuntimeState.CALLING_MODEL, RuntimeState.INTERRUPTED, RuntimeState.FAILED}
+        {RuntimeState.CALLING_MODEL, RuntimeState.INTERRUPTED, RuntimeState.CANCELLED, RuntimeState.FAILED}
     ),
     RuntimeState.COMPLETED: frozenset(),
     RuntimeState.FAILED: frozenset(),
+    RuntimeState.CANCELLED: frozenset(),
 }
+
+
+class RuntimeStateMachine:
+    """The single owner of Runtime transition legality and snapshot targets."""
+
+    @staticmethod
+    def require_transition(source: RuntimeState, target: RuntimeState) -> None:
+        if target not in ALLOWED_TRANSITIONS[source]:
+            raise InvariantViolation(f"illegal state transition {source.value} -> {target.value}")
+
+    @classmethod
+    def transition_snapshot(cls, snapshot: "RuntimeSnapshot", target: RuntimeState) -> "RuntimeSnapshot":
+        cls.require_transition(snapshot.state, target)
+        return replace(snapshot, state=target)
 
 
 class Permission(str, Enum):

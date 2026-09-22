@@ -21,6 +21,7 @@ from coding_agent.domain import (
     RuntimeSnapshot,
     RuntimeState,
     Session,
+    TERMINAL_STATES,
     ToolCallState,
     ToolResult,
     redact_sensitive_text,
@@ -366,6 +367,12 @@ class AgentApplication:
                 expected_state=RuntimeState.WAITING_APPROVAL,
                 tool_call=tool_mutation,
             )
+            # The legacy Runtime recorder owns the preceding commit.  Product
+            # unknown-effect barriers stay active through that commit and this
+            # immediate, fail-closed repair; a crash between them is repaired
+            # automatically when SQLite is reopened.
+            if isinstance(self.journal, SQLiteRunJournal):
+                self.journal.repair_resolved_recovery_barriers_after_restart()
             committed = self.journal.load_snapshot(session_id)
             if target is RuntimeState.FAILED:
                 try:
@@ -428,6 +435,8 @@ class AgentApplication:
             self.journal.close()
 
     def _export_after_run(self, result: RunResult) -> None:
+        if isinstance(self.journal, SQLiteRunJournal) and result.state in TERMINAL_STATES:
+            self.journal.finalize_admitted_turn_for_session(result.session_id)
         if self.journal is not None:
             try:
                 export_trace(self.journal, result.session_id, result.trace_path)

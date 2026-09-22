@@ -1,7 +1,7 @@
 # Coding Agent V1 Product-Layer Implementation Roadmap
 
-Date: 2026-09-22
-Status: **Architecture frozen; Product-Layer M0 Accepted and complete; M1 Accepted/complete; M2–M7 inactive**
+Date: 2026-09-23
+Status: **Architecture frozen; Product-Layer M0–M2 Accepted/complete; M3–M7 inactive; M3 not issued**
 
 ## Purpose
 
@@ -17,7 +17,8 @@ the historical Runtime M0–M5 milestones.
 The user explicitly activated Product-Layer M0 for architecture freeze and characterization and
 accepted it as complete on 2026-09-21. The formal
 [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) was issued and completed
-on 2026-09-22; M2–M7 remain inactive. M1 implements its additive domain/persistence scope;
+on 2026-09-22. The formal [`M2 execution contract`](./execution-contracts/m2-execution-contract.md)
+was accepted and completed on 2026-09-23. M3–M7 remain inactive, and M3 has not been issued. M1 implements its additive domain/persistence scope;
 the physical choices are recorded in [`m1-product-persistence-design.md`](./m1-product-persistence-design.md).
 No target product behavior from M2–M7 was implemented by M0 or M1. This Product-Layer M0 must not be confused with the completed historical Runtime M0 milestone in
 [`roadmap.md`](./roadmap.md).
@@ -285,11 +286,12 @@ accepted.
 Formal milestone execution contract: [`execution-contracts/m1-execution-contract.md`](./execution-contracts/m1-execution-contract.md).
 
 **Completed boundary:** M1 is Accepted/complete and implemented only the additive domain spine,
-Schema v5 migration, synthetic compatibility mappings, and the required evidence. M2–M7 remain
-inactive; no direct-working-tree, Turn Admission, product CLI, context, permission, or Memory
+Schema v5 migration, synthetic compatibility mappings, and the required evidence. At M1
+completion M2–M7 were inactive; no direct-working-tree, Turn Admission, product CLI, context, permission, or Memory
 behavior is included. Its completed checklist evidence is in
 [`evidence/m1-implementation-verification-2026-09-22.md`](./evidence/m1-implementation-verification-2026-09-22.md);
-owner acceptance has been recorded; M2–M7 remain inactive.
+owner acceptance has been recorded. M2 was activated later by its own formal contract; M3–M7
+remain inactive.
 
 ### Scope
 
@@ -376,6 +378,13 @@ owned by one execution record. Do not duplicate Runtime state into Conversation 
 - all prior SQLite migrations and compatibility readers.
 
 ## M2 — Workspace, lifecycle, Turn Admission, and coordinator
+
+Formal milestone execution contract: [`execution-contracts/m2-execution-contract.md`](./execution-contracts/m2-execution-contract.md).
+
+**Completed boundary:** M2 was accepted on 2026-09-23. Its execution contract limits
+direct-working-tree Product paths to read-only behavior and preserves every legacy
+copied-workspace/IPC surface. Its success, failure, recovery, rollback, compatibility, and real-tree
+non-mutation gates passed. M3–M7 remain inactive, and M3 has not been issued.
 
 ### Scope
 

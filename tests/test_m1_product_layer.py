@@ -518,7 +518,7 @@ class M1ProductLayerTest(unittest.TestCase):
             legacy.close()
 
             upgraded = SQLiteRunJournal(db_path)
-            self.assertEqual(upgraded.schema_version, 5)
+            self.assertEqual(upgraded.schema_version, 6)
             self.assertEqual(
                 upgraded.connection.execute(
                     "SELECT task FROM sessions WHERE id='legacy-created'"
@@ -576,7 +576,7 @@ class M1ProductLayerTest(unittest.TestCase):
             )
             self.assertEqual(
                 [row[0] for row in upgraded.connection.execute("SELECT version FROM schema_migrations")],
-                [1, 2, 3, 4, 5],
+                [1, 2, 3, 4, 5, 6],
             )
             self.assertEqual(upgraded.load_snapshot("legacy-uncertain"), uncertain_snapshot)
             self.assertEqual(

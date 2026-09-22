@@ -197,6 +197,15 @@ class M0MigrationStartingPointTest(unittest.TestCase):
                         "runtime_executions",
                         "conversation_semantic_events",
                         "product_mapping_failures",
+                        "product_admissions",
+                        "product_inputs",
+                        "turn_admission_artifacts",
+                        "workspace_binding_observations",
+                        "conversation_rebinds",
+                        "workspace_writer_claims",
+                        "workspace_writer_operation_receipts",
+                        "workspace_recovery_barriers",
+                        "turn_finalizations",
                     }
                 )
                 self.assertEqual(tables, expected)

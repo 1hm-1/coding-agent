@@ -20,7 +20,7 @@
 | success/tool/token/latency/failure/recovery 指标 | M3 已完成离线聚合 | `evaluation.py` + committed events | report schema、失败分母和 recovery tests |
 | replayable structured trajectory | 已实现，M2.1 已将 SQLite 设为 authority | `trajectory.py` / SQLite export | sequence/replay/golden/export equivalence |
 | Release/Evidence hardening | 已完成 | Git/CI、coverage、扩大的 mypy 门禁、recovery metrics、multi-repository eval、opt-in provider smoke | `.github/workflows/`、`pyproject.toml`、`evaluation.py`、`examples/eval_suite.json`、默认测试与手动 smoke；提交 `cf82f3c` 的 Python 3.10/3.11 hosted CI 成功；不宣称生产成功率 |
-| 成熟终端 Agent 产品扩展 | 横向产品架构已冻结；M0/M1 已 Accepted/完成；M2–M7 未激活 | [`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)、[`execution-contracts/m1-execution-contract.md`](./execution-contracts/m1-execution-contract.md) | M1 已交付 additive RepositoryIdentity/ProjectScope/WorkspaceBinding/Conversation/Turn/RuntimeExecution persistence mapping；Headless IPC 与 Memory governance 是可复用资产；direct workspace、Instructions、frozen Context、Permission、Diff/Undo 与 interactive CLI 仍需按 M2–M7 验收；Memory M2-lite 不阻塞 critical path |
+| 成熟终端 Agent 产品扩展 | 横向产品架构已冻结；M0–M2 已 Accepted/完成；M3–M7 未激活，M3 未发布 | [`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)、[`execution-contracts/m1-execution-contract.md`](./execution-contracts/m1-execution-contract.md)、[`execution-contracts/m2-execution-contract.md`](./execution-contracts/m2-execution-contract.md)、[`m2-product-lifecycle-design.md`](./m2-product-lifecycle-design.md) | M1 已交付 additive RepositoryIdentity/ProjectScope/WorkspaceBinding/Conversation/Turn/RuntimeExecution persistence mapping；M2 已交付 direct read-only WorkspaceBinding、lifecycle、atomic Turn Admission、typed inputs、rebind 与 writer/recovery coordination；Instructions、Frozen Context、Permission、Diff/Undo 与 interactive CLI 仍需按 M3–M7 验收；Memory M2-lite 不阻塞 critical path |
 | Runtime 与 Agent Platform 集成 | P2-M1 producer 已完成；Platform consumer 待外部验证 | [`protocol/runtime-ipc-v1.md`](./protocol/runtime-ipc-v1.md)、`protocol/v1/*.schema.json`、[`p2-implementation-plan.md`](./p2-implementation-plan.md)、`tests/test_protocol.py` | discovery/headless、golden、取消/退出码、v0.1/v0.2 vectors 已通过；consumer suite 尚未执行 |
 
 ## 2. 面试高频主题映射
@@ -57,7 +57,7 @@
 - source unchanged / isolated workspace modified；
 - permission denied、handler error、timeout 和 test recovery；
 - JSONL replay 与四份 semantic golden；
-- SQLite schema v5、session/message/checkpoint/call journal/summary、M1 Product compatibility mapping/recovery 与 Memory record/audit round-trip、atomic mutation 和删除 JSONL 后重建 Runtime projection；
+- SQLite schema v6、session/message/checkpoint/call journal/summary、M1 Product compatibility mapping/recovery、M2 atomic admission/lifecycle projection 与 Memory record/audit round-trip、atomic mutation 和删除 JSONL 后重建 Runtime projection；
 - episodic/semantic proposal→approval、scope/provenance/revision 隔离、delete tombstone、Context
   manifest 和 12-case 冻结 cold/warm calibration；lexical retrieval 仅供显式实验，P2-M2.3 已
   completed with no qualifying backend，默认 Application/headless/IPC 保持 Memory-disabled；

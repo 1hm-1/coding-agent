@@ -15,7 +15,6 @@ from coding_agent.compression import (
 )
 from coding_agent.context import ContextBuilder
 from coding_agent.domain import (
-    ALLOWED_TRANSITIONS,
     TERMINAL_STATES,
     BackendError,
     BuiltContext,
@@ -29,6 +28,7 @@ from coding_agent.domain import (
     RecoveryMode,
     RunResult,
     RuntimeSnapshot,
+    RuntimeStateMachine,
     RuntimeState,
     Session,
     SummaryRecord,
@@ -63,10 +63,7 @@ class StateMachine:
         clear_interrupt: bool = False,
     ) -> None:
         source = session.state
-        if target not in ALLOWED_TRANSITIONS[source]:
-            raise InvariantViolation(
-                f"illegal state transition {source.value} -> {target.value}"
-            )
+        RuntimeStateMachine.require_transition(source, target)
         event_payload: dict[str, object] = {
             "from": source.value,
             "to": target.value,
@@ -113,6 +110,7 @@ class AgentRuntime:
         lease_seconds: float = 60.0,
         fault_injector: Callable[[str], None] | None = None,
         external_interrupt_requested: Callable[[], bool] | None = None,
+        product_input_provider: Callable[[Session], Sequence[Message]] | None = None,
     ):
         self.session = session
         self.backend = backend
@@ -132,6 +130,7 @@ class AgentRuntime:
         self.lease_seconds = lease_seconds
         self.fault_injector = fault_injector
         self.external_interrupt_requested = external_interrupt_requested
+        self.product_input_provider = product_input_provider
         self._resumed = False
         self.machine = StateMachine(recorder)
         self._model_input: tuple[Message, ...] = ()
@@ -184,8 +183,14 @@ class AgentRuntime:
 
         if self.session.state in TERMINAL_STATES:
             raise InvariantViolation("terminal sessions cannot be resumed")
-        if self.session.state is RuntimeState.WAITING_APPROVAL:
-            raise InvariantViolation("resolve the pending call before resuming")
+        if self.session.state in {
+            RuntimeState.WAITING_APPROVAL,
+            RuntimeState.WAITING_PERMISSION,
+            RuntimeState.WAITING_RECONCILIATION,
+        }:
+            raise InvariantViolation("resolve the pending non-ordinary request before resuming")
+        if self.session.state is RuntimeState.WAITING_USER_INPUT:
+            raise InvariantViolation("record a correlated UserReply before resuming")
         resumed_from = self.session.state.value
         self._resumed = True
         self._seen_tool_call_ids = {
@@ -230,11 +235,44 @@ class AgentRuntime:
         }:
             self._model_input = self._build_context(emit_event=False).messages
 
+    def attach_product_input_provider(
+        self, provider: Callable[[Session], Sequence[Message]],
+    ) -> None:
+        """Attach the M2 ordered-input boundary without moving FSM authority."""
+        self.product_input_provider = provider
+
+    def _consume_product_inputs_at_safe_boundary(self) -> None:
+        if self.product_input_provider is None or self.session.state not in {
+            RuntimeState.CREATED, RuntimeState.BUILDING_CONTEXT,
+        }:
+            return
+        known = {
+            str(message.metadata.get("m2_input_id"))
+            for message in self.session.messages
+            if message.metadata.get("m2_input_id") is not None
+        }
+        provided = tuple(self.product_input_provider(self.session))
+        if self.recorder.journal is not None:
+            durable = self.recorder.refresh_from_journal()
+            apply_snapshot(self.session, durable)
+        for message in provided:
+            input_id = message.metadata.get("m2_input_id")
+            if input_id is None or str(input_id) in known:
+                continue
+            self.session.messages.append(message)
+            known.add(str(input_id))
+
     def step(self) -> RuntimeState:
         if self.session.state in TERMINAL_STATES:
             return self.session.state
-        if self.session.state is RuntimeState.WAITING_APPROVAL:
+        if self.session.state in {
+            RuntimeState.WAITING_APPROVAL,
+            RuntimeState.WAITING_USER_INPUT,
+            RuntimeState.WAITING_PERMISSION,
+            RuntimeState.WAITING_RECONCILIATION,
+        }:
             return self.session.state
+        self._consume_product_inputs_at_safe_boundary()
         self._renew_lease()
         if self._interrupt_requested():
             self._interrupt()
@@ -263,6 +301,9 @@ class AgentRuntime:
                 if self.session.state in {
                     RuntimeState.INTERRUPTED,
                     RuntimeState.WAITING_APPROVAL,
+                    RuntimeState.WAITING_USER_INPUT,
+                    RuntimeState.WAITING_PERMISSION,
+                    RuntimeState.WAITING_RECONCILIATION,
                 }:
                     break
                 self.step()

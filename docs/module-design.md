@@ -4,15 +4,16 @@
 > 当前基线：M5.1
 > 当前变化：Phase 2 P2-M1 producer 与 P2-M2 Memory governance 已完成；Coding Agent V1 产品层
 > 架构已冻结，Product-Layer M0 已 Accepted/完成；正式
-> [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) 已 Accepted/完成，M2–M7
-> 尚未激活。M1 已加入 additive Schema v5 与 Product persistence modules；legacy Runtime compatibility
+> [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) 已 Accepted/完成；正式
+> [`M2 execution contract`](./execution-contracts/m2-execution-contract.md) 已于 2026-09-23
+> Accepted/完成，M3–M7 尚未激活且 M3 未发布。M1 已加入 additive Schema v5，M2 已加入 Schema v6 与 Product lifecycle modules；legacy Runtime compatibility
 > boundary 仍保持不变。
 
 本文回答当前 v0.1 Runtime 的三个问题：功能应该放在哪个模块、模块之间允许传递什么、错误由谁处理。
 当前可执行契约见 [`contracts.md`](./contracts.md)，Runtime 架构与安全边界见
 [`architecture.md`](./architecture.md)。P2-M2 Memory 与未来产品层、Skill/MCP、多 Agent 边界见
 [`v2-product-architecture.md`](./v2-product-architecture.md)；只有本文列出的 Memory 模块已实现，
-不得把其余未来目录误当成现有模块。
+不得把未激活的 M3–M7 目标模块或未来目录误当成现有模块。
 
 本文只描述当前模块。未来 product/application service 边界以
 [`target-architecture-snapshot.md`](./target-architecture-snapshot.md)、accepted ADR 和
@@ -78,9 +79,9 @@ tests → public modules above
 | `sandbox/runner.py` | namespace 内私有 rootfs、mount、limits、直接 argv、进程树监控/清理 | 被应用直接 import；不能成为通用命令入口 |
 | `workspace.py` | 创建隔离副本、路径防逃逸、fingerprint、Git baseline | 判断任务是否修复成功 |
 | `trajectory.py` | 兼容 JSONL store、record、replay、semantic projection | 恢复执行、再次调用工具、SQLite SQL |
-| `persistence.py` | SQLite schema v5、snapshot/message/event/checkpoint、model/tool journal、summary、lease 原子 mutation，以及 M1 Product mapping/backfill | 模型/工具调用、状态迁移决策、Memory lifecycle、JSONL 格式化 |
-| `product_domain.py` | M1 RepositoryIdentity、RepositoryDescriptor、ProjectScope、WorkspaceBinding、Conversation、Turn、RuntimeExecution 与 synthetic semantic-event 值对象/不变量 | Runtime FSM、Turn Admission、ModelRequest 或 interactive product workflow |
-| `product_persistence.py` | 窄 `ProductRepository` port 与 Legacy Session→Product compatibility adapter；SQLite 仍为唯一实现/authority | 第二状态 authority、公共 IPC、M2 admission 原子发布 |
+| `persistence.py` | SQLite schema v6、snapshot/message/event/checkpoint、model/tool journal、summary、lease 原子 mutation、M1 mapping/backfill 与 M2 atomic admission/lifecycle projection | 模型/工具调用、第二 Runtime FSM、Memory lifecycle、JSONL 格式化 |
+| `product_domain.py` | M1 spine，加 M2 typed Product input、checkpoint/manifest/policy shells、admission 与 writer claim 值对象/不变量 | Runtime FSM、ModelRequest 或 interactive product workflow |
+| `product_persistence.py`、`product_application.py`、`product_workspace.py` | 窄 ProductRepository port、stateless coordinator、legacy adapter 与 observation-only direct binding/read-only gate；SQLite 仍为唯一实现/authority | 公共 IPC、M3 context/instruction、M4 permission/diff/undo 或 direct-tree mutation |
 | `migrations.py` | 有序、幂等、未知未来版本拒绝的 schema migration | session 业务状态、运行时编排 |
 | `memory/domain.py` | versioned episodic/semantic record、scope/status、provenance 与 retrieval value objects | SQL、模型调用、Runtime 状态 |
 | `memory/policy.py`、`memory/service.py` | write scope/provenance/content policy 与显式 proposal/approval/stale/delete lifecycle | 绕过 approval、工具执行、Context 拼装 |

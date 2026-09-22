@@ -1,7 +1,7 @@
 # V1 Development Capability Matrix
 
 Date: 2026-09-22
-Status: **Acceptance contract frozen; Product-Layer M0 Accepted and complete; M1 Accepted/complete with additive Schema v5 identity/mapping implemented; M2–M7 inactive; future matrix capabilities remain inactive**
+Status: **Acceptance contract frozen; Product-Layer M0–M2 Accepted and complete; M2 remains read-only on real user trees; M3–M7 and future matrix capabilities remain inactive**
 
 ## Purpose and authority
 
@@ -10,10 +10,12 @@ input to M4 and M7, not a claim about the current five-tool implementation. The 
 remain the product and domain authority; this document narrows their permitted future capability
 space to a testable V1 delivery slice.
 
-The active [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) implements
-only additive identity/mapping persistence; it implements no matrix capability. The M3+M4 real-tree
-mutation gate remains closed, and the current Schema v5 Product mapping preserves the legacy Runtime
-compatibility boundary.
+The completed [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) implemented
+only additive identity/mapping persistence. The accepted
+[`M2 execution contract`](./execution-contracts/m2-execution-contract.md) establishes direct
+WorkspaceBinding/lifecycle/read-only Product paths but implements no M4 matrix capability. The
+M3+M4 real-tree mutation gate remains closed, and the additive Schema v6 Product lifecycle preserves
+the legacy Runtime compatibility boundary; M2 acceptance does not open the M3/M4 mutation gate.
 
 V1 targets a local, single-user Linux host with POSIX process semantics and a preprovisioned
 pure-Python/package development workflow, using sandbox capabilities that the implementation can

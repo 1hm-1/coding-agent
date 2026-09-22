@@ -7,7 +7,7 @@ from typing import Callable, Sequence
 from coding_agent.domain import utc_now
 
 
-LATEST_SCHEMA_VERSION = 5
+LATEST_SCHEMA_VERSION = 6
 
 
 class MigrationError(RuntimeError):
@@ -329,7 +329,142 @@ V5 = Migration(
 )
 
 
-MIGRATIONS: tuple[Migration, ...] = (V1, V2, V3, V4, V5)
+# M2 adds the Product admission and coordination projection.  These records
+# deliberately complement rather than replace the legacy Runtime journal: a
+# Session remains the sole physical Runtime FSM authority.
+V6 = Migration(
+    version=6,
+    statements=(
+        "ALTER TABLE conversations ADD COLUMN product_version INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE conversations ADD COLUMN open_turn_id TEXT",
+        """
+        CREATE TABLE IF NOT EXISTS product_admissions (
+            operation_id TEXT PRIMARY KEY,
+            payload_digest TEXT NOT NULL,
+            conversation_id TEXT NOT NULL REFERENCES conversations(conversation_id),
+            turn_id TEXT NOT NULL UNIQUE REFERENCES turns(turn_id),
+            runtime_execution_id TEXT NOT NULL UNIQUE REFERENCES runtime_executions(runtime_execution_id),
+            legacy_session_id TEXT NOT NULL UNIQUE REFERENCES sessions(id),
+            checkpoint_id TEXT NOT NULL,
+            instruction_manifest_id TEXT NOT NULL,
+            policy_epoch_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS product_inputs (
+            input_id TEXT PRIMARY KEY,
+            operation_id TEXT NOT NULL UNIQUE,
+            payload_digest TEXT NOT NULL,
+            conversation_id TEXT NOT NULL REFERENCES conversations(conversation_id),
+            turn_id TEXT REFERENCES turns(turn_id),
+            sequence INTEGER NOT NULL,
+            input_kind TEXT NOT NULL,
+            correlation_id TEXT,
+            payload_json TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(conversation_id, sequence)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS turn_admission_artifacts (
+            turn_id TEXT PRIMARY KEY REFERENCES turns(turn_id),
+            checkpoint_id TEXT NOT NULL UNIQUE,
+            checkpoint_json TEXT NOT NULL,
+            instruction_manifest_id TEXT NOT NULL UNIQUE,
+            instruction_manifest_json TEXT NOT NULL,
+            policy_epoch_id TEXT NOT NULL,
+            policy_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS workspace_binding_observations (
+            observation_id TEXT PRIMARY KEY,
+            workspace_binding_id TEXT NOT NULL REFERENCES workspace_bindings(workspace_binding_id),
+            observation_digest TEXT NOT NULL,
+            observation_json TEXT NOT NULL,
+            observed_at TEXT NOT NULL,
+            UNIQUE(workspace_binding_id, observation_digest)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS conversation_rebinds (
+            rebind_id TEXT PRIMARY KEY,
+            operation_id TEXT NOT NULL UNIQUE,
+            payload_digest TEXT NOT NULL,
+            conversation_id TEXT NOT NULL REFERENCES conversations(conversation_id),
+            previous_workspace_binding_id TEXT NOT NULL REFERENCES workspace_bindings(workspace_binding_id),
+            workspace_binding_id TEXT NOT NULL REFERENCES workspace_bindings(workspace_binding_id),
+            expected_version INTEGER NOT NULL,
+            resulting_version INTEGER NOT NULL,
+            observation_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS workspace_writer_claims (
+            workspace_binding_id TEXT PRIMARY KEY REFERENCES workspace_bindings(workspace_binding_id),
+            claim_id TEXT NOT NULL UNIQUE,
+            operation_id TEXT NOT NULL UNIQUE,
+            payload_digest TEXT NOT NULL,
+            owner_id TEXT NOT NULL,
+            runtime_execution_id TEXT REFERENCES runtime_executions(runtime_execution_id),
+            claim_epoch INTEGER NOT NULL,
+            expires_at TEXT NOT NULL,
+            status TEXT NOT NULL,
+            observation_digest TEXT NOT NULL,
+            observation_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            released_at TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS workspace_recovery_barriers (
+            barrier_id TEXT PRIMARY KEY,
+            workspace_binding_id TEXT NOT NULL REFERENCES workspace_bindings(workspace_binding_id),
+            claim_id TEXT,
+            reason TEXT NOT NULL,
+            uncertain_invocation_id TEXT,
+            resolver_kind TEXT,
+            evidence_digest TEXT,
+            resolved_by_operation_id TEXT,
+            status TEXT NOT NULL,
+            reconciliation_token TEXT,
+            created_at TEXT NOT NULL,
+            cleared_at TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS workspace_writer_operation_receipts (
+            operation_id TEXT PRIMARY KEY,
+            payload_digest TEXT NOT NULL,
+            operation_kind TEXT NOT NULL,
+            claim_id TEXT NOT NULL,
+            result_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS turn_finalizations (
+            turn_id TEXT PRIMARY KEY REFERENCES turns(turn_id),
+            runtime_execution_id TEXT NOT NULL UNIQUE REFERENCES runtime_executions(runtime_execution_id),
+            outcome TEXT NOT NULL,
+            finalized_at TEXT NOT NULL,
+            repair_provenance TEXT NOT NULL
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS product_inputs_conversation_order ON product_inputs(conversation_id, sequence)",
+        "CREATE INDEX IF NOT EXISTS workspace_observations_binding ON workspace_binding_observations(workspace_binding_id, observed_at)",
+        "CREATE INDEX IF NOT EXISTS recovery_barriers_binding ON workspace_recovery_barriers(workspace_binding_id, status)",
+        "CREATE INDEX IF NOT EXISTS writer_operation_receipts_claim ON workspace_writer_operation_receipts(claim_id)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS recovery_barriers_uncertain_invocation ON workspace_recovery_barriers(workspace_binding_id, uncertain_invocation_id) WHERE uncertain_invocation_id IS NOT NULL",
+    ),
+)
+
+
+MIGRATIONS: tuple[Migration, ...] = (V1, V2, V3, V4, V5, V6)
 
 
 def _validate_migrations(migrations: Sequence[Migration]) -> None:
