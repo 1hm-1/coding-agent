@@ -20,8 +20,10 @@ from coding_agent.memory.retrieval_backends import (
     CandidateInputError,
     CandidateRecord,
     CandidateRequest,
+    ContrastiveCoverageBackend,
     EmbeddingHybridBackend,
     ProductionQueryMetadata,
+    LexicalCoverageCascadeBackend,
     StructuredBM25Backend,
     validate_record_metadata,
 )
@@ -100,6 +102,8 @@ class MemoryRetrievalBackendSpikeTest(unittest.TestCase):
             BM25ContentBackend(),
             StructuredBM25Backend(),
             EmbeddingHybridBackend(adapter=None),
+            ContrastiveCoverageBackend(),
+            LexicalCoverageCascadeBackend(now=RUNNER.DEFAULT_NOW),
         )
         for case_id, expected in expectations.items():
             case = by_id[case_id]
@@ -291,6 +295,84 @@ class MemoryRetrievalBackendSpikeTest(unittest.TestCase):
             hashlib.sha256(RETRIEVAL_PATH.read_bytes()).hexdigest(),
             F1D03CF_RETRIEVAL_SHA256,
         )
+
+    def test_opt_in_experiment_preserves_original_arms_and_repeats(self) -> None:
+        original, _ = RUNNER.evaluate_suite(self.suite, suite_sha256=RUNNER.sha256_file(SUITE_PATH))
+        expanded, _ = RUNNER.evaluate_suite(
+            self.suite, suite_sha256=RUNNER.sha256_file(SUITE_PATH), include_contrastive=True,
+        )
+        for before, after in zip(original["candidates"], expanded["candidates"]):
+            self.assertEqual(before["repeatability"], after["repeatability"])
+        self.assertEqual(len(expanded["candidates"]), 6)
+        for candidate in expanded["candidates"]:
+            self.assertTrue(candidate["repeatability"]["deterministic"])
+
+
+class CoverageCandidateTest(unittest.TestCase):
+    def request(self, text: str, contents: tuple[str, ...]) -> CandidateRequest:
+        metadata = validate_record_metadata({
+            "fact_type": "fact", "entities": [], "concept_keys": [],
+            "repository_component": "sample.py", "validity": "current", "revision": "r1",
+        })
+        records = []
+        for index, content in enumerate(contents):
+            record = MemoryRecord.proposed(
+                memory_id=f"m{index}", scope=MemoryScope.REPOSITORY, scope_id="repo",
+                kind=MemoryKind.SEMANTIC, content=content, source_run_id="run",
+                source_agent_id="runtime", source_event_refs=("event",),
+                repository_revision="r1", confidence=0.9, created_at=RUNNER.DEFAULT_NOW,
+            ).with_status(MemoryStatus.ACTIVE, updated_at=RUNNER.DEFAULT_NOW)
+            records.append(CandidateRecord(record, metadata))
+        return CandidateRequest(
+            query=MemoryQuery(text=text, repository_id="repo", repository_revision="r1"),
+            query_metadata=ProductionQueryMetadata((), (), ()), records=tuple(records),
+        )
+
+    def test_coverage_success_and_weak_evidence_abstention(self) -> None:
+        backend = ContrastiveCoverageBackend()
+        for text, contents, selected in (
+            ("alpha beta gamma delta", ("alpha beta",), ("m0",)),
+            ("alpha", ("alpha beta",), ()),
+            ("alpha beta gamma delta epsilon", ("alpha beta",), ()),
+            ("unknown phrase", ("alpha beta",), ()),
+            ("the what", ("the what",), ()),
+            ("alpha beta", (), ()),
+        ):
+            self.assertEqual(backend.retrieve(self.request(text, contents)).selected_ids, selected)
+
+    def test_mixed_record_evidence_abstains_without_label_metadata(self) -> None:
+        backend = ContrastiveCoverageBackend()
+        request = self.request("alpha beta gamma delta", ("alpha beta", "gamma delta"))
+        result = backend.retrieve(request)
+        self.assertEqual(result.selected_ids, ())
+        self.assertTrue(all(s.rejection == "competing_record_evidence" for s in result.scored_records))
+        request = replace(request, records=(request.records[0],))
+        self.assertEqual(backend.retrieve(request).selected_ids, ("m0",))
+
+    def test_budgets_order_and_request_recovery(self) -> None:
+        request = self.request("alpha beta", ("alpha beta", "alpha beta"))
+        for backend in (ContrastiveCoverageBackend(), LexicalCoverageCascadeBackend(now=RUNNER.DEFAULT_NOW)):
+            bounded = replace(request, query=replace(request.query, top_k=1))
+            self.assertEqual(backend.retrieve(bounded).selected_ids, ("m0",))
+            self.assertEqual(backend.retrieve(replace(bounded, records=bounded.records[::-1])).selected_ids, ("m0",))
+            empty_budget = replace(bounded, query=replace(bounded.query, token_budget=1))
+            self.assertEqual(backend.retrieve(empty_budget).selected_ids, ())
+            # A removed record cannot survive in a candidate cache; restoration is deterministic.
+            self.assertEqual(backend.retrieve(replace(bounded, records=())).selected_ids, ())
+            self.assertEqual(backend.retrieve(bounded).selected_ids, ("m0",))
+
+    def test_cascade_preserves_primary_and_only_falls_back_on_relevance(self) -> None:
+        backend = LexicalCoverageCascadeBackend(now=RUNNER.DEFAULT_NOW)
+        primary = self.request("alpha beta", ("alpha beta",))
+        fallback = self.request("alpha beta gamma delta", ("alpha beta",))
+        for request, branch in ((primary, "lexical"), (fallback, "coverage")):
+            result = backend.retrieve(request)
+            self.assertEqual(result.selected_ids, ("m0",))
+            self.assertEqual(result.scored_records[0].components["branch"], branch)
+        exhausted = replace(primary, query=replace(primary.query, token_budget=1))
+        result = backend.retrieve(exhausted)
+        self.assertEqual(result.selected_ids, ())
+        self.assertEqual(result.scored_records[0].components["branch"], "lexical")
 
 
 if __name__ == "__main__":

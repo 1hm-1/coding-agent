@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
 import math
@@ -591,6 +591,102 @@ class BM25ContentBackend:
             scores=scores,
             relative_floor=self.relative_floor,
             started=started,
+        )
+
+
+class ContrastiveCoverageBackend:
+    """Offline content-only candidate that abstains on mixed-record evidence.
+
+    A topic word alone is insufficient. Query terms supported exclusively by a
+    competing record make an otherwise plausible hit ambiguous. This is lexical
+    evidence, not semantic entailment; unsupported paraphrases still abstain.
+    No index/cache survives a request, so lifecycle authority stays upstream.
+    """
+
+    name = "contrastive-coverage"
+
+    @property
+    def parameters(self) -> Mapping[str, Any]:
+        return {
+            "minimum_query_coverage": 0.5,
+            "minimum_matched_terms": 2,
+            "reject_competing_evidence": True,
+            "relative_score_floor": 0.72,
+            "indexed_fields": ["content"],
+        }
+
+    def retrieve(self, request: CandidateRequest) -> CandidateResult:
+        started = time.monotonic()
+        query_terms = lexical_terms(request.query.text) - _COMMON_TERMS
+        documents = [lexical_terms(item.record.content) - _COMMON_TERMS for item in request.records]
+        supported = query_terms & frozenset().union(*documents)
+        scores: list[ScoredRecord] = []
+        for item, terms in zip(request.records, documents):
+            matched = query_terms & terms
+            coverage = len(matched) / max(1, len(query_terms))
+            precision = len(matched) / max(1, len(terms))
+            competing = supported - terms
+            rejection = None
+            if len(matched) < 2:
+                rejection = "insufficient_informative_overlap"
+            elif coverage < 0.5:
+                rejection = "below_query_coverage"
+            elif competing:
+                rejection = "competing_record_evidence"
+            scores.append(ScoredRecord(
+                record=item.record,
+                score=round(coverage * precision * item.record.confidence, 8),
+                components={
+                    "query_coverage": coverage,
+                    "record_precision": precision,
+                    "matched_terms": float(len(matched)),
+                    "competing_terms": float(len(competing)),
+                    "confidence": item.record.confidence,
+                },
+                rejection=rejection,
+            ))
+        return _finalize(
+            backend=self.name,
+            parameters=self.parameters,
+            request=request,
+            scores=scores,
+            relative_floor=0.72,
+            started=started,
+        )
+
+
+class LexicalCoverageCascadeBackend:
+    """Keep frozen lexical decisions; try coverage only after relevance abstention."""
+
+    name = "lexical-coverage-cascade"
+
+    def __init__(self, *, now: str):
+        self.control = LexicalControlBackend(now=now)
+        self.fallback = ContrastiveCoverageBackend()
+
+    @property
+    def parameters(self) -> Mapping[str, Any]:
+        return {
+            "primary": dict(self.control.parameters),
+            "fallback": dict(self.fallback.parameters),
+            "fallback_when": "no_primary_ranked_records",
+        }
+
+    def retrieve(self, request: CandidateRequest) -> CandidateResult:
+        started = time.monotonic()
+        result = self.control.retrieve(request)
+        branch = "lexical"
+        # Budget exhaustion is not a relevance failure: do not evade its decision.
+        if not result.ranked_ids:
+            result = self.fallback.retrieve(request)
+            branch = "coverage"
+        return replace(
+            result,
+            backend=self.name,
+            parameters=self.parameters,
+            scored_records=tuple(replace(item, components={**item.components, "branch": branch})
+                                 for item in result.scored_records),
+            latency_ms=max(0.0, (time.monotonic() - started) * 1000.0),
         )
 
 

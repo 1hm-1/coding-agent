@@ -23,8 +23,10 @@ from coding_agent.memory.retrieval_backends import (
     CandidateBackend,
     CandidateRequest,
     CandidateResult,
+    ContrastiveCoverageBackend,
     EmbeddingHybridBackend,
     LexicalControlBackend,
+    LexicalCoverageCascadeBackend,
     StructuredBM25Backend,
     TrustedRecordMetadata,
     derive_query_metadata,
@@ -300,6 +302,7 @@ def evaluate_suite(
     suite_sha256: str,
     repeats: int = DEFAULT_REPEATS,
     now: str = DEFAULT_NOW,
+    include_contrastive: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     if repeats < 3:
         raise SpikeEvaluationError("S3.7 repeatability requires at least three runs")
@@ -318,6 +321,8 @@ def evaluate_suite(
         StructuredBM25Backend(),
         EmbeddingHybridBackend(adapter=None),
     )
+    if include_contrastive:
+        backends += (ContrastiveCoverageBackend(), LexicalCoverageCascadeBackend(now=now))
     raw_candidates: list[dict[str, Any]] = []
     summary_candidates: list[dict[str, Any]] = []
     try:
@@ -475,10 +480,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--output", required=True)
     parser.add_argument("--retrieval", default="src/coding_agent/memory/retrieval.py")
     parser.add_argument("--repeats", type=int, default=DEFAULT_REPEATS)
+    parser.add_argument("--include-contrastive", action="store_true",
+                        help="Include the opt-in content coverage/ambiguity experiment")
     args = parser.parse_args(argv)
     suite = load_suite(args.suite)
     suite_hash = sha256_file(args.suite)
-    raw, summary = evaluate_suite(suite, suite_sha256=suite_hash, repeats=args.repeats)
+    raw, summary = evaluate_suite(suite, suite_sha256=suite_hash, repeats=args.repeats,
+                                  include_contrastive=args.include_contrastive)
     write_bundle(
         args.output,
         raw=raw,

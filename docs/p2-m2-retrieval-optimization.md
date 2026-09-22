@@ -2,13 +2,37 @@
 
 > 状态：**已完成**
 > 激活日期：2026-09-16
+> 2026-09-18 用户追加授权：尝试优化 Memory。仅重开离线 development candidate 实验；
+> S3.8 与生产 lexical 冻结不变，不激活 P2-M3/embedding，不创建 Holdout、不运行 Provider。
 > 前置基线：提交 `80dba4c` 已冻结 12-case 扩展 Memory benchmark；134/134 默认测试通过。
+> 2026-09-20 产品定位更新：本文件的检索证据继续有效，但“默认入口关闭是产品缺口”和
+> “P2-R1/Core Snapshot 是下一候选”的路线结论已被 M2-lite ADR supersede。Memory 默认 optional，
+> Core Snapshot/generic auto top-k 为 OFF，实施顺序以 V1 roadmap 为准。
 
 ## 1. 目标与边界
 
 本工作只优化 P2-M2 已有的确定性 lexical/metadata retrieval 与 Memory Context 表达，不激活
 P2-M3，不加入 embedding、vector backend、RAG framework、Skill、MCP、多 Agent、公共 IPC 字段
 或第三方 Runtime 依赖。默认 `AgentApplication` 与 `run-headless` 继续保持 Memory-disabled。
+
+### 本次追加实验验收（实验已完成，非生产验收）
+
+尝试 content-only coverage gate 与竞争候选歧义拒绝：至少两个信息词匹配、query 信息词覆盖
+至少 0.5；若 query 还匹配其他记录独有的信息词，则拒绝混合主题的候选。使用集合而非重复词频，
+不新增 alias、不使用 ground-truth metadata。参数在本次测量前固定，不根据逐例 label 调整。
+
+首轮 coverage 单臂 recall/injection 为 0.375/0，与 lexical 的命中集合存在互补；追加一个
+事后提出的 cascade 实验：保留 lexical 的所有排序结果，仅在无记录通过 relevance gate 时
+调用 coverage。不能把该组合称为预注册方案或 blind holdout 结果。
+
+- [x] 通过既有 label-free projection，在同一 40-case development suite 与冻结 baseline 比较。
+- [x] 成功、无匹配、跨记录歧义、预算、隔离、确定性与恢复/回退测试通过。
+- [x] 保存两轮 summary、逐 case 选择与原始 artifact hash；不选择生产后端。
+- [x] 169/169 unittest、四份 golden、Ruff、36 文件 mypy 与文档同步。
+
+最终 cascade recall `9/24→10/24`、injection `0→0`、retrieval Token `196→220`；
+单臂 coverage 无总体召回改善。仅为 development 结果，production backend 仍为 none。
+完整局限与复现命令见 [实验记录](./evidence/memory-coverage-experiment-2026-09-18.md)。
 
 ## 2. 验收清单
 
@@ -262,3 +286,21 @@ Secret/隐私、cache identity 与模型升级重建、delete/stale/scope 传播
 timeout/offline/fail-closed、每次检索成本与 Token/success，并在看结果前冻结新的 development set
 和全新 blind Holdout。本轮不实施任一路线。完整审查见
 [`s3-8-retrieval-route-closure-2026-09-18.md`](./evidence/s3-8-retrieval-route-closure-2026-09-18.md)。
+
+## 16. 产品定义纠偏：本结论只否决 Dynamic Recall 候选
+
+后续产品审查确认，P2-M2.3 的算法结论有效，但原先从中推导出的产品路线过宽。被证据拒绝的是：
+
+- 把当前 lexical-control、bm25-content 或 structured-bm25 作为自动 Dynamic Recall 后端；
+- 在没有真实 Provider 净收益前，仅凭 scripted benchmark 启用这些后端。
+
+它没有评测、也没有从算法证据上否决 Core Snapshot、按需 History Search 或 governed writes。
+后续 M2-lite 产品决策独立选择将 Core Snapshot、自动提炼和 generic auto top-k 延期；当前默认入口
+关闭同时是代码事实和目标默认边界，不再定义为产品缺口。SQLite authority、provenance、scope、
+revision、tombstone、audit 和全部冻结失败证据继续保留。
+
+因此原“路线 A 直接进入 P2-M3 / 路线 B 继续检索算法”的二选一以及随后提出的 P2-R1 默认 serving
+路线都不再是当前下一决策。当前 authority 是
+[`decisions/memory-product-positioning.md`](./decisions/memory-product-positioning.md) 与
+[`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。本次文档
+收口不改变任何运行行为，也不重写本文件前述历史算法结论。
