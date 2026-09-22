@@ -121,8 +121,9 @@ PYTHONPATH=src python3 -m coding_agent.cli \
 
 预期 todo replay 的关键结果：`final_state=completed`、`test_outcomes=[false,true]`、`source_unchanged=true`。
 
-当前默认把事实写入 `<agent-home>/state.db`（schema v4，含 summaries 派生缓存及 P2-M2 Memory
-record/lifecycle/retrieval audit）；JSONL 仍只投影 Runtime events。删除 trace 后可运行：
+当前默认把事实写入 `<agent-home>/state.db`（schema v5，含 summaries 派生缓存、M1 Product
+mapping/recovery 记录及 P2-M2 Memory record/lifecycle/retrieval audit）；JSONL 仍只投影 Runtime
+events。删除 trace 后可运行：
 
 ```bash
 PYTHONPATH=src python3 -m coding_agent.cli \

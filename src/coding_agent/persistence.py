@@ -28,6 +28,15 @@ from coding_agent.domain import (
     ToolCallState,
 )
 from coding_agent.migrations import LATEST_SCHEMA_VERSION, MigrationRunner
+from coding_agent.product_domain import (
+    Conversation,
+    ProjectScope,
+    RepositoryDescriptor,
+    RepositoryIdentity,
+    RuntimeExecution,
+    Turn,
+    WorkspaceBinding,
+)
 
 
 EVENT_SCHEMA_VERSION = 1
@@ -153,6 +162,18 @@ class RunJournal(Protocol):
     def load_snapshot(self, session_id: str) -> RuntimeSnapshot:
         ...
 
+    def load_session(self, session_id: str) -> Session:
+        ...
+
+    def list_sessions(self) -> list[dict[str, object]]:
+        ...
+
+    def load(self, session_id: str) -> list[Event]:
+        ...
+
+    def append(self, event: Event) -> None:
+        ...
+
     def list_messages(self, session_id: str) -> list[Message]:
         ...
 
@@ -193,6 +214,9 @@ class RunJournal(Protocol):
         ...
 
     def list_tool_calls(self, session_id: str) -> list[dict[str, Any]]:
+        ...
+
+    def completed_model_call_count(self, session_id: str) -> int:
         ...
 
     def get_summary(self, session_id: str, summary_id: str) -> SummaryRecord | None:
@@ -249,6 +273,7 @@ class SQLiteRunJournal:
         event_id_factory: Callable[[], str] | None = None,
         commit_hook: Callable[[str], None] | None = None,
         fault_injector: Callable[[str], None] | None = None,
+        mapping_failure_hook: Callable[[str], None] | None = None,
     ):
         self.db_path = Path(db_path)
         self._database = str(db_path)
@@ -265,6 +290,7 @@ class SQLiteRunJournal:
         self.lease_clock = lease_clock or time.time
         self.event_id_factory = event_id_factory or (lambda: str(uuid.uuid4()))
         self.commit_hook = commit_hook or fault_injector
+        self.mapping_failure_hook = mapping_failure_hook
         self._lock = threading.RLock()
         self._connection = sqlite3.connect(
             self._database,
@@ -273,8 +299,19 @@ class SQLiteRunJournal:
             isolation_level=None,
         )
         self._connection.row_factory = sqlite3.Row
-        self._configure_connection()
-        self.schema_version = MigrationRunner(clock=self.clock).migrate(self._connection)
+        try:
+            self._configure_connection()
+            self.schema_version = MigrationRunner(clock=self.clock).migrate(self._connection)
+            # Existing sessions are upgraded through independent, idempotent M1
+            # mapping transactions.  This is intentionally outside the migration
+            # DDL transaction and outside Runtime admission.
+            self.backfill_legacy_product_mappings()
+        except BaseException:
+            # Backfill failures are recorded in their own committed recovery
+            # transaction.  Do not leave a half-constructed journal holding a
+            # shared connection after surfacing that failure.
+            self._connection.close()
+            raise
 
     @staticmethod
     def _default_clock() -> str:
@@ -785,6 +822,525 @@ class SQLiteRunJournal:
                 raise PersistenceError("failed to create session") from exc
         return (created_event, message_event)
 
+    def register_repository_identity(
+        self,
+        descriptors: Mapping[str, str],
+        *,
+        repository_id: str | None = None,
+    ) -> str:
+        """Register a generated product identity and its observed descriptors.
+
+        Only a previously registered canonical path or Git common-directory can
+        discover an identity.  Remote and history evidence is retained for
+        inspection, but deliberately cannot merge independent clones.
+        """
+
+        normalized = {
+            kind: value for kind, value in descriptors.items() if kind and value
+        }
+        if not normalized:
+            raise ValueError("at least one non-empty repository descriptor is required")
+        timestamp = self.clock()
+        with self._lock:
+            with self._write_transaction():
+                selected = repository_id
+                if selected is None:
+                    discovery = [
+                        (kind, value)
+                        for kind, value in normalized.items()
+                        if kind in {"canonical_path", "git_common_dir"}
+                    ]
+                    candidates = {
+                        str(row["repository_id"])
+                        for kind, value in discovery
+                        for row in self._connection.execute(
+                            """
+                            SELECT repository_id FROM repository_descriptors
+                            WHERE descriptor_kind=? AND descriptor_value=?
+                            """,
+                            (kind, value),
+                        )
+                    }
+                    if len(candidates) > 1:
+                        raise PersistenceError("repository descriptor discovery is ambiguous")
+                    selected = next(iter(candidates), str(uuid.uuid4()))
+                existing = self._connection.execute(
+                    "SELECT 1 FROM repository_identities WHERE repository_id=?", (selected,)
+                ).fetchone()
+                if existing is None:
+                    if repository_id is not None:
+                        raise PersistenceError("repository identity must be registered before adding descriptors")
+                    self._connection.execute(
+                        "INSERT INTO repository_identities(repository_id, created_at) VALUES (?, ?)",
+                        (selected, timestamp),
+                    )
+                for kind, value in normalized.items():
+                    if kind in {"canonical_path", "git_common_dir"}:
+                        conflict = self._connection.execute(
+                            """
+                            SELECT repository_id FROM repository_descriptors
+                            WHERE descriptor_kind=? AND descriptor_value=?
+                            """,
+                            (kind, value),
+                        ).fetchone()
+                        if conflict is not None and str(conflict["repository_id"]) != selected:
+                            raise PersistenceError(
+                                "a discovery descriptor cannot belong to multiple repository identities"
+                            )
+                    exists = self._connection.execute(
+                        """
+                        SELECT 1 FROM repository_descriptors
+                        WHERE repository_id=? AND descriptor_kind=? AND descriptor_value=?
+                        """,
+                        (selected, kind, value),
+                    ).fetchone()
+                    if exists is None:
+                        self._connection.execute(
+                            """
+                            INSERT INTO repository_descriptors(
+                                descriptor_id, repository_id, descriptor_kind,
+                                descriptor_value, observed_at
+                            ) VALUES (?, ?, ?, ?, ?)
+                            """,
+                            (str(uuid.uuid4()), selected, kind, value, timestamp),
+                        )
+        return selected
+
+    def get_repository_identity(self, repository_id: str) -> RepositoryIdentity | None:
+        """Load a generated M1 identity; descriptor evidence remains separate."""
+
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT repository_id, created_at FROM repository_identities WHERE repository_id=?",
+                (repository_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        try:
+            return RepositoryIdentity(str(row["repository_id"]), str(row["created_at"]))
+        except (TypeError, ValueError) as exc:
+            raise PersistenceError("corrupt repository identity") from exc
+
+    def list_repository_descriptors(self, repository_id: str) -> list[RepositoryDescriptor]:
+        """Load ordered discovery evidence without making it identity authority."""
+
+        with self._lock:
+            rows = self._connection.execute(
+                """
+                SELECT descriptor_id, repository_id, descriptor_kind, descriptor_value
+                FROM repository_descriptors WHERE repository_id=?
+                ORDER BY descriptor_kind, descriptor_value, descriptor_id
+                """,
+                (repository_id,),
+            ).fetchall()
+        try:
+            return [
+                RepositoryDescriptor(
+                    str(row["descriptor_id"]),
+                    str(row["repository_id"]),
+                    str(row["descriptor_kind"]),
+                    str(row["descriptor_value"]),
+                )
+                for row in rows
+            ]
+        except (TypeError, ValueError) as exc:
+            raise PersistenceError("corrupt repository descriptor") from exc
+
+    def ensure_legacy_product_mapping(
+        self,
+        session_id: str,
+        *,
+        failure_hook: Callable[[str], None] | None = None,
+    ) -> RuntimeExecution:
+        """Atomically create, or return, the private M1 mapping for one Session.
+
+        This is deliberately a separate M1 transaction from legacy Session
+        creation.  It supplies recoverable compatibility data without changing
+        legacy ``run_task()`` admission/lifecycle atomicity.
+        """
+
+        timestamp = self.clock()
+        with self._lock:
+            with self._write_transaction():
+                mapped = self._connection.execute(
+                    """
+                    SELECT runtime_execution_id, legacy_session_id, turn_id,
+                           workspace_binding_id
+                    FROM runtime_executions WHERE legacy_session_id=?
+                    """,
+                    (session_id,),
+                ).fetchone()
+                if mapped is not None:
+                    # Never bless a pre-existing V5 row merely because its
+                    # execution row survives.  A reopen/backfill must reject
+                    # a broken aggregate before recording recovery.
+                    execution = self.get_legacy_product_mapping(session_id)
+                    if execution is None:
+                        raise PersistenceError("mapped legacy session has no runtime execution")
+                    self._mark_mapping_recovered(session_id, timestamp)
+                    return execution
+                session = self._connection.execute(
+                    "SELECT source_path, workspace_path FROM sessions WHERE id=?", (session_id,)
+                ).fetchone()
+                if session is None:
+                    raise SessionNotFound(session_id)
+                # The path is a mutable descriptor, never the identity value.
+                canonical_path = str(Path(str(session["source_path"])).resolve())
+                repository_id = self._register_repository_identity_in_transaction(
+                    {"canonical_path": canonical_path}, timestamp
+                )
+                scope_row = self._connection.execute(
+                    """
+                    SELECT project_scope_id FROM project_scopes
+                    WHERE repository_id=? AND relative_path='.'
+                    """,
+                    (repository_id,),
+                ).fetchone()
+                if scope_row is None:
+                    project_scope_id = str(uuid.uuid4())
+                    self._connection.execute(
+                        """
+                        INSERT INTO project_scopes(project_scope_id, repository_id, relative_path, created_at)
+                        VALUES (?, ?, '.', ?)
+                        """,
+                        (project_scope_id, repository_id, timestamp),
+                    )
+                else:
+                    project_scope_id = str(scope_row["project_scope_id"])
+                workspace_path = session["workspace_path"]
+                if workspace_path:
+                    binding_kind = "legacy_copied_workspace"
+                    binding_locator = str(Path(str(workspace_path)).resolve())
+                else:
+                    # No Runtime workspace was recorded yet. Do not make the
+                    # source descriptor look like an execution workspace.
+                    binding_kind = "legacy_unprepared_compatibility"
+                    binding_locator = f"legacy-session:{session_id}:workspace-not-recorded"
+                workspace_binding_id = str(uuid.uuid4())
+                self._connection.execute(
+                    """
+                    INSERT INTO workspace_bindings(
+                        workspace_binding_id, repository_id, project_scope_id,
+                        binding_kind, locator, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        workspace_binding_id,
+                        repository_id,
+                        project_scope_id,
+                        binding_kind,
+                        binding_locator,
+                        timestamp,
+                    ),
+                )
+                conversation_id = str(uuid.uuid4())
+                self._connection.execute(
+                    """
+                    INSERT INTO conversations(
+                        conversation_id, repository_id, project_scope_id,
+                        default_workspace_binding_id, provenance_kind, created_at
+                    ) VALUES (?, ?, ?, ?, 'synthetic_legacy_import', ?)
+                    """,
+                    (conversation_id, repository_id, project_scope_id, workspace_binding_id, timestamp),
+                )
+                turn_id = str(uuid.uuid4())
+                self._connection.execute(
+                    """
+                    INSERT INTO turns(turn_id, conversation_id, ordinal, provenance_kind, created_at)
+                    VALUES (?, ?, 1, 'synthetic_legacy_import', ?)
+                    """,
+                    (turn_id, conversation_id, timestamp),
+                )
+                self._connection.execute(
+                    """
+                    INSERT INTO conversation_semantic_events(
+                        conversation_event_id, conversation_id, sequence, event_type,
+                        provenance_kind, provenance_json, created_at
+                    ) VALUES (?, ?, 1, 'legacy_session_imported', 'synthetic_legacy_mapping', ?, ?)
+                    """,
+                    (
+                        str(uuid.uuid4()),
+                        conversation_id,
+                        _json_dumps(
+                            {
+                                "legacy_session_id": session_id,
+                                "semantic_limit": (
+                                    "mapping only; does not reconstruct an InitialRequest "
+                                    "or historical interactive exchange"
+                                ),
+                            }
+                        ),
+                        timestamp,
+                    ),
+                )
+                hook = failure_hook or self.mapping_failure_hook
+                if hook is not None:
+                    hook("before_runtime_execution_insert")
+                runtime_execution_id = str(uuid.uuid4())
+                self._connection.execute(
+                    """
+                    INSERT INTO runtime_executions(
+                        runtime_execution_id, legacy_session_id, turn_id,
+                        workspace_binding_id, created_at
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (runtime_execution_id, session_id, turn_id, workspace_binding_id, timestamp),
+                )
+                self._mark_mapping_recovered(session_id, timestamp)
+                return RuntimeExecution(
+                    runtime_execution_id=runtime_execution_id,
+                    legacy_session_id=session_id,
+                    turn_id=turn_id,
+                    workspace_binding_id=workspace_binding_id,
+                )
+
+    def backfill_legacy_product_mappings(self) -> list[RuntimeExecution]:
+        """Map every legacy Session, allowing a later retry after interruption."""
+
+        with self._lock:
+            session_ids = [
+                str(row["id"])
+                for row in self._connection.execute("SELECT id FROM sessions ORDER BY created_at, id")
+            ]
+        mappings: list[RuntimeExecution] = []
+        for session_id in session_ids:
+            try:
+                mappings.append(self.ensure_legacy_product_mapping(session_id))
+            except Exception as error:
+                # Mapping rows roll back as a unit. Record the recovery seam in
+                # a separate transaction, then surface the failed backfill.
+                try:
+                    self.record_legacy_product_mapping_failure(session_id, error)
+                except Exception:
+                    pass
+                raise
+        return mappings
+
+    def get_legacy_product_mapping(self, session_id: str) -> RuntimeExecution | None:
+        with self._lock:
+            row = self._connection.execute(
+                """
+                SELECT runtime_execution_id, legacy_session_id, turn_id, workspace_binding_id
+                FROM runtime_executions WHERE legacy_session_id=?
+                """,
+                (session_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            execution = RuntimeExecution(
+                runtime_execution_id=str(row["runtime_execution_id"]),
+                legacy_session_id=str(row["legacy_session_id"]),
+                turn_id=str(row["turn_id"]),
+                workspace_binding_id=str(row["workspace_binding_id"]),
+            )
+            inspected = self.inspect_legacy_product_mapping(session_id)
+            if inspected is None:
+                raise PersistenceError("corrupt product mapping has no complete aggregate")
+            inspected_execution = inspected["runtime_execution"]
+            if inspected_execution != execution:
+                raise PersistenceError("corrupt product mapping has mismatched runtime execution")
+            return execution
+
+    def record_legacy_product_mapping_failure(self, session_id: str, error: Exception) -> None:
+        """Persist an observable recovery seam without changing a RunResult."""
+
+        timestamp = self.clock()
+        with self._lock:
+            with self._write_transaction():
+                self._connection.execute(
+                    """
+                    INSERT INTO product_mapping_failures(
+                        legacy_session_id, attempt_count, last_error,
+                        first_failed_at, last_failed_at, recovered_at
+                    ) VALUES (?, 1, ?, ?, ?, NULL)
+                    ON CONFLICT(legacy_session_id) DO UPDATE SET
+                        attempt_count=product_mapping_failures.attempt_count + 1,
+                        last_error=excluded.last_error,
+                        last_failed_at=excluded.last_failed_at,
+                        recovered_at=NULL
+                    """,
+                    (session_id, f"{type(error).__name__}: {error}", timestamp, timestamp),
+                )
+
+    def get_legacy_product_mapping_failure(self, session_id: str) -> dict[str, object] | None:
+        with self._lock:
+            row = self._connection.execute(
+                """
+                SELECT attempt_count, last_error, first_failed_at, last_failed_at, recovered_at
+                FROM product_mapping_failures WHERE legacy_session_id=?
+                """,
+                (session_id,),
+            ).fetchone()
+        return None if row is None else dict(row)
+
+    def inspect_legacy_product_mapping(self, session_id: str) -> dict[str, object] | None:
+        """Return M1 records for compatibility inspection, without IPC exposure."""
+
+        with self._lock:
+            execution_exists = self._connection.execute(
+                "SELECT 1 FROM runtime_executions WHERE legacy_session_id=?", (session_id,)
+            ).fetchone()
+            row = self._connection.execute(
+                """
+            SELECT execution.runtime_execution_id, execution.legacy_session_id,
+                   execution.turn_id, execution.workspace_binding_id,
+                   turn.conversation_id, turn.ordinal, turn.provenance_kind AS turn_provenance,
+                   conversation.repository_id, conversation.project_scope_id,
+                   conversation.default_workspace_binding_id AS conversation_binding_id,
+                   conversation.provenance_kind AS conversation_provenance,
+                   scope.repository_id AS scope_repository_id, scope.relative_path,
+                   binding.repository_id AS binding_repository_id,
+                   binding.project_scope_id AS binding_project_scope_id,
+                   binding.binding_kind, binding.locator,
+                   default_binding.repository_id AS default_binding_repository_id,
+                   default_binding.project_scope_id AS default_binding_project_scope_id,
+                   identity.created_at AS repository_created_at
+            FROM runtime_executions execution
+            JOIN turns turn ON turn.turn_id=execution.turn_id
+            JOIN conversations conversation ON conversation.conversation_id=turn.conversation_id
+            JOIN project_scopes scope ON scope.project_scope_id=conversation.project_scope_id
+            JOIN workspace_bindings binding ON binding.workspace_binding_id=execution.workspace_binding_id
+            JOIN workspace_bindings default_binding
+                ON default_binding.workspace_binding_id=conversation.default_workspace_binding_id
+            JOIN repository_identities identity ON identity.repository_id=conversation.repository_id
+            WHERE execution.legacy_session_id=?
+                """,
+                (session_id,),
+            ).fetchone()
+            if row is None:
+                if execution_exists is not None:
+                    raise PersistenceError("corrupt product mapping has a broken aggregate relation")
+                return None
+            try:
+                repository = RepositoryIdentity(str(row["repository_id"]), str(row["repository_created_at"]))
+                scope = ProjectScope(
+                    str(row["project_scope_id"]),
+                    str(row["scope_repository_id"]),
+                    str(row["relative_path"]),
+                )
+                binding = WorkspaceBinding(
+                    str(row["workspace_binding_id"]),
+                    str(row["binding_repository_id"]),
+                    str(row["binding_project_scope_id"]),
+                    str(row["binding_kind"]),
+                    str(row["locator"]),
+                )
+                conversation = Conversation(
+                    str(row["conversation_id"]),
+                    repository.repository_id,
+                    scope.project_scope_id,
+                    str(row["conversation_binding_id"]),
+                    str(row["conversation_provenance"]),
+                )
+                turn = Turn(
+                    str(row["turn_id"]),
+                    conversation.conversation_id,
+                    int(row["ordinal"]),
+                    str(row["turn_provenance"]),
+                )
+                execution = RuntimeExecution(
+                    str(row["runtime_execution_id"]),
+                    str(row["legacy_session_id"]),
+                    turn.turn_id,
+                    binding.workspace_binding_id,
+                )
+            except (TypeError, ValueError) as exc:
+                raise PersistenceError("corrupt product mapping violates a domain invariant") from exc
+            if (
+                scope.repository_id != repository.repository_id
+                or binding.repository_id != repository.repository_id
+                or binding.project_scope_id != scope.project_scope_id
+                or str(row["default_binding_repository_id"]) != repository.repository_id
+                or str(row["default_binding_project_scope_id"]) != scope.project_scope_id
+            ):
+                raise PersistenceError("corrupt product mapping has inconsistent aggregate relations")
+        return {
+            "repository_identity": repository,
+            "project_scope": scope,
+            "workspace_binding": binding,
+            "conversation": conversation,
+            "turn": turn,
+            "runtime_execution": execution,
+        }
+
+    def list_conversation_semantic_events(self, session_id: str) -> list[dict[str, Any]]:
+        with self._lock:
+            rows = self._connection.execute(
+                """
+            SELECT event.event_type, event.provenance_kind, event.provenance_json, event.sequence
+            FROM conversation_semantic_events event
+            JOIN turns turn ON turn.conversation_id=event.conversation_id
+            JOIN runtime_executions execution ON execution.turn_id=turn.turn_id
+            WHERE execution.legacy_session_id=? ORDER BY event.sequence
+                """,
+                (session_id,),
+            ).fetchall()
+        return [
+            {
+                "event_type": str(row["event_type"]),
+                "provenance_kind": str(row["provenance_kind"]),
+                "provenance": _json_loads(str(row["provenance_json"]), description="semantic provenance"),
+                "sequence": int(row["sequence"]),
+            }
+            for row in rows
+        ]
+
+    def _register_repository_identity_in_transaction(
+        self, descriptors: Mapping[str, str], timestamp: str
+    ) -> str:
+        discovery = [
+            (kind, value)
+            for kind, value in descriptors.items()
+            if kind in {"canonical_path", "git_common_dir"}
+        ]
+        candidates = {
+            str(row["repository_id"])
+            for kind, value in discovery
+            for row in self._connection.execute(
+                """
+                SELECT repository_id FROM repository_descriptors
+                WHERE descriptor_kind=? AND descriptor_value=?
+                """,
+                (kind, value),
+            )
+        }
+        if len(candidates) > 1:
+            raise PersistenceError("repository descriptor discovery is ambiguous")
+        repository_id = next(iter(candidates), str(uuid.uuid4()))
+        if not candidates:
+            self._connection.execute(
+                "INSERT INTO repository_identities(repository_id, created_at) VALUES (?, ?)",
+                (repository_id, timestamp),
+            )
+        for kind, value in descriptors.items():
+            exists = self._connection.execute(
+                """
+                SELECT 1 FROM repository_descriptors
+                WHERE repository_id=? AND descriptor_kind=? AND descriptor_value=?
+                """,
+                (repository_id, kind, value),
+            ).fetchone()
+            if exists is None:
+                self._connection.execute(
+                    """
+                    INSERT INTO repository_descriptors(
+                        descriptor_id, repository_id, descriptor_kind,
+                        descriptor_value, observed_at
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (str(uuid.uuid4()), repository_id, kind, value, timestamp),
+                )
+        return repository_id
+
+    def _mark_mapping_recovered(self, session_id: str, timestamp: str) -> None:
+        self._connection.execute(
+            """
+            UPDATE product_mapping_failures SET recovered_at=?
+            WHERE legacy_session_id=? AND recovered_at IS NULL
+            """,
+            (timestamp, session_id),
+        )
+
     def acquire_lease(self, session_id: str, owner: str, *, lease_seconds: float = 60.0) -> None:
         if not owner:
             raise ValueError("lease owner cannot be empty")
@@ -947,7 +1503,13 @@ class SQLiteRunJournal:
                 "SELECT request_id FROM model_calls WHERE session_id=? ORDER BY ordinal",
                 (session_id,),
             ).fetchall()
-        return [self.get_model_call(session_id, str(row["request_id"])) for row in rows if row]
+        calls: list[dict[str, Any]] = []
+        for row in rows:
+            call = self.get_model_call(session_id, str(row["request_id"]))
+            if call is None:
+                raise InvariantViolation("listed model call cannot be read back")
+            calls.append(call)
+        return calls
 
     def list_tool_calls(self, session_id: str) -> list[dict[str, Any]]:
         with self._lock:
@@ -956,14 +1518,16 @@ class SQLiteRunJournal:
                 "SELECT call_id FROM tool_calls WHERE session_id=? ORDER BY ordinal",
                 (session_id,),
             ).fetchall()
-        return [
-            self.get_tool_call(
+        calls: list[dict[str, Any]] = []
+        for row in rows:
+            call = self.get_tool_call(
                 session_id,
                 _unscoped_tool_call_id(session_id, str(row["call_id"])),
             )
-            for row in rows
-            if row
-        ]
+            if call is None:
+                raise InvariantViolation("listed tool call cannot be read back")
+            calls.append(call)
+        return calls
 
     def get_summary(self, session_id: str, summary_id: str) -> SummaryRecord | None:
         with self._lock:

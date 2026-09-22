@@ -9,13 +9,16 @@
 > [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。
 > **Product-Layer M0 Architecture Freeze + Characterization 已获 owner Accepted 并完成；不要与
 > 已完成的历史 Runtime M0 混淆。正式 [`M1 execution contract`](./execution-contracts/m1-execution-contract.md)
-> 已发布，M1 为 ACTIVE；M2–M7 仍未激活。** 本发布轮只落契约和状态文档，尚未开始 M1 实现；当前
-> Session、copied workspace、Schema v4、Runtime IPC、Memory wiring 和所有 target product behavior
-> 均保持 M0 characterization 的 legacy 基线。
+> 已 Accepted/完成；M2–M7 仍未激活。** M1 已实现 additive Schema v5 product identity/
+> legacy mapping；`sessions`、copied workspace、Runtime IPC、Memory wiring 与所有 M2–M7 target
+> product behavior 仍保持 legacy compatibility boundary，详见 [`m1-product-persistence-design.md`](./m1-product-persistence-design.md)。
+> M1 verification 为 197 run：196 passed、1 个保留 M3 expected failure，coverage 79.9%（高于 70%
+> 门槛），owner acceptance 已完成；完整证据见
+> [`evidence/m1-implementation-verification-2026-09-22.md`](./evidence/m1-implementation-verification-2026-09-22.md)。
 > V1 开发能力与验收范围已冻结在
 > [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)，但这只是未来 M4/M7
 > acceptance contract，不表示其中的 direct-tree、Git、delete、完整 Python workflow 或 interactive
-> responsiveness 已实现。P2-R1 不再是下一候选；后续 M1 实施只能按已发布契约的封闭范围进行。
+> responsiveness 已实现。P2-R1 不再是下一候选；后续 Product work 必须等待明确激活的 M2+ 契约。
 > M0 报告与证据见 [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)：
 > M0 证据收口后的测试总数为 183：182 pass、1 个 M3-owned expected failure；14-run 完整 scripted baseline 与
 > 25-run stability baseline 均无 infrastructure failure。未运行 live Provider，未改生产代码或 Schema。
@@ -70,8 +73,9 @@
 - Working memory 继续由 session/messages/context 管理；新增的长期层只包含 episodic 与 semantic
   memory，scope 为 session/repository/user。Procedural memory 仍属于未来 P2-M3 Skill。
 - `MemoryRecord` v1 保存 scope/kind/content、committed Runtime provenance、repository revision、
-  confidence/expiry、status、supersedes、content hash 和 optimistic version。SQLite schema v4 的
-  `memory_records`、`memory_events`、`memory_retrievals` 分别作为记录、生命周期和检索审计 authority。
+  confidence/expiry、status、supersedes、content hash 和 optimistic version。M1 additive Schema v5
+  保留原 schema v4 的 `memory_records`、`memory_events`、`memory_retrievals`，它们分别作为记录、
+  生命周期和检索审计 authority。
 - 所有写入先是 `proposed`；schema、journal provenance、scope ownership、revision、Secret、完整工具
   输出、宿主绝对路径、嵌入式指令和去重检查通过后，仍需显式 activate。支持 reject、stale、
   supersede 和 delete；delete 清空原文，只保留 tombstone/hash/audit。

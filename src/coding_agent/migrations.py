@@ -7,7 +7,7 @@ from typing import Callable, Sequence
 from coding_agent.domain import utc_now
 
 
-LATEST_SCHEMA_VERSION = 4
+LATEST_SCHEMA_VERSION = 5
 
 
 class MigrationError(RuntimeError):
@@ -226,7 +226,110 @@ V4 = Migration(
 )
 
 
-MIGRATIONS: tuple[Migration, ...] = (V1, V2, V3, V4)
+# M1 product-layer records are additive.  They intentionally do not alter the
+# legacy Runtime tables: ``sessions`` remains the physical Runtime execution
+# record throughout the compatibility window.
+V5 = Migration(
+    version=5,
+    statements=(
+        """
+        CREATE TABLE IF NOT EXISTS repository_identities (
+            repository_id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS repository_descriptors (
+            descriptor_id TEXT PRIMARY KEY,
+            repository_id TEXT NOT NULL REFERENCES repository_identities(repository_id),
+            descriptor_kind TEXT NOT NULL,
+            descriptor_value TEXT NOT NULL,
+            observed_at TEXT NOT NULL,
+            UNIQUE(repository_id, descriptor_kind, descriptor_value)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS project_scopes (
+            project_scope_id TEXT PRIMARY KEY,
+            repository_id TEXT NOT NULL REFERENCES repository_identities(repository_id),
+            relative_path TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(repository_id, relative_path)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS workspace_bindings (
+            workspace_binding_id TEXT PRIMARY KEY,
+            repository_id TEXT NOT NULL REFERENCES repository_identities(repository_id),
+            project_scope_id TEXT NOT NULL REFERENCES project_scopes(project_scope_id),
+            binding_kind TEXT NOT NULL,
+            locator TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS conversations (
+            conversation_id TEXT PRIMARY KEY,
+            repository_id TEXT NOT NULL REFERENCES repository_identities(repository_id),
+            project_scope_id TEXT NOT NULL REFERENCES project_scopes(project_scope_id),
+            default_workspace_binding_id TEXT NOT NULL REFERENCES workspace_bindings(workspace_binding_id),
+            provenance_kind TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS turns (
+            turn_id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL REFERENCES conversations(conversation_id),
+            ordinal INTEGER NOT NULL,
+            provenance_kind TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(conversation_id, ordinal)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS runtime_executions (
+            runtime_execution_id TEXT PRIMARY KEY,
+            legacy_session_id TEXT NOT NULL UNIQUE REFERENCES sessions(id),
+            turn_id TEXT NOT NULL UNIQUE REFERENCES turns(turn_id),
+            workspace_binding_id TEXT NOT NULL REFERENCES workspace_bindings(workspace_binding_id),
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS conversation_semantic_events (
+            conversation_event_id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL REFERENCES conversations(conversation_id),
+            sequence INTEGER NOT NULL,
+            event_type TEXT NOT NULL,
+            provenance_kind TEXT NOT NULL,
+            provenance_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(conversation_id, sequence)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS product_mapping_failures (
+            legacy_session_id TEXT PRIMARY KEY REFERENCES sessions(id),
+            attempt_count INTEGER NOT NULL,
+            last_error TEXT NOT NULL,
+            first_failed_at TEXT NOT NULL,
+            last_failed_at TEXT NOT NULL,
+            recovered_at TEXT
+        )
+        """,
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS repository_discovery_descriptor_unique
+        ON repository_descriptors(descriptor_kind, descriptor_value)
+        WHERE descriptor_kind IN ('canonical_path', 'git_common_dir')
+        """,
+        "CREATE INDEX IF NOT EXISTS runtime_executions_legacy_session ON runtime_executions(legacy_session_id)",
+        "CREATE INDEX IF NOT EXISTS conversation_semantic_events_order ON conversation_semantic_events(conversation_id, sequence)",
+    ),
+)
+
+
+MIGRATIONS: tuple[Migration, ...] = (V1, V2, V3, V4, V5)
 
 
 def _validate_migrations(migrations: Sequence[Migration]) -> None:
@@ -245,10 +348,12 @@ class MigrationRunner:
         migrations: Sequence[Migration] = MIGRATIONS,
         *,
         clock: Callable[[], str] = utc_now,
+        migration_fault_hook: Callable[[int, str], None] | None = None,
     ):
         _validate_migrations(migrations)
         self.migrations = tuple(migrations)
         self.clock = clock
+        self.migration_fault_hook = migration_fault_hook
 
     @property
     def latest_version(self) -> int:
@@ -283,10 +388,14 @@ class MigrationRunner:
             try:
                 for statement in migration.statements:
                     connection.execute(statement)
+                if self.migration_fault_hook is not None:
+                    self.migration_fault_hook(migration.version, "before_provenance_insert")
                 connection.execute(
                     "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
                     (migration.version, self.clock()),
                 )
+                if self.migration_fault_hook is not None:
+                    self.migration_fault_hook(migration.version, "before_commit")
                 connection.commit()
             except BaseException:
                 connection.rollback()

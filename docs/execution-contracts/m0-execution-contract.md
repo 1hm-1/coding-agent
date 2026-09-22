@@ -10,9 +10,13 @@ Completion status (2026-09-21): **ACCEPTED / COMPLETE**
 > requires a separately issued and activated formal execution contract.
 
 > Later activation annotation (2026-09-22): the formal
-> [`M1 execution contract`](./m1-execution-contract.md) has been issued and M1 is now **ACTIVE**.
+> [`M1 execution contract`](./m1-execution-contract.md) was later issued, implemented, and accepted
+> as complete on 2026-09-22.
 > The preceding text remains the historical M0-issued state; this publication turn starts no M1
 > implementation, leaving current code and Schema v4 at the M0-characterized legacy baseline.
+
+> Later implementation annotation (2026-09-22): M1 later implemented its additive Schema v5
+> identity/mapping scope. This M0 historical body is unchanged; M2–M7 remain inactive.
 
 Executor: **Sol High Codex session**
 

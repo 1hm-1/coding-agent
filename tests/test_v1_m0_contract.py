@@ -161,9 +161,12 @@ class M0MigrationStartingPointTest(unittest.TestCase):
             )
         connection.commit()
 
-    def test_every_committed_schema_start_migrates_idempotently_to_v4(self) -> None:
+    def test_every_committed_schema_start_migrates_idempotently_to_current_schema(self) -> None:
         catalog = json.loads((FIXTURES / "migration_catalog.json").read_text(encoding="utf-8"))
-        self.assertEqual(catalog["latest"], LATEST_SCHEMA_VERSION)
+        # The catalog is immutable M0 evidence: its v4 is historical rather
+        # than a claim that later additive migrations do not exist.
+        self.assertEqual(catalog["latest"], 4)
+        self.assertGreaterEqual(LATEST_SCHEMA_VERSION, catalog["latest"])
         for start in catalog["supported_starts"]:
             with self.subTest(start=start), tempfile.TemporaryDirectory() as temporary:
                 connection = sqlite3.connect(Path(temporary) / "state.db")
@@ -173,7 +176,7 @@ class M0MigrationStartingPointTest(unittest.TestCase):
                 self.assertEqual(runner.migrate(connection), LATEST_SCHEMA_VERSION)
                 self.assertEqual(runner.migrate(connection), LATEST_SCHEMA_VERSION)
                 versions = [row[0] for row in connection.execute("SELECT version FROM schema_migrations ORDER BY version")]
-                self.assertEqual(versions, [1, 2, 3, 4])
+                self.assertEqual(versions, list(range(1, LATEST_SCHEMA_VERSION + 1)))
                 tables = {
                     row[0]
                     for row in connection.execute(
@@ -183,6 +186,19 @@ class M0MigrationStartingPointTest(unittest.TestCase):
                 expected = {"schema_migrations"}
                 for names in catalog["versions"].values():
                     expected.update(names)
+                expected.update(
+                    {
+                        "repository_identities",
+                        "repository_descriptors",
+                        "project_scopes",
+                        "workspace_bindings",
+                        "conversations",
+                        "turns",
+                        "runtime_executions",
+                        "conversation_semantic_events",
+                        "product_mapping_failures",
+                    }
+                )
                 self.assertEqual(tables, expected)
                 connection.close()
 

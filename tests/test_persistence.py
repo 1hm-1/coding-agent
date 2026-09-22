@@ -28,6 +28,8 @@ from coding_agent.migrations import (
     V1,
     V2,
     V3,
+    V4,
+    V5,
 )
 from coding_agent.persistence import (
     JournalConflict,
@@ -93,7 +95,7 @@ class PersistenceFoundationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             db_path = Path(temporary) / "state.db"
             journal = SQLiteRunJournal(db_path)
-            self.assertEqual(journal.schema_version, 4)
+            self.assertEqual(journal.schema_version, 5)
             self.assertEqual(journal.connection.execute("PRAGMA foreign_keys").fetchone()[0], 1)
             self.assertEqual(
                 journal.connection.execute("PRAGMA journal_mode").fetchone()[0].lower(),
@@ -132,6 +134,15 @@ class PersistenceFoundationTest(unittest.TestCase):
                     "memory_records",
                     "memory_events",
                     "memory_retrievals",
+                    "repository_identities",
+                    "repository_descriptors",
+                    "project_scopes",
+                    "workspace_bindings",
+                    "conversations",
+                    "turns",
+                    "runtime_executions",
+                    "conversation_semantic_events",
+                    "product_mapping_failures",
                     "sqlite_sequence",
                 },
             )
@@ -152,28 +163,112 @@ class PersistenceFoundationTest(unittest.TestCase):
             with self.assertRaises(FutureSchemaVersion):
                 SQLiteRunJournal(db_path)
 
-    def test_memory_schema_migration_rolls_back_partial_version(self) -> None:
+    def test_product_schema_migration_rolls_back_partial_version(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            connection = sqlite3.connect(Path(temporary) / "state.db")
-            broken_v4 = Migration(
-                version=4,
-                statements=(
-                    "CREATE TABLE partial_memory_table(id TEXT PRIMARY KEY)",
-                    "THIS IS NOT VALID SQL",
-                ),
-            )
-            with self.assertRaises(sqlite3.OperationalError):
-                MigrationRunner((V1, V2, V3, broken_v4)).migrate(connection)
-            self.assertIsNone(
-                connection.execute(
-                    "SELECT name FROM sqlite_master WHERE name = 'partial_memory_table'"
-                ).fetchone()
-            )
-            self.assertEqual(
-                [row[0] for row in connection.execute("SELECT version FROM schema_migrations")],
-                [1, 2, 3],
-            )
-            connection.close()
+            for boundary in range(0, len(V5.statements) + 1):
+                with self.subTest(statement_boundary=boundary):
+                    connection = sqlite3.connect(Path(temporary) / f"state-{boundary}.db")
+                    broken_v5 = Migration(
+                        version=5,
+                        statements=(*V5.statements[:boundary], "THIS IS NOT VALID SQL"),
+                    )
+                    with self.assertRaises(sqlite3.OperationalError):
+                        MigrationRunner((V1, V2, V3, V4, broken_v5)).migrate(connection)
+                    self.assertIsNone(
+                        connection.execute(
+                            "SELECT name FROM sqlite_master WHERE name = 'repository_identities'"
+                        ).fetchone()
+                    )
+                    self.assertEqual(
+                        [row[0] for row in connection.execute("SELECT version FROM schema_migrations")],
+                        [1, 2, 3, 4],
+                    )
+                    connection.close()
+
+    def test_product_schema_provenance_and_commit_failures_rollback_legacy_session(self) -> None:
+        """V5 failure after DDL must not lose the readable v4 Runtime record."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            for fault_point in ("before_provenance_insert", "before_commit"):
+                with self.subTest(fault_point=fault_point):
+                    db_path = Path(temporary) / f"state-{fault_point}.db"
+                    connection = sqlite3.connect(db_path)
+                    seed_v4 = Migration(
+                        version=5,
+                        statements=("THIS IS NOT VALID SQL",),
+                    )
+                    with self.assertRaises(sqlite3.OperationalError):
+                        MigrationRunner((V1, V2, V3, V4, seed_v4)).migrate(connection)
+                    snapshot = self.snapshot(f"legacy-{fault_point}")
+                    connection.execute(
+                        """
+                        INSERT INTO sessions(
+                            id, task, source_path, workspace_path, state, policy_json,
+                            source_fingerprint, final_answer, failure_json, step_count,
+                            model_calls, tool_calls, last_event_sequence, version, created_at,
+                            updated_at, lease_owner, lease_expires_at, interrupt_requested_at,
+                            resume_target_state, context_version
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, NULL, NULL, ?, ?, ?)
+                        """,
+                        (
+                            snapshot.session_id,
+                            snapshot.task,
+                            snapshot.source_path,
+                            snapshot.workspace_path,
+                            snapshot.state.value,
+                            json.dumps(snapshot.policy.to_dict(), sort_keys=True),
+                            snapshot.source_fingerprint,
+                            snapshot.final_answer,
+                            json.dumps(snapshot.failure, sort_keys=True),
+                            snapshot.step_count,
+                            snapshot.model_calls,
+                            snapshot.tool_calls,
+                            snapshot.version,
+                            snapshot.created_at,
+                            snapshot.updated_at,
+                            snapshot.interrupt_requested_at,
+                            (
+                                snapshot.resume_target_state.value
+                                if snapshot.resume_target_state is not None
+                                else None
+                            ),
+                            snapshot.context_version,
+                        ),
+                    )
+                    connection.execute(
+                        "INSERT INTO checkpoints(session_id, state, snapshot_json, updated_at) VALUES (?, ?, ?, ?)",
+                        (snapshot.session_id, snapshot.state.value, snapshot.to_json(), snapshot.updated_at),
+                    )
+                    connection.commit()
+
+                    def fail_at(version: int, point: str) -> None:
+                        if version == 5 and point == fault_point:
+                            raise RuntimeError(f"injected {point}")
+
+                    with self.assertRaisesRegex(RuntimeError, fault_point):
+                        MigrationRunner(migration_fault_hook=fail_at).migrate(connection)
+                    self.assertIsNone(
+                        connection.execute(
+                            "SELECT name FROM sqlite_master WHERE name = 'repository_identities'"
+                        ).fetchone()
+                    )
+                    self.assertEqual(
+                        [row[0] for row in connection.execute("SELECT version FROM schema_migrations")],
+                        [1, 2, 3, 4],
+                    )
+                    self.assertEqual(
+                        connection.execute("SELECT task FROM sessions WHERE id=?", (snapshot.session_id,)).fetchone()[0],
+                        snapshot.task,
+                    )
+                    self.assertEqual(
+                        connection.execute("SELECT snapshot_json FROM checkpoints WHERE session_id=?", (snapshot.session_id,)).fetchone()[0],
+                        snapshot.to_json(),
+                    )
+                    connection.close()
+
+                    upgraded = SQLiteRunJournal(db_path)
+                    self.assertEqual(upgraded.load_snapshot(snapshot.session_id), snapshot)
+                    upgraded.close()
 
     def test_snapshot_and_session_message_event_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

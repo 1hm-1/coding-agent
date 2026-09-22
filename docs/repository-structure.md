@@ -77,7 +77,9 @@ coding-agent/
 │   ├── domain.py                     # 核心值对象、enum 和错误
 │   ├── export.py                     # SQLite committed events → JSONL projection
 │   ├── migrations.py                 # ordered SQLite schema migrations
-│   ├── persistence.py                # SQLite journal、snapshot、summary 和事务
+│   ├── persistence.py                # schema v5 SQLite journal、snapshot、summary、M1 mapping 和事务
+│   ├── product_domain.py             # M1 Product persistence value objects/invariants
+│   ├── product_persistence.py        # M1 ProductRepository port + legacy compatibility adapter
 │   ├── runtime.py                    # 显式 FSM 与执行循环
 │   ├── test_profiles.py              # 可信测试命令配置
 │   ├── command_profiles.py            # 结构化命令 profile/allowlist
@@ -88,7 +90,7 @@ coding-agent/
 │   │   ├── domain.py                 # MemoryRecord/query/hit/selection
 │   │   ├── policy.py                 # scope/content admission
 │   │   ├── service.py                # proposal/approval/lifecycle + provenance
-│   │   ├── sqlite.py                 # schema v4 Memory authority
+│   │   ├── sqlite.py                 # schema v5 SQLite authority (including Memory tables)
 │   │   ├── retrieval.py              # bounded weighted lexical/metadata retrieval
 │   │   └── evaluation.py             # cold/warm quality metrics
 │   ├── protocol/
@@ -154,7 +156,7 @@ CLI 的 `--agent-home` 必须在 source 外。例如：
 
 ```text
 /tmp/coding-agent-demo/
-├── state.db                          # SQLite 权威事实来源（schema v4，含 Memory audit）
+├── state.db                          # SQLite 权威事实来源（schema v5，含 M1 Product + Memory audit）
 ├── traces/
 │   └── <session-id>.jsonl
 └── workspaces/
@@ -192,7 +194,7 @@ tests/
 └── test_models.py              # M2.3 offline adapter/retry contract tests
 
 <agent-home>/
-├── state.db                    # 已实现：schema v4 权威事实来源，含 summaries + Memory
+├── state.db                    # 已实现：schema v5 权威事实来源，含 summaries + M1 Product + Memory
 ├── traces/                     # 已实现：从 DB 导出的可重建 projection
 └── workspaces/
 ```
@@ -230,7 +232,7 @@ src/coding_agent/memory/
 ├── domain.py                  # MemoryRecord/query/hit/selection
 ├── policy.py                  # scope/content admission
 ├── service.py                 # proposal/approval/lifecycle + journal provenance
-├── sqlite.py                  # schema v4 Memory authority
+├── sqlite.py                  # schema v5 SQLite authority (including Memory tables)
 ├── retrieval.py              # bounded weighted lexical/metadata retrieval
 ├── retrieval_backends.py     # S3.7 离线 candidate contracts/backends；不接生产路径
 ├── retrieval_spike.py        # label-free evaluator、统一 funnel/metrics/evidence writer

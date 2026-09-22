@@ -4,8 +4,9 @@
 > 当前基线：M5.1
 > 当前变化：Phase 2 P2-M1 producer 与 P2-M2 Memory governance 已完成；Coding Agent V1 产品层
 > 架构已冻结，Product-Layer M0 已 Accepted/完成；正式
-> [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) 已发布且 M1 ACTIVE，M2–M7
-> 尚未激活。本发布轮没有代码/Schema 改动，本文描述的当前模块仍为 legacy 基线。
+> [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) 已 Accepted/完成，M2–M7
+> 尚未激活。M1 已加入 additive Schema v5 与 Product persistence modules；legacy Runtime compatibility
+> boundary 仍保持不变。
 
 本文回答当前 v0.1 Runtime 的三个问题：功能应该放在哪个模块、模块之间允许传递什么、错误由谁处理。
 当前可执行契约见 [`contracts.md`](./contracts.md)，Runtime 架构与安全边界见
@@ -77,7 +78,9 @@ tests → public modules above
 | `sandbox/runner.py` | namespace 内私有 rootfs、mount、limits、直接 argv、进程树监控/清理 | 被应用直接 import；不能成为通用命令入口 |
 | `workspace.py` | 创建隔离副本、路径防逃逸、fingerprint、Git baseline | 判断任务是否修复成功 |
 | `trajectory.py` | 兼容 JSONL store、record、replay、semantic projection | 恢复执行、再次调用工具、SQLite SQL |
-| `persistence.py` | SQLite schema v4、snapshot/message/event/checkpoint、model/tool journal、summary、lease 原子 mutation | 模型/工具调用、状态迁移决策、Memory lifecycle、JSONL 格式化 |
+| `persistence.py` | SQLite schema v5、snapshot/message/event/checkpoint、model/tool journal、summary、lease 原子 mutation，以及 M1 Product mapping/backfill | 模型/工具调用、状态迁移决策、Memory lifecycle、JSONL 格式化 |
+| `product_domain.py` | M1 RepositoryIdentity、RepositoryDescriptor、ProjectScope、WorkspaceBinding、Conversation、Turn、RuntimeExecution 与 synthetic semantic-event 值对象/不变量 | Runtime FSM、Turn Admission、ModelRequest 或 interactive product workflow |
+| `product_persistence.py` | 窄 `ProductRepository` port 与 Legacy Session→Product compatibility adapter；SQLite 仍为唯一实现/authority | 第二状态 authority、公共 IPC、M2 admission 原子发布 |
 | `migrations.py` | 有序、幂等、未知未来版本拒绝的 schema migration | session 业务状态、运行时编排 |
 | `memory/domain.py` | versioned episodic/semantic record、scope/status、provenance 与 retrieval value objects | SQL、模型调用、Runtime 状态 |
 | `memory/policy.py`、`memory/service.py` | write scope/provenance/content policy 与显式 proposal/approval/stale/delete lifecycle | 绕过 approval、工具执行、Context 拼装 |

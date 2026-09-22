@@ -20,7 +20,7 @@
 | `test_m3_evaluation.py` | eval/integration | strict manifest/containment、fresh repetition、trusted oracle、基础设施失败、task/runtime 分离、metrics、paired A/B |
 | `test_m4_sandbox.py` | security/integration/fault | capability fail-closed、namespace escape/network/secret/symlink/proc/device、resource/output limits、process cleanup、parallel session、SQLite recovery |
 | `test_m4_execution.py` | security/contract/integration/fault | structured argv/profile allowlist、cwd/schema、approval fail-closed、non-zero observation、sandbox cleanup 和 non-idempotent recovery |
-| `test_memory.py` | contract/security/integration/fault/eval | schema v4、proposal lifecycle、provenance/scope/content policy、transaction rollback、bounded retrieval、leakage、Context manifest、默认入口关闭与多任务 cold/warm benchmark |
+| `test_memory.py` | contract/security/integration/fault/eval | Schema v5（保留 v4 Memory tables）、proposal lifecycle、provenance/scope/content policy、transaction rollback、bounded retrieval、leakage、Context manifest、默认入口关闭与多任务 cold/warm benchmark |
 | `live_provider_smoke.py` | opt-in live contract | 凭据门控的 OpenAI-compatible/Anthropic 真实 adapter 请求；不进入默认 discovery |
 
 当前统一命令：

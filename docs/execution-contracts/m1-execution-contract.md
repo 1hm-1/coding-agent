@@ -1,7 +1,7 @@
 # Product-Layer M1 Execution Contract — Domain Spine and Persistence Migration
 
 Date issued: 2026-09-22
-Status: **ACTIVE**
+Status: **ACCEPTED / COMPLETE** (2026-09-22)
 Milestone owner: the coordinating/reviewing session
 Executor: Terra High
 Activation: This document formally activates **Product-Layer M1 only**. It replaces no Accepted
@@ -201,22 +201,27 @@ destructive downgrade or delete legacy rows as its rollback strategy.
 The M1 checklist is intentionally open on issuance. No item may be checked until success, expected
 failure, and rollback/recovery evidence required above all pass.
 
-- [ ] Physical identity, registry/discovery, schema, key, and provenance decisions documented and
+- [x] Physical identity, registry/discovery, schema, key, and provenance decisions documented and
       ADR-consistent.
-- [ ] Additive migration and compatibility adapters implemented; v0–v4 starts and future-version
+- [x] Additive migration and compatibility adapters implemented; v0–v4 starts and future-version
       rejection verified.
-- [ ] Legacy Session mappings and synthetic historical provenance are lossless and inspectable.
-- [ ] Newly created legacy one-shot runs receive a synthetic Product mapping in the same SQLite
+- [x] Legacy Session mappings and synthetic historical provenance are lossless and inspectable.
+- [x] Newly created legacy one-shot runs receive a synthetic Product mapping in the same SQLite
       authority; the mapping transaction is atomic/idempotent/recoverable without a half-created
       mapping and does not change legacy `run_task()` lifecycle/admission atomicity.
-- [ ] Product transcript/semantic events are distinct from Runtime/tool audit without duplicate FSM
+- [x] Product transcript/semantic events are distinct from Runtime/tool audit without duplicate FSM
       authority.
-- [ ] Migration statement/transaction failure, restart, rollback, and mixed historical-data
+- [x] Migration statement/transaction failure, restart, rollback, and mixed historical-data
       recovery evidence pass.
-- [ ] Existing one-shot/headless copied-workspace, JSONL/replay, CLI, IPC v1, Memory-off, and four
+- [x] Existing one-shot/headless copied-workspace, JSONL/replay, CLI, IPC v1, Memory-off, and four
       semantic-golden compatibility evidence pass unchanged.
-- [ ] Full M1 verification report and state/navigation updates are complete; no M2–M7 behavior is
+- [x] Full M1 verification report and state/navigation updates are complete; no M2–M7 behavior is
       claimed implemented.
+
+Evidence is recorded in
+[`../evidence/m1-implementation-verification-2026-09-22.md`](../evidence/m1-implementation-verification-2026-09-22.md).
+All checklist evidence is complete and the owner accepted M1 on 2026-09-22. This completion does
+not activate M2–M7.
 
 Stop immediately and request owner direction if an Accepted ADR conflicts with another authority,
 if a required migration cannot preserve a supported legacy reader/payload, if an implementation
@@ -226,6 +231,6 @@ do not silently broaden or rewrite this issued contract.
 
 ## 10. Downstream status
 
-M1 is **ACTIVE**. M2, M3, M4, M5, M6 (optional), and M7 remain **inactive**. M1 completion does
+M1 is **ACCEPTED / COMPLETE**. M2, M3, M4, M5, M6 (optional), and M7 remain **inactive**. M1 completion does
 not autoactivate any of them, does not open the M3+M4 real-working-tree mutation gate, and does
 not authorize legacy removal.

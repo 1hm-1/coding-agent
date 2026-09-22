@@ -4,8 +4,9 @@
 > P2-R1 原默认 serving 假设已被 M2-lite Memory ADR 取代；Memory 实施未激活；P2-M3 顺延。
 > 横向产品架构已冻结，旧 CR-R1 已 superseded；Product-Layer M0 Architecture Freeze +
 > Characterization 已获 owner Accepted 并完成。正式
-> [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) 已发布且 M1 ACTIVE；
-> M2–M7 仍未激活。本发布轮只发布契约和状态文档，尚未开始 M1 实现，当前代码与 Schema 仍为 legacy 基线。
+> [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) 已 Accepted/完成；
+> M2–M7 仍未激活。M1 additive Schema v5 identity/mapping 已实现；legacy Runtime kernel、copied
+> workspace 和所有 M2–M7 target behavior 保持兼容边界，见 [`m1-product-persistence-design.md`](./m1-product-persistence-design.md)。
 > V1 capability/metrics/responsiveness acceptance 已补齐；P2-R1 不再是下一候选。M0 只允许
 > characterization，不表示未来 target product behavior 已实现。
 > 固定版本：`v0.1.0`；安装、测试、离线 Eval、Demo 和支持边界见 `docs/releases/v0.1.0.md`。
@@ -23,7 +24,7 @@
    [`architecture-consistency-audit.md`](./architecture-consistency-audit.md)、
    [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)、
    [已完成的 M0 milestone execution contract](./execution-contracts/m0-execution-contract.md)、
-   [active M1 milestone execution contract](./execution-contracts/m1-execution-contract.md)、
+   [completed M1 milestone execution contract](./execution-contracts/m1-execution-contract.md)、
    [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)、全部 accepted ADR，以及
    已完成的 P2-M1/P2-M2 和 Runtime IPC 权威规范。旧
    `conversation-runtime-refactor-plan.md` 只作历史记录，不得从中激活实施。
@@ -72,9 +73,9 @@ spike 的 8 个隔离/一致性测试和 S3.8 audit 的 3 个测试）。Ruff、
   procedural memory、RAG/vector 仍未激活，没有明确里程碑不得加入代码或依赖。
 - `v0.1.0` 没有 `protocol-info`、`run-headless` 或 Runtime IPC v1；这些能力只属于当前 `0.2.0.dev0` 开发树。
 - **Product-Layer M0** 已 Accepted/完成，不要与已完成的历史 Runtime M0 混淆。M0 仅做
-  architecture freeze/characterization，未实现 target product behavior。M1 已由正式契约激活；
-  M2–M7 仍未授权。本发布轮未实现 M1，因此产品实体、Schema、语义修复和生产 metrics instrumentation
-  仍保持旧基线。后续 M1 work 只能按 active contract 的封闭范围进行；M0 历史 testability exception
+  architecture freeze/characterization，未实现 target product behavior。M1 已由正式契约实施并
+  Accepted/完成 additive Schema v5 identity/mapping；M2–M7 仍未授权。后续 Product work 必须先
+  激活对应里程碑；M0 历史 testability exception
   已随 M0 完成而关闭。
 
 ## 4. M2/M3/M4/M5.1 完成事实与下一步推荐入口
@@ -282,8 +283,8 @@ governance/control-plane 部分继续有效。Memory 实施尚未激活。本次
 [`architecture-consistency-audit.md`](./architecture-consistency-audit.md) 与
 [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。旧
 [`conversation-runtime-refactor-plan.md`](./conversation-runtime-refactor-plan.md) 已 superseded；新路线
-Product-Layer M0 characterization 已 Accepted/完成；正式 M1 execution contract 已发布且 M1 ACTIVE，
-M2–M7 与其 target behavior 仍未激活。本发布轮没有 M1 代码/Schema 改动。
+Product-Layer M0/M1 已 Accepted/完成；M1 additive Schema v5 identity/mapping 已实现。M2–M7 与其
+target behavior 仍未激活。
 
 后续开发协作采用“主控发布任务、审阅成果并检查代码；Terra High 执行已批准的具体修改”的分工。
 这是仓库开发流程，不是产品 multi-Agent 功能，也不激活任何 milestone。
@@ -315,9 +316,10 @@ docs/v1-development-capability-matrix.md、全部 accepted ADR 和 Runtime IPC v
 权威规范。P2-M1/P2-M2 已完成；169/169 是 M0 前历史基线，M0 证据收口为 183 个测试：
 182 pass、1 个 M3-owned expected failure，不要将这些数字当作本窗口新运行。横向产品架构已冻结，
 Product-Layer M0 characterization 已 Accepted/完成；不要与历史 Runtime M0 混淆。正式 M1 execution
-contract 已发布且 M1 ACTIVE，但本发布轮没有开始实现，当前代码/Schema 仍为 legacy 基线。M2–M7
+contract 已 Accepted/完成，M1 additive Schema v5 identity/mapping 已实现，legacy Runtime
+compatibility 保持不变。M2–M7
 和其 target product behavior 均未激活。P2-R1 不再是下一候选，Memory 定位为 optional M2-lite。
-后续 M1 只能按契约实现；不得提前加入 M2–M7 的 Product behavior、Skill、MCP、多 Agent、RAG/vector、
+后续 Product work 必须先明确激活对应 M2–M7 契约；不得提前加入 M2–M7 的 Product behavior、Skill、MCP、多 Agent、RAG/vector、
 shell 字符串或默认网络。
 ```
 

@@ -33,6 +33,10 @@ from coding_agent.persistence import (
     SQLiteRunJournal,
     ToolCallMutation,
 )
+from coding_agent.product_persistence import (
+    LegacySessionProductCompatibilityAdapter,
+    ProductRepository,
+)
 from coding_agent.runtime import AgentRuntime
 from coding_agent.sandbox.base import SandboxExecutor
 from coding_agent.sandbox.local_container import build_default_sandbox_executor
@@ -160,8 +164,22 @@ class AgentApplication:
             self._export_after_run(result)
             return result
         finally:
-            if self.journal is not None and owner is not None:
-                self.journal.release_lease(session.id, owner)
+            # M1 compatibility mapping is intentionally subsequent to Runtime
+            # execution. It has its own atomic/retryable transaction and
+            # cannot change legacy run_task() admission/lifecycle atomicity.
+            # When a copied workspace exists its immutable binding records that
+            # workspace; otherwise the adapter records explicit unprepared
+            # compatibility provenance rather than claiming source execution.
+            try:
+                if isinstance(self.journal, ProductRepository):
+                    # The M1 adapter is deliberately post-run: it cannot change
+                    # the legacy lifecycle/admission boundary or RunResult.
+                    LegacySessionProductCompatibilityAdapter(self.journal).map_after_legacy_run(
+                        session.id
+                    )
+            finally:
+                if self.journal is not None and owner is not None:
+                    self.journal.release_lease(session.id, owner)
 
     def resume_session(
         self,
@@ -419,14 +437,15 @@ class AgentApplication:
 
     @contextmanager
     def _interrupt_signal_handler(self, session_id: str):
-        if self.journal is None or threading.current_thread() is not threading.main_thread():
+        journal = self.journal
+        if journal is None or threading.current_thread() is not threading.main_thread():
             yield
             return
         previous = signal.getsignal(signal.SIGINT)
 
         def handle_interrupt(signum: int, frame: object) -> None:
             del signum, frame
-            self.journal.request_interrupt(session_id)
+            journal.request_interrupt(session_id)
 
         signal.signal(signal.SIGINT, handle_interrupt)
         try:

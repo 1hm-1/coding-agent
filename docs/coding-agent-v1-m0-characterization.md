@@ -260,3 +260,6 @@ then-current activation boundary. **Later activation annotation (2026-09-22):** 
 [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) is now published and M1
 is ACTIVE. This publication turn makes no M1 implementation change, so this M0 report and its
 evidence remain historical rather than being rewritten as Product behavior.
+
+**Later implementation annotation (2026-09-22):** M1 later implemented its additive Schema v5
+identity/mapping scope. This M0 report and evidence remain historical; M2–M7 remain inactive.

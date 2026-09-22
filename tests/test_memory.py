@@ -90,7 +90,7 @@ class MemoryFixture(unittest.TestCase):
 class MemoryDomainAndStoreTest(MemoryFixture):
     def test_proposal_round_trip_and_explicit_activation_audit(self) -> None:
         proposed = self.propose()
-        self.assertEqual(self.store.schema_version, 4)
+        self.assertEqual(self.store.schema_version, 5)
         self.assertEqual(self.store.get(proposed.memory_id), proposed)
         self.assertEqual(proposed.status, MemoryStatus.PROPOSED)
 
@@ -106,7 +106,7 @@ class MemoryDomainAndStoreTest(MemoryFixture):
 
         reopened = SQLiteMemoryStore(self.db_path, clock=lambda: NOW)
         try:
-            self.assertEqual(reopened.schema_version, 4)
+            self.assertEqual(reopened.schema_version, 5)
             self.assertEqual(reopened.get(active.memory_id), active)
         finally:
             reopened.close()

@@ -1,7 +1,7 @@
 # Target Architecture Snapshot
 
-Date: 2026-09-20
-Status: **Architecture frozen; Product-Layer M0 Accepted and complete; M1 ACTIVE; M2–M7 inactive; this publication turn has not implemented target behavior**
+Date: 2026-09-22
+Status: **Architecture frozen; Product-Layer M0 Accepted and complete; M1 Accepted/complete with its additive Product persistence spine implemented; M2–M7 inactive**
 
 ## Purpose and authority
 
@@ -9,9 +9,10 @@ This document is the concise target view of the finalized Coding Agent product A
 not a replacement for the individual decisions. Current implementation facts remain documented in
 [`current-state.md`](./current-state.md) and [`architecture.md`](./architecture.md).
 
-The formal [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) is active.
-Its 2026-09-22 publication turn changes only documentation: current code and Schema v4 remain the
-M0-characterized legacy baseline, and M2–M7 remain inactive.
+The formal [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) is Accepted and complete.
+M1 has implemented its additive Schema v5 Product persistence spine and compatibility mappings;
+the legacy Runtime Kernel remains authoritative for existing one-shot execution and M2–M7 remain
+inactive.
 
 The product target is a Claude Code-like local Coding Agent with a simple product model above a
 reliable, recoverable RuntimeExecution kernel.

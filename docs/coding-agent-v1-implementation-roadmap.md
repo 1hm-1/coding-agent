@@ -1,7 +1,7 @@
 # Coding Agent V1 Product-Layer Implementation Roadmap
 
-Date: 2026-09-20
-Status: **Architecture frozen; Product-Layer M0 Accepted and complete; M1 ACTIVE; M2–M7 inactive**
+Date: 2026-09-22
+Status: **Architecture frozen; Product-Layer M0 Accepted and complete; M1 Accepted/complete; M2–M7 inactive**
 
 ## Purpose
 
@@ -16,10 +16,10 @@ the historical Runtime M0–M5 milestones.
 
 The user explicitly activated Product-Layer M0 for architecture freeze and characterization and
 accepted it as complete on 2026-09-21. The formal
-[`M1 execution contract`](./execution-contracts/m1-execution-contract.md) was issued on 2026-09-22,
-so M1 is ACTIVE; M2–M7 remain inactive. This contract-publication turn starts no M1 implementation,
-and none of the target product behavior described by those milestones was implemented by M0. This
-Product-Layer M0 must not be confused with the completed historical Runtime M0 milestone in
+[`M1 execution contract`](./execution-contracts/m1-execution-contract.md) was issued and completed
+on 2026-09-22; M2–M7 remain inactive. M1 implements its additive domain/persistence scope;
+the physical choices are recorded in [`m1-product-persistence-design.md`](./m1-product-persistence-design.md).
+No target product behavior from M2–M7 was implemented by M0 or M1. This Product-Layer M0 must not be confused with the completed historical Runtime M0 milestone in
 [`roadmap.md`](./roadmap.md).
 
 ## Implementation principles
@@ -284,9 +284,12 @@ accepted.
 
 Formal milestone execution contract: [`execution-contracts/m1-execution-contract.md`](./execution-contracts/m1-execution-contract.md).
 
-**Current activation boundary:** M1 is ACTIVE, but the 2026-09-22 publication turn releases only
-the contract and state/navigation updates. It makes no production, schema, migration, test,
-fixture, scaffold, or semantic change. M2–M7 remain inactive.
+**Completed boundary:** M1 is Accepted/complete and implemented only the additive domain spine,
+Schema v5 migration, synthetic compatibility mappings, and the required evidence. M2–M7 remain
+inactive; no direct-working-tree, Turn Admission, product CLI, context, permission, or Memory
+behavior is included. Its completed checklist evidence is in
+[`evidence/m1-implementation-verification-2026-09-22.md`](./evidence/m1-implementation-verification-2026-09-22.md);
+owner acceptance has been recorded; M2–M7 remain inactive.
 
 ### Scope
 
