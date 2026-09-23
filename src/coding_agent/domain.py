@@ -106,7 +106,8 @@ ALLOWED_TRANSITIONS: Mapping[RuntimeState, frozenset[RuntimeState]] = {
         }
     ),
     RuntimeState.WAITING_USER_INPUT: frozenset(
-        {RuntimeState.BUILDING_CONTEXT, RuntimeState.INTERRUPTED, RuntimeState.CANCELLED,
+        {RuntimeState.PREPARING_WORKSPACE, RuntimeState.BUILDING_CONTEXT,
+         RuntimeState.INTERRUPTED, RuntimeState.CANCELLED,
          RuntimeState.FAILED}
     ),
     RuntimeState.WAITING_PERMISSION: frozenset(
@@ -302,9 +303,16 @@ class ToolResult:
 class Usage:
     input_tokens: int = 0
     output_tokens: int = 0
+    present: bool | None = None
+
+    def __post_init__(self) -> None:
+        if self.present is None:
+            object.__setattr__(self, "present", bool(self.input_tokens or self.output_tokens))
 
     def to_dict(self) -> JsonObject:
-        return asdict(self)
+        if not self.present:
+            return {}
+        return {"input_tokens": self.input_tokens, "output_tokens": self.output_tokens}
 
 
 @dataclass(frozen=True)
@@ -323,6 +331,25 @@ class ModelRequest:
             "max_output_tokens": self.max_output_tokens,
             "metadata": dict(self.metadata),
         }
+
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, Any]) -> "ModelRequest":
+        messages = raw.get("messages", [])
+        tools = raw.get("tools", [])
+        metadata = raw.get("metadata", {})
+        if not isinstance(messages, list) or any(not isinstance(item, Mapping) for item in messages):
+            raise ValueError("model request messages must be objects")
+        if not isinstance(tools, list) or any(not isinstance(item, Mapping) for item in tools):
+            raise ValueError("model request tools must be objects")
+        if not isinstance(metadata, Mapping):
+            raise ValueError("model request metadata must be an object")
+        return cls(
+            request_id=str(raw["request_id"]),
+            messages=tuple(Message.from_dict(item) for item in messages),
+            tools=tuple(dict(item) for item in tools),
+            max_output_tokens=int(raw["max_output_tokens"]),
+            metadata=dict(metadata),
+        )
 
 
 @dataclass(frozen=True)
@@ -365,6 +392,7 @@ class ModelResponse:
             usage=Usage(
                 input_tokens=int(usage.get("input_tokens", 0)),
                 output_tokens=int(usage.get("output_tokens", 0)),
+                present="input_tokens" in usage and "output_tokens" in usage,
             ),
             finish_reason=str(raw.get("finish_reason", "stop")),
             provider_metadata=dict(metadata),
@@ -817,7 +845,9 @@ class BuiltContext:
 
     @property
     def needs_compression(self) -> bool:
-        if self.compressed:
+        if self.compressed and not any(
+            section.name == "recent" and section.messages for section in self.sections
+        ):
             return False
         if self.high_watermark_tokens is None:
             return False

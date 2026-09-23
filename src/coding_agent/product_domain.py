@@ -174,8 +174,10 @@ class InstructionManifest:
 
     def __post_init__(self) -> None:
         _require_text(self.instruction_manifest_id, "instruction_manifest_id")
-        if self.placeholder_kind != "m2_placeholder_no_discovery":
-            raise ValueError("M2 cannot claim instruction discovery")
+        if self.placeholder_kind not in {
+            "m2_placeholder_no_discovery", "m3_resolved_instruction_manifest",
+        }:
+            raise ValueError("unsupported instruction manifest representation")
 
 
 @dataclass(frozen=True)
@@ -223,3 +225,276 @@ class WorkspaceWriterClaim:
             _require_text(str(getattr(self, field)), field)
         if self.claim_epoch < 1:
             raise ValueError("claim epoch must be positive")
+
+
+# M3 immutable context records. They model Product evidence only: RuntimeState
+# and provider wire representations deliberately remain outside this module.
+@dataclass(frozen=True)
+class InstructionSnapshot:
+    snapshot_id: str
+    content_digest: str
+    content: str
+
+    def __post_init__(self) -> None:
+        for field in ("snapshot_id", "content_digest"):
+            _require_text(str(getattr(self, field)), field)
+
+
+@dataclass(frozen=True)
+class FrozenModelRequest:
+    request_id: str
+    request_digest: str
+    context_manifest_id: str
+    normalized_payload: Mapping[str, object]
+
+    def __post_init__(self) -> None:
+        for field in ("request_id", "request_digest", "context_manifest_id"):
+            _require_text(str(getattr(self, field)), field)
+
+
+@dataclass(frozen=True)
+class ContextManifest:
+    context_manifest_id: str
+    request_id: str
+    request_digest: str
+    manifest_digest: str
+    policy_version: str
+
+    def __post_init__(self) -> None:
+        for field in ("context_manifest_id", "request_id", "request_digest", "manifest_digest", "policy_version"):
+            _require_text(str(getattr(self, field)), field)
+
+
+@dataclass(frozen=True)
+class ProviderAttempt:
+    attempt_id: str
+    request_id: str
+    ordinal: int
+    status: str
+
+    def __post_init__(self) -> None:
+        for field in ("attempt_id", "request_id", "status"):
+            _require_text(str(getattr(self, field)), field)
+        if self.ordinal < 1:
+            raise ValueError("attempt ordinal must be positive")
+
+
+@dataclass(frozen=True)
+class InstructionSourceRecord:
+    source_id: str
+    locator: str
+    normalized_path: str
+    scope_kind: str
+    authority_rank: int
+    specificity: int
+    revision_digest: str
+    disposition: str
+    reason: str | None = None
+    snapshot: InstructionSnapshot | None = None
+
+    def __post_init__(self) -> None:
+        for field in ("source_id", "locator", "normalized_path", "scope_kind", "revision_digest", "disposition"):
+            _require_text(str(getattr(self, field)), field)
+        if self.authority_rank < 0 or self.specificity < 0:
+            raise ValueError("instruction rank and specificity must be non-negative")
+        if self.disposition == "effective" and self.snapshot is None:
+            raise ValueError("effective instruction source requires an immutable snapshot")
+
+
+@dataclass(frozen=True)
+class InstructionManifestEntry:
+    entry_id: str
+    source: InstructionSourceRecord
+    sequence: int
+    trust_disposition: str
+    disposition: str
+    reason: str | None = None
+
+    def __post_init__(self) -> None:
+        _require_text(self.entry_id, "entry_id")
+        _require_text(self.trust_disposition, "trust_disposition")
+        _require_text(self.disposition, "disposition")
+        if self.sequence < 1:
+            raise ValueError("manifest entry sequence must be positive")
+
+
+@dataclass(frozen=True)
+class InstructionOverrideEdge:
+    edge_id: str
+    winner_entry_id: str
+    loser_entry_id: str
+    conflict_key: str
+    resolution_kind: str
+
+    def __post_init__(self) -> None:
+        for field in ("edge_id", "winner_entry_id", "loser_entry_id", "conflict_key", "resolution_kind"):
+            _require_text(str(getattr(self, field)), field)
+        if self.winner_entry_id == self.loser_entry_id:
+            raise ValueError("instruction override edge cannot be self-referential")
+
+
+@dataclass(frozen=True)
+class ContextSelection:
+    source_class: str
+    source_id: str
+    disposition: str
+    reason: str
+    token_count: int
+    source_digest: str
+
+    def __post_init__(self) -> None:
+        for field in ("source_class", "source_id", "disposition", "reason", "source_digest"):
+            _require_text(str(getattr(self, field)), field)
+        if self.token_count < 0:
+            raise ValueError("selection token count must be non-negative")
+
+
+@dataclass(frozen=True)
+class FrozenContextPackage:
+    messages: tuple[Mapping[str, object], ...]
+    selections: tuple[ContextSelection, ...]
+    policy_version: str
+    token_counter_version: str
+    required_tokens: int
+    optional_tokens: int
+    total_budget: int
+    memory_status: str = "absent"
+
+    def __post_init__(self) -> None:
+        if self.memory_status != "absent":
+            raise ValueError("M3 core Context must keep Memory absent")
+        if min(self.required_tokens, self.optional_tokens, self.total_budget) < 0:
+            raise ValueError("context token counts must be non-negative")
+        # Section counts are allocation estimates. The complete normalized
+        # request is checked with the provider/request counter before freeze.
+
+
+@dataclass(frozen=True)
+class ProviderAttemptOutcome:
+    outcome_id: str
+    attempt_id: str
+    outcome_kind: str
+    usage_classification: str
+    coverage_status: str
+    payload: Mapping[str, object] = dataclass_field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        for field in ("outcome_id", "attempt_id", "outcome_kind", "usage_classification", "coverage_status"):
+            _require_text(str(getattr(self, field)), field)
+
+
+@dataclass(frozen=True)
+class SummaryClaim:
+    claim_id: str
+    claim_kind: str
+    text: str
+    source_start_sequence: int
+    source_end_sequence: int
+    source_artifact_id: str | None = None
+    source_revision: str | None = None
+    status: str = "valid"
+
+    def __post_init__(self) -> None:
+        for field in ("claim_id", "claim_kind", "text", "status"):
+            _require_text(str(getattr(self, field)), field)
+        if self.source_start_sequence < 1 or self.source_end_sequence < self.source_start_sequence:
+            raise ValueError("summary claim source range is invalid")
+
+
+@dataclass(frozen=True)
+class SummaryArtifact:
+    summary_artifact_id: str
+    conversation_id: str
+    source_start_sequence: int
+    source_end_sequence: int
+    source_digest: str
+    content: str
+    content_digest: str
+    policy_version: str
+    generator_version: str
+    claims: tuple[SummaryClaim, ...] = ()
+    status: str = "valid"
+
+    def __post_init__(self) -> None:
+        for field in (
+            "summary_artifact_id", "conversation_id", "source_digest", "content_digest",
+            "policy_version", "generator_version", "status",
+        ):
+            _require_text(str(getattr(self, field)), field)
+        if self.source_start_sequence < 1 or self.source_end_sequence < self.source_start_sequence:
+            raise ValueError("summary source range is invalid")
+        for claim in self.claims:
+            if claim.source_start_sequence < self.source_start_sequence or claim.source_end_sequence > self.source_end_sequence:
+                raise ValueError("summary claim escapes artifact source range")
+
+
+@dataclass(frozen=True)
+class ToolResultArtifact:
+    artifact_id: str
+    tool_call_id: str
+    channel: str
+    mime_type: str
+    encoding: str
+    content_digest: str
+    captured_size: int
+    range_start: int
+    range_end: int
+    capture_limit: int
+    capture_completeness: str
+    content: bytes | None = None
+
+    def __post_init__(self) -> None:
+        for field in (
+            "artifact_id", "tool_call_id", "channel", "mime_type", "encoding",
+            "content_digest", "capture_completeness",
+        ):
+            _require_text(str(getattr(self, field)), field)
+        if min(self.captured_size, self.range_start, self.range_end, self.capture_limit) < 0:
+            raise ValueError("artifact ranges must be non-negative")
+        if self.range_end < self.range_start:
+            raise ValueError("artifact range is invalid")
+
+
+@dataclass(frozen=True)
+class NormalizedObservation:
+    observation_id: str
+    artifact_id: str
+    status_kind: str
+    semantic: Mapping[str, object]
+    excerpt: str | None
+    prompt_truncated: bool
+    projection_completeness: str
+
+    def __post_init__(self) -> None:
+        for field in ("observation_id", "artifact_id", "status_kind", "projection_completeness"):
+            _require_text(str(getattr(self, field)), field)
+
+
+@dataclass(frozen=True)
+class FileContextItem:
+    file_context_item_id: str
+    workspace_binding_id: str
+    normalized_path: str
+    file_type: str
+    content_hash: str
+    revision: str
+    byte_start: int
+    byte_end: int
+    range_digest: str
+    origin_kind: str
+    origin_id: str
+    status: str = "current"
+    content: bytes | None = None
+    encoding: str = "binary"
+    capture_completeness: str = "unknown"
+
+    def __post_init__(self) -> None:
+        for field in (
+            "file_context_item_id", "workspace_binding_id", "normalized_path", "file_type",
+            "content_hash", "revision", "range_digest", "origin_kind", "origin_id", "status",
+        ):
+            _require_text(str(getattr(self, field)), field)
+        if self.byte_start < 0 or self.byte_end < self.byte_start:
+            raise ValueError("file context byte range is invalid")
+        if self.content is not None and len(self.content) != self.byte_end - self.byte_start:
+            raise ValueError("file context content does not match the selected range")

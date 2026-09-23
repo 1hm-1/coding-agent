@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+import base64
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
@@ -74,6 +75,10 @@ class ProductLifecycleConflict(PersistenceError):
     """A Conversation lifecycle precondition is no longer true."""
 
 
+class StaleProductContext(ProductLifecycleConflict):
+    """Concurrent Product input invalidated an unpublished model decision."""
+
+
 class DirectTreeReadOnlyViolation(PersistenceError):
     """M2 direct working-tree composition rejected a side effect."""
 
@@ -116,6 +121,7 @@ class JournalMutation:
     payload: JsonObject
     message_to_append: Message | None = None
     model_call: "ModelCallMutation | None" = None
+    auxiliary_model_call: "AuxiliaryModelCallMutation | None" = None
     tool_call: "ToolCallMutation | None" = None
     summary: "SummaryMutation | None" = None
     clear_interrupt: bool = False
@@ -134,6 +140,22 @@ class ModelCallMutation:
     error: JsonObject | None = None
     started_at: str | None = None
     finished_at: str | None = None
+    context_manifest: JsonObject | None = None
+
+
+@dataclass(frozen=True)
+class AuxiliaryModelCallMutation:
+    request_id: str
+    backend: str
+    status: str
+    request: JsonObject
+    ordinal: int = 1
+    attempt: int = 1
+    response: JsonObject | None = None
+    error: JsonObject | None = None
+    started_at: str | None = None
+    finished_at: str | None = None
+    context_manifest: JsonObject | None = None
 
 
 @dataclass(frozen=True)
@@ -226,6 +248,19 @@ class RunJournal(Protocol):
     def get_model_call(self, session_id: str, request_id: str) -> dict[str, Any] | None:
         ...
 
+    def get_model_attempt_evidence(
+        self, session_id: str, request_id: str, attempt: int,
+    ) -> dict[str, Any] | None:
+        ...
+
+    def mark_model_attempt_dispatched(
+        self, session_id: str, request_id: str, attempt: int,
+    ) -> None:
+        ...
+
+    def get_pending_summary_attempt(self, session_id: str) -> dict[str, Any] | None:
+        ...
+
     def get_tool_call(self, session_id: str, call_id: str) -> dict[str, Any] | None:
         ...
 
@@ -266,6 +301,12 @@ def _json_loads(raw: str, *, description: str) -> Any:
         return json.loads(raw)
     except (TypeError, ValueError) as exc:
         raise InvariantViolation(f"invalid {description} JSON") from exc
+
+
+def _required_int(value: object, description: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, (int, str)):
+        raise InvariantViolation(f"{description} must be an integer")
+    return int(value)
 
 
 def _scoped_tool_call_id(session_id: str, call_id: str) -> str:
@@ -327,6 +368,8 @@ class SQLiteRunJournal:
             # mapping transactions.  This is intentionally outside the migration
             # DDL transaction and outside Runtime admission.
             self.backfill_legacy_product_mappings()
+            self.backfill_m3_model_evidence()
+            self.backfill_m3_tool_artifacts()
             # M2 recovery barriers are SQLite authority too.  Startup repairs
             # are idempotent and create no artifact in a bound checkout.
             self.repair_recovery_barriers_after_restart()
@@ -403,6 +446,10 @@ class SQLiteRunJournal:
     def _invoke_commit_hook(self) -> None:
         if self.commit_hook is not None:
             self.commit_hook("before_commit")
+
+    def _invoke_fault_stage(self, stage: str) -> None:
+        if self.commit_hook is not None:
+            self.commit_hook(stage)
 
     def _new_event(
         self,
@@ -520,9 +567,12 @@ class SQLiteRunJournal:
         if not mutation.request_id:
             raise InvariantViolation("model request id cannot be empty")
         existing = self._connection.execute(
-            "SELECT session_id FROM model_calls WHERE request_id = ?",
+            "SELECT session_id, request_json FROM model_calls WHERE request_id = ?",
             (mutation.request_id,),
         ).fetchone()
+        request_json = _json_dumps(mutation.request)
+        if existing is not None and str(existing["request_json"]) != request_json:
+            raise InvariantViolation("a frozen model request cannot be overwritten by retry")
         started_at = mutation.started_at or timestamp
         response_json = (
             _json_dumps(mutation.response) if mutation.response is not None else None
@@ -546,34 +596,577 @@ class SQLiteRunJournal:
                     mutation.attempt,
                     mutation.backend,
                     mutation.status,
-                    _json_dumps(mutation.request),
+                    request_json,
                     response_json,
                     error_json,
                     started_at,
                     finished_at,
                 ),
             )
-            return
+        else:
+            self._connection.execute(
+                """
+                UPDATE model_calls SET
+                    attempt=?, backend=?, status=?,
+                    response_json=?, error_json=?, started_at=COALESCE(started_at, ?),
+                    finished_at=?
+                WHERE request_id=? AND session_id=?
+                """,
+                (
+                    mutation.attempt,
+                    mutation.backend,
+                    mutation.status,
+                    response_json,
+                    error_json,
+                    started_at,
+                    finished_at,
+                    mutation.request_id,
+                    session_id,
+                ),
+            )
+        self._record_m3_model_evidence_in_transaction(
+            session_id, mutation, request_json, response_json, error_json,
+            started_at, finished_at, timestamp,
+            legacy_model_call_id=mutation.request_id,
+        )
+
+    def _record_m3_model_evidence_in_transaction(
+        self, session_id: str, mutation: ModelCallMutation | AuxiliaryModelCallMutation,
+        request_json: str,
+        response_json: str | None, error_json: str | None,
+        started_at: str, finished_at: str | None, timestamp: str,
+        *, request_kind: str = "agent", legacy_model_call_id: str | None = None,
+    ) -> None:
+        """Publish the immutable v7 request/manifest/attempt projection atomically.
+
+        The mutual request/manifest foreign keys are deferred until commit.  The
+        request digest covers only normalized request bytes; the audit envelope
+        may therefore bind the manifest digest without creating a digest cycle.
+        """
+        request_digest = hashlib.sha256(request_json.encode("utf-8")).hexdigest()
+        context_manifest_id = str(uuid.uuid5(
+            uuid.NAMESPACE_URL, f"m3-context-manifest:{mutation.request_id}",
+        ))
+        request_payload = _json_loads(request_json, description="frozen model request")
+        if not isinstance(request_payload, Mapping):
+            raise InvariantViolation("frozen model request must be an object")
+        messages = request_payload.get("messages", [])
+        tools = request_payload.get("tools", [])
+        if not isinstance(messages, list) or not isinstance(tools, list):
+            raise InvariantViolation("frozen model request collections are invalid")
+        selections = []
+        for index, message in enumerate(messages, start=1):
+            if not isinstance(message, Mapping):
+                raise InvariantViolation("frozen model request message is invalid")
+            encoded = _json_dumps(dict(message))
+            selections.append({
+                "source_class": "required" if index == len(messages) else "recent_transcript",
+                "source_id": f"message:{index}",
+                "sequence": index,
+                "disposition": "included",
+                "reason": "runtime_frozen_input",
+                "token_count": max(1, (len(encoded.encode("utf-8")) + 3) // 4),
+                "token_classification": "estimated",
+                "source_digest": hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+            })
+        tool_json = _json_dumps(tools)
+        manifest_without_digest = {
+            "context_manifest_id": context_manifest_id,
+            "request_id": mutation.request_id,
+            "request_digest": request_digest,
+            "policy_version": "m3-runtime-compat-v1",
+            "token_counter_version": "utf8-bytes-ceil4-v1",
+            "memory_status": "absent",
+            "selections": selections,
+        }
+        if mutation.context_manifest is not None:
+            supplied = dict(mutation.context_manifest)
+            if (
+                supplied.get("request_id") != mutation.request_id
+                or supplied.get("request_digest") != request_digest
+                or supplied.get("context_manifest_id") != context_manifest_id
+                or supplied.get("memory_status") != "absent"
+            ):
+                raise InvariantViolation("Product ContextManifest does not bind the frozen request")
+            supplied_selections = supplied.get("selections")
+            if not isinstance(supplied_selections, list) or any(
+                not isinstance(item, Mapping) for item in supplied_selections
+            ):
+                raise InvariantViolation("Product ContextManifest selections are invalid")
+            selections = [
+                {
+                    **dict(item), "sequence": index,
+                    "token_classification": str(item.get("token_classification", "estimated")),
+                }
+                for index, item in enumerate(supplied_selections, start=1)
+            ]
+            manifest_without_digest = {
+                key: value for key, value in supplied.items() if key != "manifest_digest"
+            }
+            manifest_digest = hashlib.sha256(
+                _json_dumps(manifest_without_digest).encode("utf-8")
+            ).hexdigest()
+            if supplied.get("manifest_digest") != manifest_digest:
+                raise InvariantViolation("Product ContextManifest digest is invalid")
+            manifest_json = _json_dumps(supplied)
+        else:
+            manifest_digest = hashlib.sha256(
+                _json_dumps(manifest_without_digest).encode("utf-8")
+            ).hexdigest()
+            manifest_json = _json_dumps({
+                **manifest_without_digest, "manifest_digest": manifest_digest,
+            })
+        runtime = self._connection.execute(
+            """SELECT r.runtime_execution_id, r.turn_id, t.conversation_id
+               FROM runtime_executions AS r JOIN turns AS t ON t.turn_id=r.turn_id
+               WHERE r.legacy_session_id=?""",
+            (session_id,),
+        ).fetchone()
+        semantic_end: int | None = None
+        semantic_digest: str | None = None
+        if request_kind == "summary_auxiliary" and runtime is not None:
+            semantic_rows = self._connection.execute(
+                """SELECT sequence, event_type, provenance_kind, provenance_json
+                   FROM conversation_semantic_events WHERE conversation_id=? ORDER BY sequence""",
+                (str(runtime["conversation_id"]),),
+            ).fetchall()
+            if not semantic_rows or [int(row["sequence"]) for row in semantic_rows] != list(
+                range(1, len(semantic_rows) + 1)
+            ):
+                raise InvariantViolation("auxiliary summary has no verified Conversation prefix")
+            prefix = [
+                {"sequence": int(row["sequence"]), "event_type": str(row["event_type"]),
+                 "provenance_kind": str(row["provenance_kind"]),
+                 "payload": _json_loads(str(row["provenance_json"]), description="semantic prefix")}
+                for row in semantic_rows
+            ]
+            semantic_end = len(prefix)
+            semantic_digest = hashlib.sha256(_json_dumps(prefix).encode("utf-8")).hexdigest()
+        session = self._read_session_row(session_id)
+        audit_json = _json_dumps({
+            "context_manifest_id": context_manifest_id,
+            "context_manifest_digest": manifest_digest,
+            "request_digest": request_digest,
+            "provenance": "m3_runtime_freeze" if runtime is not None else "m3_legacy_compatibility",
+            "semantic_prefix_end_sequence": semantic_end,
+            "semantic_prefix_digest": semantic_digest,
+        })
+        existing_request = self._connection.execute(
+            "SELECT request_digest, request_json, context_manifest_id FROM frozen_model_requests WHERE request_id=?",
+            (mutation.request_id,),
+        ).fetchone()
+        if existing_request is None:
+            metadata = request_payload.get("metadata", {})
+            if runtime is not None and mutation.context_manifest is not None:
+                if not isinstance(metadata, Mapping):
+                    raise ProductLifecycleConflict("Product request has no causal snapshot")
+                frontier = self._connection.execute(
+                    """SELECT c.product_version, c.open_turn_id,
+                              (SELECT MAX(sequence) FROM conversation_semantic_events
+                               WHERE conversation_id=c.conversation_id) AS causal_frontier,
+                              (SELECT instruction_manifest_id FROM instruction_manifests
+                               WHERE conversation_id=c.conversation_id
+                               ORDER BY revision DESC LIMIT 1) AS manifest_id,
+                              (SELECT revision FROM instruction_manifests
+                               WHERE conversation_id=c.conversation_id
+                               ORDER BY revision DESC LIMIT 1) AS manifest_revision,
+                              r.runtime_execution_id, r.turn_id
+                       FROM runtime_executions AS r
+                       JOIN turns AS t ON t.turn_id=r.turn_id
+                       JOIN conversations AS c ON c.conversation_id=t.conversation_id
+                       WHERE r.legacy_session_id=?""", (session_id,),
+                ).fetchone()
+                if frontier is None or (
+                    metadata.get("m3_product_version") != int(frontier["product_version"])
+                    or metadata.get("m3_causal_frontier") != int(frontier["causal_frontier"] or 0)
+                    or metadata.get("m3_instruction_manifest_id") != frontier["manifest_id"]
+                    or metadata.get("m3_instruction_manifest_revision") != frontier["manifest_revision"]
+                    or metadata.get("m3_turn_id") != frontier["turn_id"]
+                    or metadata.get("m3_runtime_execution_id") != frontier["runtime_execution_id"]
+                    or frontier["open_turn_id"] != frontier["turn_id"]
+                ):
+                    raise StaleProductContext("Product causal snapshot changed before model freeze")
+                frozen_files = metadata.get("m3_file_sources", ())
+                if not isinstance(frozen_files, list):
+                    raise ProductLifecycleConflict("Product file-source freeze metadata is corrupt")
+                if frozen_files:
+                    binding = self._connection.execute(
+                        """SELECT workspace.locator FROM workspace_bindings AS workspace
+                           JOIN runtime_executions AS runtime
+                             ON runtime.workspace_binding_id=workspace.workspace_binding_id
+                           WHERE runtime.legacy_session_id=?""",
+                        (session_id,),
+                    ).fetchone()
+                    if binding is None:
+                        raise ProductLifecycleConflict("Product file-source binding is unavailable")
+                    root = Path(str(binding["locator"])).resolve(strict=True)
+                    for source in frozen_files:
+                        if not isinstance(source, Mapping) or not isinstance(source.get("path"), str):
+                            raise ProductLifecycleConflict("Product file-source freeze metadata is corrupt")
+                        try:
+                            candidate = (root / str(source["path"])).resolve(strict=True)
+                            candidate.relative_to(root)
+                            if candidate.stat().st_size > 1024 * 1024:
+                                raise ValueError("file exceeds bounded freeze verification")
+                            with candidate.open("rb") as stream:
+                                raw = stream.read(1024 * 1024 + 1)
+                            if (len(raw) > 1024 * 1024
+                                    or hashlib.sha256(raw).hexdigest() != source.get("revision")):
+                                raise StaleProductContext("Product file source changed before model freeze")
+                        except (OSError, ValueError, RuntimeError) as exc:
+                            raise StaleProductContext(
+                                "Product file source is unavailable before model freeze"
+                            ) from exc
+            self._invoke_fault_stage("before_m3_frozen_request")
+            self._connection.execute(
+                """INSERT INTO frozen_model_requests(
+                       request_id, runtime_execution_id, legacy_session_id, request_ordinal,
+                       request_kind, context_manifest_id, request_digest, request_json, audit_json,
+                       semantic_prefix_end_sequence, semantic_prefix_digest,
+                       legacy_model_call_id, runtime_event_sequence, runtime_version, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (mutation.request_id,
+                 str(runtime["runtime_execution_id"]) if runtime is not None else None,
+                 session_id, mutation.ordinal,
+                 (request_kind if request_kind == "summary_auxiliary"
+                  else ("agent" if runtime is not None else "legacy_import")),
+                 context_manifest_id, request_digest, request_json, audit_json,
+                 semantic_end, semantic_digest,
+                 legacy_model_call_id, int(session["last_event_sequence"]) + 1,
+                 int(session["version"]) + 1, timestamp),
+            )
+            self._invoke_fault_stage("after_m3_frozen_request")
+            tool_schema_tokens = _required_int(manifest_without_digest.get(
+                "tool_schema_tokens", max(0, (len(tool_json.encode("utf-8")) + 3) // 4),
+            ), "tool schema tokens")
+            required_tokens = _required_int(manifest_without_digest.get(
+                "required_tokens", sum(int(item["token_count"]) for item in selections),
+            ), "required tokens")
+            optional_tokens = _required_int(
+                manifest_without_digest.get("optional_tokens", 0), "optional tokens",
+            )
+            context_window = _required_int(manifest_without_digest.get(
+                "context_window",
+                max(1, required_tokens + optional_tokens + tool_schema_tokens
+                    + _required_int(request_payload.get("max_output_tokens", 0), "max output tokens")),
+            ), "context window")
+            output_reserve = _required_int(manifest_without_digest.get(
+                "output_reserve", max(0, _required_int(
+                    request_payload.get("max_output_tokens", 0), "max output tokens",
+                )),
+            ), "output reserve")
+            framing_margin = _required_int(
+                manifest_without_digest.get("framing_margin", 0), "framing margin",
+            )
+            policy_version = str(manifest_without_digest.get("policy_version", "m3-runtime-compat-v1"))
+            token_counter_version = str(manifest_without_digest.get("token_counter_version", "utf8-bytes-ceil4-v1"))
+            self._invoke_fault_stage("before_m3_context_manifest")
+            self._connection.execute(
+                """INSERT INTO context_manifests(
+                       context_manifest_id, request_id, request_digest, manifest_digest,
+                       manifest_json, policy_version, token_counter_version,
+                       provider_capability_json, context_window, output_reserve, framing_margin,
+                       tool_schema_tokens, required_tokens, optional_tokens, memory_status, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'absent', ?)""",
+                (context_manifest_id, mutation.request_id, request_digest, manifest_digest,
+                 manifest_json, policy_version, token_counter_version,
+                 _json_dumps({
+                     "provider": manifest_without_digest.get("provider", mutation.backend),
+                     "model": manifest_without_digest.get("model"),
+                     "source": manifest_without_digest.get("capability_source"),
+                     "version": manifest_without_digest.get("capability_version"),
+                     "counter_identity": manifest_without_digest.get("counter_identity"),
+                     "counter_classification": manifest_without_digest.get("counter_classification"),
+                     "tool_accounting": manifest_without_digest.get("tool_accounting"),
+                 }), context_window,
+                 output_reserve, framing_margin, tool_schema_tokens, required_tokens,
+                 optional_tokens, timestamp),
+            )
+            self._invoke_fault_stage("after_m3_context_manifest")
+            context_operation_id = str(uuid.uuid5(
+                uuid.NAMESPACE_URL, f"m3-context-operation:{mutation.request_id}",
+            ))
+            self._invoke_fault_stage("before_m3_context_operation")
+            self._connection.execute(
+                """INSERT INTO context_operations(
+                       context_operation_id, request_id, conversation_id, operation_kind, status,
+                       policy_version, started_at, finished_at, elapsed_ms, metrics_json, coverage_status)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 'unknown')""",
+                (context_operation_id, mutation.request_id,
+                 str(runtime["conversation_id"]) if runtime is not None else None,
+                 "compaction" if request_kind == "summary_auxiliary" else "composition",
+                 "started" if request_kind == "summary_auxiliary" else "succeeded",
+                 policy_version, timestamp,
+                 None if request_kind == "summary_auxiliary" else timestamp,
+                 _json_dumps({"required_tokens": required_tokens,
+                              "class_ledger": manifest_without_digest.get("class_ledger", {}),
+                              "memory_status": "absent"})),
+            )
+            self._invoke_fault_stage("after_m3_context_operation")
+            metric_binding: dict[str, Any] = {
+                "conversation_id": str(runtime["conversation_id"]) if runtime is not None else None,
+                "turn_id": str(runtime["turn_id"]) if runtime is not None else None,
+                "runtime_execution_id": str(runtime["runtime_execution_id"]) if runtime is not None else None,
+                "request_id": mutation.request_id,
+                "context_operation_id": context_operation_id,
+                "timestamp": timestamp,
+            }
+            self._record_m3_count_in_transaction(
+                identity=mutation.request_id, metric_name="frozen_request_count",
+                population_kind=request_kind, **metric_binding,
+            )
+            self._record_m3_count_in_transaction(
+                identity=context_manifest_id, metric_name="context_manifest_count",
+                population_kind=request_kind, **metric_binding,
+            )
+            self._record_m3_count_in_transaction(
+                identity=context_operation_id, metric_name="context_operation_count",
+                population_kind=("compaction_started" if request_kind == "summary_auxiliary"
+                                 else "composition_succeeded"), **metric_binding,
+            )
+            self._invoke_fault_stage("before_m3_context_selections")
+            for item in selections:
+                self._connection.execute(
+                    """INSERT INTO context_selection_items(
+                           selection_id, context_operation_id, source_class, source_id, sequence,
+                           disposition, reason, token_count, token_classification, source_digest)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (str(uuid.uuid5(uuid.NAMESPACE_URL, f"{context_operation_id}:{item['source_id']}")),
+                     context_operation_id, item["source_class"], item["source_id"], item["sequence"],
+                     item["disposition"], item["reason"], item["token_count"],
+                    item["token_classification"], item["source_digest"]),
+                )
+                if item["disposition"] != "included":
+                    self._record_m3_count_in_transaction(
+                        identity=f"{context_operation_id}:{item['source_id']}",
+                        metric_name="context_source_omission_count",
+                        population_kind=str(item["disposition"]),
+                        dimensions={"source_class": item["source_class"], "reason": item["reason"]},
+                        **metric_binding,
+                    )
+            for source_class in sorted({str(item["source_class"]) for item in selections}):
+                included_tokens = sum(
+                    int(item["token_count"]) for item in selections
+                    if item["source_class"] == source_class and item["disposition"] == "included"
+                )
+                self._connection.execute(
+                    """INSERT INTO m3_metric_samples(
+                           metric_sample_id, metric_name, population_kind, conversation_id,
+                           turn_id, runtime_execution_id, request_id, attempt_id,
+                           context_operation_id, value, unit, classification,
+                           coverage_status, dimensions_json, created_at)
+                       VALUES (?, 'context_section_tokens', ?, ?, ?, ?,
+                               ?, NULL, ?, ?, 'tokens', 'estimated', 'complete', ?, ?)""",
+                    (str(uuid.uuid5(uuid.NAMESPACE_URL,
+                                    f"m3-section-metric:{context_operation_id}:{source_class}")),
+                     "context_compaction" if request_kind == "summary_auxiliary" else "context_composition",
+                     str(runtime["conversation_id"]) if runtime is not None else None,
+                     str(runtime["turn_id"]) if runtime is not None else None,
+                     str(runtime["runtime_execution_id"]) if runtime is not None else None,
+                     mutation.request_id, context_operation_id, float(included_tokens),
+                     _json_dumps({"section": source_class,
+                                  "policy_version": policy_version}), timestamp),
+                )
+            self._invoke_fault_stage("after_m3_context_selections")
+            self._connection.execute(
+                """INSERT OR IGNORE INTO m3_metric_samples(
+                       metric_sample_id, metric_name, population_kind, conversation_id,
+                       turn_id, runtime_execution_id, request_id, attempt_id,
+                       context_operation_id, value, unit, classification, coverage_status,
+                       dimensions_json, created_at)
+                   VALUES (?, 'context_compaction_latency_ms', ?, ?,
+                           ?, ?, ?, NULL, ?, NULL, 'ms', 'unknown', 'unknown', ?, ?)""",
+                (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-context-metric:{context_operation_id}")),
+                 "context_compaction" if request_kind == "summary_auxiliary" else "context_composition",
+                 str(runtime["conversation_id"]) if runtime is not None else None,
+                 str(runtime["turn_id"]) if runtime is not None else None,
+                 str(runtime["runtime_execution_id"]) if runtime is not None else None,
+                 mutation.request_id, context_operation_id,
+                 _json_dumps({"operation_kind": (
+                     "compaction" if request_kind == "summary_auxiliary" else "composition"
+                 ), "policy_version": policy_version}),
+                 timestamp),
+            )
+        elif (
+            str(existing_request["request_digest"]) != request_digest
+            or str(existing_request["request_json"]) != request_json
+            or str(existing_request["context_manifest_id"]) != context_manifest_id
+        ):
+            raise InvariantViolation("frozen v7 request evidence changed")
+
+        attempt_id = str(uuid.uuid5(
+            uuid.NAMESPACE_URL, f"m3-model-attempt:{mutation.request_id}:{mutation.attempt}",
+        ))
+        self._invoke_fault_stage("before_m3_attempt_intent")
         self._connection.execute(
-            """
-            UPDATE model_calls SET
-                attempt=?, backend=?, status=?, request_json=?,
-                response_json=?, error_json=?, started_at=COALESCE(started_at, ?),
-                finished_at=?
-            WHERE request_id=? AND session_id=?
-            """,
-            (
-                mutation.attempt,
-                mutation.backend,
-                mutation.status,
-                _json_dumps(mutation.request),
-                response_json,
-                error_json,
-                started_at,
-                finished_at,
-                mutation.request_id,
-                session_id,
-            ),
+            """INSERT OR IGNORE INTO model_attempts(
+                   attempt_id, request_id, ordinal, backend, intent_status,
+                   wall_started_at, monotonic_started, created_at)
+               VALUES (?, ?, ?, ?, 'committed_not_dispatched', ?, NULL, ?)""",
+            (attempt_id, mutation.request_id, mutation.attempt, mutation.backend, started_at, timestamp),
+        )
+        self._invoke_fault_stage("after_m3_attempt_intent")
+        attempt_binding: dict[str, Any] = {
+            "conversation_id": str(runtime["conversation_id"]) if runtime is not None else None,
+            "turn_id": str(runtime["turn_id"]) if runtime is not None else None,
+            "runtime_execution_id": str(runtime["runtime_execution_id"]) if runtime is not None else None,
+            "request_id": mutation.request_id,
+            "attempt_id": attempt_id,
+            "timestamp": timestamp,
+        }
+        if mutation.attempt > 1:
+            self._record_m3_count_in_transaction(
+                identity=attempt_id, metric_name="model_retry_count",
+                population_kind="retry_intent", dimensions={"ordinal": mutation.attempt},
+                **attempt_binding,
+            )
+            self._connection.execute(
+                """INSERT OR IGNORE INTO m3_metric_samples(
+                       metric_sample_id, metric_name, population_kind, conversation_id,
+                       turn_id, runtime_execution_id, request_id, attempt_id,
+                       context_operation_id, value, unit, classification,
+                       coverage_status, dimensions_json, created_at)
+                   VALUES (?, 'retry_recovery_overhead_ms', 'retry_intent', ?, ?, ?, ?, ?,
+                           NULL, NULL, 'ms', 'unknown', 'unknown', ?, ?)""",
+                (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-retry-overhead:{attempt_id}")),
+                 attempt_binding["conversation_id"], attempt_binding["turn_id"],
+                 attempt_binding["runtime_execution_id"], mutation.request_id, attempt_id,
+                 _json_dumps({"reason": "cross-process_monotonic_boundary_unavailable"}), timestamp),
+            )
+        outcome_kind = {
+            "succeeded": "succeeded", "failed": "failed", "uncertain": "unknown",
+            "cancelled": "cancelled",
+        }.get(mutation.status)
+        if outcome_kind is None:
+            return
+        usage: object = None
+        if response_json is not None:
+            decoded_response = _json_loads(response_json, description="model response")
+            if isinstance(decoded_response, Mapping):
+                usage = decoded_response.get("usage")
+        usage_present = isinstance(usage, Mapping) and all(
+            isinstance(value, int) and not isinstance(value, bool) and value >= 0
+            for value in (usage.get("input_tokens"), usage.get("output_tokens"))
+        )
+        usage_classification = "measured" if usage_present else "unknown"
+        if usage_present and mutation.backend == "scripted":
+            usage_classification = "synthetic"
+        coverage_status = "complete" if finished_at is not None and outcome_kind != "unknown" else "censored"
+        dispatch = self._connection.execute(
+            "SELECT monotonic_started FROM model_attempt_dispatches WHERE attempt_id=?",
+            (attempt_id,),
+        ).fetchone()
+        elapsed_ms = None
+        latency_classification = "censored" if outcome_kind == "unknown" else "unknown"
+        if dispatch is not None and dispatch["monotonic_started"] is not None and outcome_kind != "unknown":
+            elapsed_ms = max(0.0, (time.monotonic() - float(dispatch["monotonic_started"])) * 1000.0)
+            latency_classification = "measured"
+        outcome_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-model-outcome:{attempt_id}:{outcome_kind}"))
+        self._connection.execute(
+            """INSERT OR IGNORE INTO model_attempt_outcomes(
+                   outcome_id, attempt_id, outcome_kind, response_json, error_json, usage_json,
+                   usage_classification, wall_finished_at, monotonic_elapsed_ms,
+                   coverage_status, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (outcome_id, attempt_id, outcome_kind, response_json, error_json,
+             _json_dumps(usage) if usage_present else None,
+             usage_classification, finished_at, elapsed_ms, coverage_status, timestamp),
+        )
+        self._record_m3_count_in_transaction(
+            identity=outcome_id, metric_name="model_attempt_outcome_count",
+            population_kind=(f"auxiliary_{outcome_kind}" if request_kind == "summary_auxiliary"
+                             else outcome_kind), **attempt_binding,
+        )
+        if request_kind == "summary_auxiliary":
+            self._record_m3_count_in_transaction(
+                identity=outcome_id, metric_name="context_compaction_outcome_count",
+                population_kind=outcome_kind,
+                context_operation_id=str(uuid.uuid5(
+                    uuid.NAMESPACE_URL, f"m3-context-operation:{mutation.request_id}")),
+                **attempt_binding,
+            )
+        if request_kind == "summary_auxiliary":
+            context_operation_id = str(uuid.uuid5(
+                uuid.NAMESPACE_URL, f"m3-context-operation:{mutation.request_id}",
+            ))
+            operation_coverage = "censored" if outcome_kind == "unknown" else "incomplete"
+            self._connection.execute(
+                """UPDATE context_operations SET status=?, finished_at=?, coverage_status=?
+                   WHERE context_operation_id=? AND operation_kind='compaction'""",
+                (outcome_kind, finished_at, operation_coverage, context_operation_id),
+            )
+            self._connection.execute(
+                """UPDATE m3_metric_samples
+                   SET population_kind=?, coverage_status=?, dimensions_json=?
+                   WHERE context_operation_id=?
+                     AND metric_name='context_compaction_latency_ms'""",
+                (f"compaction_{outcome_kind}", operation_coverage,
+                 _json_dumps({"operation_kind": "compaction", "outcome_kind": outcome_kind,
+                              "timing_boundary": "not_measured"}), context_operation_id),
+            )
+        self._connection.execute(
+            """INSERT INTO m3_metric_samples(
+                   metric_sample_id, metric_name, population_kind, conversation_id, turn_id,
+                   runtime_execution_id, request_id, attempt_id, context_operation_id,
+                   value, unit, classification, coverage_status, dimensions_json, created_at)
+               VALUES (?, 'model_attempt_latency_ms', ?, ?, ?, ?, ?, ?, NULL,
+                       ?, 'ms', ?, ?, ?, ?)""",
+            (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-metric:{attempt_id}:{outcome_kind}")),
+             (f"auxiliary_{outcome_kind}" if request_kind == "summary_auxiliary" else outcome_kind),
+             str(runtime["conversation_id"]) if runtime is not None else None,
+             str(runtime["turn_id"]) if runtime is not None else None,
+             str(runtime["runtime_execution_id"]) if runtime is not None else None,
+             mutation.request_id, attempt_id, elapsed_ms,
+             latency_classification, coverage_status,
+             _json_dumps({"backend": mutation.backend, "attempt": mutation.attempt,
+                          "usage_classification": usage_classification}), timestamp),
+        )
+        usage_value = None
+        if isinstance(usage, Mapping):
+            input_tokens = usage.get("input_tokens")
+            output_tokens = usage.get("output_tokens")
+            if (
+                isinstance(input_tokens, int) and not isinstance(input_tokens, bool)
+                and isinstance(output_tokens, int) and not isinstance(output_tokens, bool)
+                and input_tokens >= 0 and output_tokens >= 0
+            ):
+                usage_value = float(input_tokens + output_tokens)
+        usage_coverage = "complete" if usage_value is not None else (
+            "censored" if outcome_kind == "unknown" else "incomplete"
+        )
+        self._connection.execute(
+            """INSERT OR IGNORE INTO m3_metric_samples(
+                   metric_sample_id, metric_name, population_kind, conversation_id, turn_id,
+                   runtime_execution_id, request_id, attempt_id, context_operation_id,
+                   value, unit, classification, coverage_status, dimensions_json, created_at)
+               VALUES (?, 'token_usage', ?, ?, ?, ?, ?, ?, NULL,
+                       ?, 'tokens', ?, ?, ?, ?)""",
+            (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-token-metric:{attempt_id}:{outcome_kind}")),
+             (f"auxiliary_{outcome_kind}" if request_kind == "summary_auxiliary" else outcome_kind),
+             str(runtime["conversation_id"]) if runtime is not None else None,
+             str(runtime["turn_id"]) if runtime is not None else None,
+             str(runtime["runtime_execution_id"]) if runtime is not None else None,
+             mutation.request_id, attempt_id, usage_value, usage_classification,
+             usage_coverage, _json_dumps({"backend": mutation.backend, "usage": usage}), timestamp),
+        )
+
+    def _upsert_auxiliary_model_call(
+        self, session_id: str, mutation: AuxiliaryModelCallMutation, timestamp: str,
+    ) -> None:
+        """Publish Summary-provider lineage without consuming a legacy Agent ordinal."""
+        if not mutation.request_id:
+            raise InvariantViolation("auxiliary model request id cannot be empty")
+        request_json = _json_dumps(mutation.request)
+        response_json = _json_dumps(mutation.response) if mutation.response is not None else None
+        error_json = _json_dumps(mutation.error) if mutation.error is not None else None
+        started_at = mutation.started_at or timestamp
+        finished_at = mutation.finished_at or (
+            timestamp if mutation.status in {"succeeded", "failed", "uncertain", "cancelled"} else None
+        )
+        self._record_m3_model_evidence_in_transaction(
+            session_id, mutation, request_json, response_json, error_json,
+            started_at, finished_at, timestamp,
+            request_kind="summary_auxiliary", legacy_model_call_id=None,
         )
 
     def _upsert_tool_call(self, session_id: str, mutation: ToolCallMutation, timestamp: str) -> None:
@@ -617,8 +1210,8 @@ class SQLiteRunJournal:
                     finished_at,
                 ),
             )
-            return
-        self._connection.execute(
+        else:
+            self._connection.execute(
             """
             UPDATE tool_calls SET
                 attempt=?, tool_name=?, arguments_json=?, recovery_mode=?, status=?,
@@ -628,7 +1221,7 @@ class SQLiteRunJournal:
                 finished_at=?
             WHERE call_id=? AND session_id=?
             """,
-            (
+                (
                 mutation.attempt,
                 mutation.tool_name,
                 _json_dumps(mutation.arguments),
@@ -642,14 +1235,83 @@ class SQLiteRunJournal:
                 finished_at,
                 storage_call_id,
                 session_id,
-            ),
+                ),
+            )
+        if result_json is not None:
+            truncated = bool(mutation.result.get("truncated", False)) if mutation.result else False
+            self._record_m3_tool_artifact_in_transaction(
+                session_id=session_id,
+                tool_call_id=mutation.call_id,
+                result_json=result_json,
+                timestamp=timestamp,
+                capture_completeness=(
+                    "incomplete" if truncated or len(result_json.encode("utf-8")) > 256 * 1024
+                    else "complete"
+                ),
+            )
+
+    def _record_m3_tool_artifact_in_transaction(
+        self, *, session_id: str, tool_call_id: str, result_json: str,
+        timestamp: str, capture_completeness: str,
+    ) -> None:
+        raw = result_json.encode("utf-8")
+        captured = raw[: 256 * 1024]
+        digest = hashlib.sha256(captured).hexdigest()
+        artifact_id = str(uuid.uuid5(
+            uuid.NAMESPACE_URL, f"m3-tool-artifact:{session_id}:{tool_call_id}:result:{digest}",
+        ))
+        excerpt_bytes = captured[:4096]
+        excerpt = excerpt_bytes.decode("utf-8", errors="replace")
+        observation_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-observation:{artifact_id}"))
+        self._connection.execute(
+            """INSERT OR IGNORE INTO tool_result_artifacts(
+                   artifact_id, legacy_session_id, tool_call_id, channel, mime_type,
+                   encoding, content, content_digest, captured_size, range_start,
+                   range_end, capture_limit, capture_completeness, created_at)
+               VALUES (?, ?, ?, 'result', 'application/json', 'utf-8', ?, ?, ?, 0, ?, ?, ?, ?)""",
+            (artifact_id, session_id, tool_call_id, captured, digest, len(captured),
+             len(captured), 256 * 1024, capture_completeness, timestamp),
         )
+        decoded = _json_loads(result_json, description="tool artifact result")
+        semantic: JsonObject = {
+            "status": decoded.get("status") if isinstance(decoded, Mapping) else "unknown",
+            "tool_name": decoded.get("tool_name") if isinstance(decoded, Mapping) else None,
+        }
+        self._connection.execute(
+            """INSERT OR IGNORE INTO normalized_observations(
+                   observation_id, artifact_id, status_kind, semantic_json, excerpt,
+                   excerpt_digest, prompt_truncated, projection_completeness, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (observation_id, artifact_id, str(semantic["status"] or "unknown"),
+             _json_dumps(semantic), excerpt, hashlib.sha256(excerpt_bytes).hexdigest(),
+             int(len(captured) > len(excerpt_bytes)), capture_completeness, timestamp),
+        )
+        mapping = self._connection.execute(
+            """SELECT t.conversation_id FROM runtime_executions AS r
+               JOIN turns AS t ON t.turn_id=r.turn_id WHERE r.legacy_session_id=?""",
+            (session_id,),
+        ).fetchone()
+        if mapping is not None:
+            present = self._connection.execute(
+                """SELECT 1 FROM conversation_semantic_events
+                   WHERE conversation_id=? AND event_type='tool_observation_referenced'
+                     AND provenance_json LIKE ? LIMIT 1""",
+                (str(mapping["conversation_id"]), f'%"artifact_id":"{artifact_id}"%'),
+            ).fetchone()
+            if present is None:
+                self._append_conversation_semantic_event(
+                    str(mapping["conversation_id"]), "tool_observation_referenced",
+                    "m3_tool_artifact",
+                    {"artifact_id": artifact_id, "observation_id": observation_id,
+                     "tool_call_id": tool_call_id}, timestamp,
+                )
 
     def _upsert_summary(
         self,
         session_id: str,
         mutation: SummaryMutation,
         timestamp: str,
+        auxiliary_request_id: str | None = None,
     ) -> None:
         record = mutation.record
         if record.session_id != session_id:
@@ -746,6 +1408,202 @@ class SQLiteRunJournal:
             )
             if updated.rowcount != 1:
                 raise InvariantViolation("summary to supersede was not found")
+        if existing is None:
+            self._project_m3_summary_in_transaction(
+                session_id, record, mutation, summary_json, timestamp, auxiliary_request_id,
+            )
+
+    def _project_m3_summary_in_transaction(
+        self, session_id: str, record: SummaryRecord, mutation: SummaryMutation,
+        summary_json: str, timestamp: str, auxiliary_request_id: str | None,
+    ) -> None:
+        binding = self._connection.execute(
+            """SELECT turn.conversation_id, runtime.runtime_execution_id,
+                      runtime.workspace_binding_id,
+                      admission.instruction_manifest_id
+               FROM runtime_executions AS runtime
+               JOIN turns AS turn ON turn.turn_id=runtime.turn_id
+               LEFT JOIN product_admissions AS admission
+                 ON admission.runtime_execution_id=runtime.runtime_execution_id
+               WHERE runtime.legacy_session_id=?""",
+            (session_id,),
+        ).fetchone()
+        if binding is None or auxiliary_request_id is None:
+            return
+        frozen = self._connection.execute(
+            """SELECT request.legacy_session_id, request.runtime_execution_id,
+                      request.semantic_prefix_end_sequence, request.semantic_prefix_digest,
+                      attempt.attempt_id
+               FROM frozen_model_requests AS request
+               JOIN model_attempts AS attempt ON attempt.request_id=request.request_id
+               JOIN model_attempt_outcomes AS outcome ON outcome.attempt_id=attempt.attempt_id
+               WHERE request.request_id=? AND request.request_kind='summary_auxiliary'
+                 AND outcome.outcome_kind='succeeded'
+               ORDER BY attempt.ordinal DESC LIMIT 1""",
+            (auxiliary_request_id,),
+        ).fetchone()
+        if frozen is None or (
+            str(frozen["legacy_session_id"]) != session_id
+            or str(frozen["runtime_execution_id"]) != str(binding["runtime_execution_id"])
+            or frozen["semantic_prefix_end_sequence"] is None
+            or frozen["semantic_prefix_digest"] is None
+        ):
+            raise InvariantViolation("native SummaryArtifact has no exact successful auxiliary attempt")
+        active_manifest = self._connection.execute(
+            """SELECT instruction_manifest_id FROM instruction_manifests
+               WHERE conversation_id=? ORDER BY revision DESC LIMIT 1""",
+            (str(binding["conversation_id"]),),
+        ).fetchone()
+        manifest_id = str(active_manifest["instruction_manifest_id"]) if active_manifest is not None else None
+        semantic = self._connection.execute(
+            """SELECT sequence, event_type, provenance_kind, provenance_json
+               FROM conversation_semantic_events WHERE conversation_id=? ORDER BY sequence""",
+            (str(binding["conversation_id"]),),
+        ).fetchall()
+        if not semantic or [int(row["sequence"]) for row in semantic] != list(range(1, len(semantic) + 1)):
+            raise InvariantViolation("Conversation semantic prefix is missing or noncontiguous")
+        events = [
+            {"sequence": int(row["sequence"]), "event_type": str(row["event_type"]),
+             "provenance_kind": str(row["provenance_kind"]),
+             "payload": _json_loads(str(row["provenance_json"]), description="semantic prefix")}
+            for row in semantic
+        ]
+        source_digest = hashlib.sha256(_json_dumps(events).encode("utf-8")).hexdigest()
+        if (len(events) != int(frozen["semantic_prefix_end_sequence"])
+                or source_digest != str(frozen["semantic_prefix_digest"])):
+            raise StaleProductContext("Conversation semantic prefix changed during summary generation")
+        claims: list[tuple[str, str, int, str | None, str | None]] = []
+        for event in events:
+            kind = str(event["event_type"])
+            payload = event["payload"]
+            if not isinstance(payload, Mapping):
+                raise InvariantViolation("Conversation semantic event payload is corrupt")
+            sequence = int(event["sequence"])
+            if kind in {"initial_request_accepted", "steering_accepted", "reply_accepted"}:
+                input_row = self._connection.execute(
+                    "SELECT payload_json FROM product_inputs WHERE operation_id=?",
+                    (payload.get("operation_id"),),
+                ).fetchone()
+                if input_row is None:
+                    raise InvariantViolation("Conversation input source is unavailable")
+                input_payload = _json_loads(str(input_row["payload_json"]), description="summary input")
+                if not isinstance(input_payload, Mapping) or not isinstance(input_payload.get("text"), str):
+                    raise InvariantViolation("Conversation input source is corrupt")
+                claim_kind = "conversational_intent" if kind == "initial_request_accepted" else "explicit_decision"
+                claims.append((claim_kind, str(input_payload["text"]), sequence, None, None))
+            elif kind == "tool_observation_referenced":
+                artifact = self._connection.execute(
+                    """SELECT content_digest, tool_call_id, content, capture_completeness
+                       FROM tool_result_artifacts WHERE artifact_id=?""",
+                    (payload.get("artifact_id"),),
+                ).fetchone()
+                if artifact is None:
+                    raise InvariantViolation("Conversation tool artifact is unavailable")
+                claims.append(("tool_test_fact", f"Tool observation {artifact['tool_call_id']}",
+                               sequence, str(payload["artifact_id"]), str(artifact["content_digest"])))
+                if artifact["capture_completeness"] == "complete" and artifact["content"] is not None:
+                    result_value = _json_loads(
+                        bytes(artifact["content"]).decode("utf-8"),
+                        description="completed tool source",
+                    )
+                    if isinstance(result_value, Mapping) and result_value.get("status") == "success":
+                        claims.append((
+                            "completed_work", f"Successful {result_value.get('tool_name', 'tool')} call "
+                            f"{artifact['tool_call_id']}", sequence,
+                            str(payload["artifact_id"]), str(artifact["content_digest"]),
+                        ))
+                files = self._connection.execute(
+                    """SELECT normalized_path, byte_start, byte_end, revision
+                       FROM file_context_items WHERE origin_kind='tool_result' AND origin_id=?
+                         AND content IS NOT NULL ORDER BY file_context_item_id""",
+                    (str(payload["artifact_id"]),),
+                ).fetchall()
+                for file_item in files:
+                    claims.append((
+                        "repository_code_fact",
+                        f"Captured {file_item['normalized_path']} bytes "
+                        f"{file_item['byte_start']}:{file_item['byte_end']}",
+                        sequence, str(payload["artifact_id"]), str(file_item["revision"]),
+                    ))
+        for unresolved in record.unresolved:
+            supported = next(
+                ((sequence, artifact_id, revision)
+                 for _, text, sequence, artifact_id, revision in claims
+                 if unresolved and unresolved in text),
+                None,
+            )
+            if supported is not None:
+                claims.append(("unresolved_decision", unresolved, *supported))
+        if not claims:
+            return
+        content = summary_json
+        content_digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        previous = self._connection.execute(
+            """SELECT summary_artifact_id FROM conversation_summary_artifacts
+               WHERE conversation_id=? AND status='valid'
+               ORDER BY source_end_sequence DESC, created_at DESC LIMIT 1""",
+            (str(binding["conversation_id"]),),
+        ).fetchone()
+        parent_id = str(previous["summary_artifact_id"]) if previous is not None else None
+        self._connection.execute(
+            """INSERT OR IGNORE INTO conversation_summary_artifacts(
+                   summary_artifact_id, conversation_id, source_start_sequence,
+                   source_end_sequence, source_digest, auxiliary_request_id,
+                   auxiliary_attempt_id, content, content_digest,
+                   policy_version, generator_version, parent_summary_id,
+                   instruction_manifest_id, workspace_binding_id, status,
+                   superseded_by, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'm3-summary-v1',
+                       'runtime-compression+conversation-projection-v1', ?, ?, ?, ?, NULL, ?)""",
+            (record.summary_id, str(binding["conversation_id"]), 1,
+             len(semantic), source_digest, auxiliary_request_id,
+             str(frozen["attempt_id"]), content, content_digest,
+             parent_id, manifest_id, str(binding["workspace_binding_id"]),
+             "valid",
+             record.created_at or timestamp),
+        )
+        saved_summary = self._connection.execute(
+            """SELECT conversation_id, source_start_sequence, source_end_sequence,
+                      source_digest, auxiliary_request_id, auxiliary_attempt_id,
+                      content_digest, parent_summary_id
+               FROM conversation_summary_artifacts WHERE summary_artifact_id=?""",
+            (record.summary_id,),
+        ).fetchone()
+        if saved_summary is None or tuple(saved_summary) != (
+            str(binding["conversation_id"]), 1, len(semantic), source_digest,
+            auxiliary_request_id, str(frozen["attempt_id"]), content_digest, parent_id,
+        ):
+            raise InvariantViolation("native SummaryArtifact identity/content collision")
+        for index, (kind, text, sequence, artifact_id, revision) in enumerate(claims, start=1):
+            claim_id = str(uuid.uuid5(uuid.NAMESPACE_URL,
+                                      f"m3-conversation-claim:{record.summary_id}:{index}"))
+            self._connection.execute(
+                """INSERT OR IGNORE INTO conversation_summary_claims(
+                       claim_id, summary_artifact_id, claim_kind, claim_text,
+                       source_start_sequence, source_end_sequence, source_artifact_id,
+                       source_revision, status, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'valid', ?)""",
+                (claim_id, record.summary_id, kind, text, sequence, sequence,
+                 artifact_id, revision, timestamp),
+            )
+            saved_claim = self._connection.execute(
+                """SELECT summary_artifact_id, claim_kind, claim_text,
+                          source_start_sequence, source_end_sequence,
+                          source_artifact_id, source_revision
+                   FROM conversation_summary_claims WHERE claim_id=?""",
+                (claim_id,),
+            ).fetchone()
+            if saved_claim is None or tuple(saved_claim) != (
+                record.summary_id, kind, text, sequence, sequence, artifact_id, revision,
+            ):
+                raise InvariantViolation("native SummaryClaim identity/content collision")
+        if parent_id is not None:
+            self._connection.execute(
+                """UPDATE conversation_summary_artifacts
+                   SET status='superseded', superseded_by=?
+                   WHERE summary_artifact_id=? AND summary_artifact_id<>?""",
+                (record.summary_id, parent_id, record.summary_id),
+            )
 
     def create_session(
         self,
@@ -1367,6 +2225,82 @@ class SQLiteRunJournal:
             (timestamp, session_id),
         )
 
+    def backfill_m3_model_evidence(self) -> int:
+        """Import pre-v7 model rows, including an in-flight exact request."""
+        with self._lock:
+            rows = self._connection.execute(
+                """SELECT call.* FROM model_calls AS call
+                   LEFT JOIN frozen_model_requests AS frozen
+                     ON frozen.request_id=call.request_id
+                   WHERE frozen.request_id IS NULL
+                   ORDER BY call.session_id, call.ordinal"""
+            ).fetchall()
+        imported = 0
+        for row in rows:
+            request = _json_loads(str(row["request_json"]), description="legacy model request")
+            if not isinstance(request, Mapping):
+                raise PersistenceError("legacy model request is corrupt")
+            response = self._decode_optional_object(
+                row["response_json"], description="legacy model response",
+            )
+            error = self._decode_optional_object(
+                row["error_json"], description="legacy model error",
+            )
+            mutation = ModelCallMutation(
+                request_id=str(row["request_id"]), ordinal=int(row["ordinal"]),
+                attempt=int(row["attempt"]), backend=str(row["backend"]),
+                status=str(row["status"]), request=dict(request), response=response,
+                error=error, started_at=str(row["started_at"]),
+                finished_at=str(row["finished_at"]) if row["finished_at"] else None,
+            )
+            timestamp = self.clock()
+            with self._lock:
+                with self._write_transaction():
+                    self._record_m3_model_evidence_in_transaction(
+                        str(row["session_id"]), mutation, str(row["request_json"]),
+                        str(row["response_json"]) if row["response_json"] is not None else None,
+                        str(row["error_json"]) if row["error_json"] is not None else None,
+                        str(row["started_at"]),
+                        str(row["finished_at"]) if row["finished_at"] is not None else None,
+                        timestamp,
+                        legacy_model_call_id=str(row["request_id"]),
+                    )
+            imported += 1
+        return imported
+
+    def backfill_m3_tool_artifacts(self) -> int:
+        """Project legacy result rows with explicitly unknown capture completeness."""
+        with self._lock:
+            candidates = self._connection.execute(
+                """SELECT call.session_id, call.call_id, call.result_json
+                   FROM tool_calls AS call WHERE call.result_json IS NOT NULL
+                   ORDER BY call.session_id, call.ordinal"""
+            ).fetchall()
+            rows = [
+                row for row in candidates
+                if self._connection.execute(
+                    """SELECT 1 FROM tool_result_artifacts
+                       WHERE legacy_session_id=? AND tool_call_id=? LIMIT 1""",
+                    (str(row["session_id"]), _unscoped_tool_call_id(
+                        str(row["session_id"]), str(row["call_id"]),
+                    )),
+                ).fetchone() is None
+            ]
+            if not rows:
+                return 0
+            timestamp = self.clock()
+            with self._write_transaction():
+                for row in rows:
+                    storage_id = str(row["call_id"])
+                    session_id = str(row["session_id"])
+                    self._record_m3_tool_artifact_in_transaction(
+                        session_id=session_id,
+                        tool_call_id=_unscoped_tool_call_id(session_id, storage_id),
+                        result_json=str(row["result_json"]), timestamp=timestamp,
+                        capture_completeness="unknown",
+                    )
+        return len(rows)
+
     # ---- M2 Product lifecycle projection ---------------------------------
     # These methods use the same lock/connection/BEGIN IMMEDIATE authority as
     # the legacy journal.  They never advance RuntimeState; the inserted
@@ -1420,6 +2354,207 @@ class SQLiteRunJournal:
             "workspace_binding_id": workspace_binding_id, "expected_version": expected_version,
             "observation": dict(observation),
         })
+
+    @classmethod
+    def canonical_instruction_trust_digest(
+        cls, *, repository_id: str, project_scope_id: str,
+        workspace_binding_id: str | None, source_kind: str, trusted: bool,
+    ) -> str:
+        return cls.canonical_product_payload_digest({
+            "kind": "instruction_trust", "repository_id": repository_id,
+            "project_scope_id": project_scope_id,
+            "workspace_binding_id": workspace_binding_id,
+            "source_kind": source_kind, "trusted": trusted,
+        })
+
+    def configure_instruction_trust(
+        self, *, operation_id: str, payload_digest: str, repository_id: str,
+        project_scope_id: str, workspace_binding_id: str | None,
+        source_kind: str = "agents_md", trusted: bool,
+    ) -> str:
+        expected = self.canonical_instruction_trust_digest(
+            repository_id=repository_id, project_scope_id=project_scope_id,
+            workspace_binding_id=workspace_binding_id, source_kind=source_kind,
+            trusted=trusted,
+        )
+        if payload_digest != expected:
+            raise ProductAdmissionConflict("instruction trust payload digest is not canonical")
+        timestamp = self.clock()
+        with self._lock:
+            with self._write_transaction():
+                receipt = self._connection.execute(
+                    "SELECT payload_digest, result_json FROM product_operation_receipts WHERE operation_id=?",
+                    (operation_id,),
+                ).fetchone()
+                if receipt is not None:
+                    if str(receipt["payload_digest"]) != payload_digest:
+                        raise ProductAdmissionConflict("instruction trust operation id was reused")
+                    result = _json_loads(str(receipt["result_json"]), description="instruction trust receipt")
+                    if not isinstance(result, Mapping) or not isinstance(result.get("trust_id"), str):
+                        raise PersistenceError("instruction trust receipt is corrupt")
+                    return str(result["trust_id"])
+                scope = self._connection.execute(
+                    "SELECT repository_id FROM project_scopes WHERE project_scope_id=?",
+                    (project_scope_id,),
+                ).fetchone()
+                if scope is None or str(scope["repository_id"]) != repository_id:
+                    raise ProductLifecycleConflict("instruction trust scope is incompatible")
+                if workspace_binding_id is not None:
+                    binding = self._connection.execute(
+                        """SELECT repository_id, project_scope_id FROM workspace_bindings
+                           WHERE workspace_binding_id=?""", (workspace_binding_id,),
+                    ).fetchone()
+                    if binding is None or str(binding["repository_id"]) != repository_id \
+                        or str(binding["project_scope_id"]) != project_scope_id:
+                        raise ProductLifecycleConflict("workspace-local instruction trust is incompatible")
+                parameters = (repository_id, project_scope_id, workspace_binding_id, source_kind)
+                active = self._connection.execute(
+                    """SELECT trust_id FROM instruction_trusts
+                       WHERE repository_id=? AND project_scope_id=?
+                         AND workspace_binding_id IS ? AND source_kind=? AND disposition='active'
+                       ORDER BY created_at DESC LIMIT 1""", parameters,
+                ).fetchone()
+                if trusted:
+                    trust_id = str(active["trust_id"]) if active is not None else str(uuid.uuid4())
+                    if active is None:
+                        self._connection.execute(
+                            """INSERT INTO instruction_trusts(
+                                   trust_id, repository_id, project_scope_id, workspace_binding_id,
+                                   source_kind, disposition, operation_id, payload_digest, created_at, revoked_at)
+                               VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, NULL)""",
+                            (trust_id, repository_id, project_scope_id, workspace_binding_id,
+                             source_kind, operation_id, payload_digest, timestamp),
+                        )
+                else:
+                    trust_id = str(active["trust_id"]) if active is not None else str(uuid.uuid5(
+                        uuid.NAMESPACE_URL,
+                        f"revoked-instruction-trust:{repository_id}:{project_scope_id}:{workspace_binding_id}:{source_kind}",
+                    ))
+                    if active is not None:
+                        self._connection.execute(
+                            """UPDATE instruction_trusts SET disposition='revoked', revoked_at=?
+                               WHERE trust_id=? AND disposition='active'""",
+                            (timestamp, trust_id),
+                        )
+                result_json = _json_dumps({"trust_id": trust_id, "trusted": trusted})
+                self._connection.execute(
+                    """INSERT INTO product_operation_receipts(
+                           operation_id, payload_digest, operation_kind, result_json, created_at)
+                       VALUES (?, ?, 'instruction_trust', ?, ?)""",
+                    (operation_id, payload_digest, result_json, timestamp),
+                )
+                return trust_id
+
+    def list_instruction_trusts(
+        self, *, repository_id: str, project_scope_id: str,
+    ) -> list[dict[str, object]]:
+        with self._lock:
+            return [dict(row) for row in self._connection.execute(
+                """SELECT * FROM instruction_trusts
+                   WHERE repository_id=? AND project_scope_id=? ORDER BY created_at, trust_id""",
+                (repository_id, project_scope_id),
+            ).fetchall()]
+
+    @classmethod
+    def canonical_instruction_refresh_digest(
+        cls, *, conversation_id: str, expected_version: int,
+        reason: str, target_paths: tuple[str, ...],
+    ) -> str:
+        return cls.canonical_product_payload_digest({
+            "kind": "instruction_refresh", "conversation_id": conversation_id,
+            "expected_version": expected_version, "reason": reason,
+            "target_paths": list(target_paths),
+        })
+
+    def refresh_instruction_manifest(
+        self, *, operation_id: str, payload_digest: str, conversation_id: str,
+        expected_version: int, reason: str = "explicit_refresh",
+        target_paths: tuple[str, ...] = (),
+    ) -> str:
+        """Discover outside SQL, then publish one safe-boundary manifest revision."""
+        if reason not in {"explicit_refresh", "path_activation"}:
+            raise ValueError("unsupported instruction refresh reason")
+        normalized_paths = tuple(sorted(dict.fromkeys(target_paths)))
+        expected_digest = self.canonical_instruction_refresh_digest(
+            conversation_id=conversation_id, expected_version=expected_version,
+            reason=reason, target_paths=normalized_paths,
+        )
+        if payload_digest != expected_digest:
+            raise ProductAdmissionConflict("instruction refresh payload digest is not canonical")
+        with self._lock:
+            conversation = self._connection.execute(
+                """SELECT repository_id, project_scope_id, default_workspace_binding_id,
+                          product_version, open_turn_id
+                   FROM conversations WHERE conversation_id=?""", (conversation_id,),
+            ).fetchone()
+            if conversation is None:
+                raise ProductLifecycleConflict("conversation was not found")
+            receipt = self._connection.execute(
+                "SELECT payload_digest, result_json FROM product_operation_receipts WHERE operation_id=?",
+                (operation_id,),
+            ).fetchone()
+            if receipt is not None:
+                if str(receipt["payload_digest"]) != payload_digest:
+                    raise ProductAdmissionConflict("instruction refresh operation id was reused")
+                result = _json_loads(str(receipt["result_json"]), description="instruction refresh receipt")
+                if not isinstance(result, Mapping) or not isinstance(result.get("instruction_manifest_id"), str):
+                    raise PersistenceError("instruction refresh receipt is corrupt")
+                return str(result["instruction_manifest_id"])
+            binding_id = str(conversation["default_workspace_binding_id"])
+            repository_id = str(conversation["repository_id"])
+            project_scope_id = str(conversation["project_scope_id"])
+            turn_id = conversation["open_turn_id"]
+        fresh, _ = self._capture_direct_binding_observation(binding_id)
+        resolved = self._prepare_m3_instruction_manifest(
+            repository_id=repository_id, project_scope_id=project_scope_id,
+            workspace_binding_id=binding_id, operation_id=operation_id,
+            fresh_observation=fresh, target_paths=normalized_paths,
+        )
+        timestamp = self.clock()
+        with self._lock:
+            with self._write_transaction():
+                current = self._connection.execute(
+                    """SELECT product_version, open_turn_id FROM conversations
+                       WHERE conversation_id=?""", (conversation_id,),
+                ).fetchone()
+                if current is None or int(current["product_version"]) != expected_version:
+                    raise ProductLifecycleConflict("conversation version changed during instruction refresh")
+                if current["open_turn_id"] is None or str(current["open_turn_id"]) != str(turn_id):
+                    raise ProductLifecycleConflict("instruction refresh requires one stable open Turn")
+                state = self._connection.execute(
+                    """SELECT s.state FROM runtime_executions AS r
+                       JOIN sessions AS s ON s.id=r.legacy_session_id WHERE r.turn_id=?""",
+                    (str(turn_id),),
+                ).fetchone()
+                if state is None or RuntimeState(str(state["state"])) not in {
+                    RuntimeState.CREATED, RuntimeState.BUILDING_CONTEXT,
+                    RuntimeState.WAITING_USER_INPUT, RuntimeState.INTERRUPTED,
+                }:
+                    raise ProductLifecycleConflict("instruction refresh is not at a safe boundary")
+                self._persist_m3_instruction_manifest_in_transaction(
+                    resolved=resolved, repository_id=repository_id,
+                    project_scope_id=project_scope_id, workspace_binding_id=binding_id,
+                    conversation_id=conversation_id, turn_id=str(turn_id), timestamp=timestamp,
+                    refresh_operation_id=operation_id, refresh_reason=reason,
+                )
+                manifest_id = str(getattr(resolved, "manifest_id"))
+                self._append_conversation_semantic_event(
+                    conversation_id, "instruction_manifest_refreshed", "m3_instruction_refresh",
+                    {"operation_id": operation_id, "instruction_manifest_id": manifest_id,
+                     "reason": reason, "target_paths": list(normalized_paths)}, timestamp,
+                )
+                self._connection.execute(
+                    "UPDATE conversations SET product_version=product_version+1 WHERE conversation_id=?",
+                    (conversation_id,),
+                )
+                self._connection.execute(
+                    """INSERT INTO product_operation_receipts(
+                           operation_id, payload_digest, operation_kind, result_json, created_at)
+                       VALUES (?, ?, 'instruction_refresh', ?, ?)""",
+                    (operation_id, payload_digest,
+                     _json_dumps({"instruction_manifest_id": manifest_id}), timestamp),
+                )
+                return manifest_id
 
     def _read_admission_in_transaction(self, operation_id: str) -> TurnAdmission | None:
         row = self._connection.execute(
@@ -1485,12 +2620,23 @@ class SQLiteRunJournal:
                    JOIN sessions ON sessions.id=executions.legacy_session_id
                    WHERE turns.conversation_id=? ORDER BY turns.ordinal""", (conversation_id,),
             ).fetchall()
+            outstanding = self._connection.execute(
+                """SELECT input_id, payload_json FROM product_inputs
+                   WHERE conversation_id=? AND input_kind='ordinary_input_request'
+                     AND status='outstanding' ORDER BY sequence""", (conversation_id,),
+            ).fetchall()
         return {
             "conversation_id": str(row["conversation_id"]), "repository_id": str(row["repository_id"]),
             "project_scope_id": str(row["project_scope_id"]),
             "default_workspace_binding_id": str(row["default_workspace_binding_id"]),
             "product_version": int(row["product_version"]), "open_turn_id": row["open_turn_id"],
-            "turns": [dict(turn) for turn in turns], "resume_started": False,
+            "turns": [dict(turn) for turn in turns],
+            "outstanding_input_requests": [
+                {"request_id": str(item["input_id"]),
+                 "payload": _json_loads(str(item["payload_json"]), description="ordinary input request")}
+                for item in outstanding
+            ],
+            "resume_started": False,
         }
 
     def resume_execution(self, operation_id: str) -> TurnAdmission:
@@ -1552,7 +2698,710 @@ class SQLiteRunJournal:
                 # but does not silently change the immutable binding.
                 with self._write_transaction():
                     self._persist_binding_observation_in_transaction(binding_id, fresh, self.clock())
+        with self._lock:
+            latest_manifest = self._connection.execute(
+                """SELECT instruction_manifest_id FROM instruction_manifests
+                   WHERE conversation_id=? ORDER BY revision DESC LIMIT 1""",
+                (admission.conversation_id,),
+            ).fetchone()
+        manifest_id = (
+            str(latest_manifest["instruction_manifest_id"]) if latest_manifest is not None
+            else admission.instruction_manifest.instruction_manifest_id
+        )
+        self._validate_instruction_manifest_snapshots(
+            manifest_id,
+            required=(admission.instruction_manifest.placeholder_kind == "m3_resolved_instruction_manifest"),
+        )
         return admission
+
+    def _validate_instruction_manifest_snapshots(
+        self, instruction_manifest_id: str, *, required: bool,
+    ) -> None:
+        with self._lock:
+            manifest = self._connection.execute(
+                "SELECT effective_digest FROM instruction_manifests WHERE instruction_manifest_id=?",
+                (instruction_manifest_id,),
+            ).fetchone()
+            if manifest is None:
+                if required:
+                    raise ProductLifecycleConflict("instruction manifest evidence is unavailable")
+                return
+            rows = self._connection.execute(
+                """SELECT e.sequence, e.disposition, e.source_digest,
+                          s.content_digest, s.canonical_utf8, s.byte_count
+                   FROM instruction_manifest_entries AS e
+                   LEFT JOIN instruction_snapshots AS s ON s.snapshot_id=e.snapshot_id
+                   WHERE e.instruction_manifest_id=? ORDER BY e.sequence""",
+                (instruction_manifest_id,),
+            ).fetchall()
+        for row in rows:
+            if str(row["disposition"]) != "effective":
+                continue
+            if row["canonical_utf8"] is None:
+                raise ProductLifecycleConflict("required instruction snapshot is unavailable")
+            raw = bytes(row["canonical_utf8"])
+            digest = hashlib.sha256(raw).hexdigest()
+            if (
+                len(raw) != int(row["byte_count"])
+                or digest != str(row["content_digest"])
+                or digest != str(row["source_digest"])
+            ):
+                raise ProductLifecycleConflict("required instruction snapshot is corrupt")
+            try:
+                raw.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise ProductLifecycleConflict("required instruction snapshot is not canonical UTF-8") from exc
+
+    def _observe_instruction_manifest_drift(self, instruction_manifest_id: str) -> str:
+        """Append staleness evidence while retaining the frozen effective bytes."""
+        from coding_agent.product_instructions import MAX_SOURCE_BYTES
+
+        with self._lock:
+            previous_stale = self._connection.execute(
+                """SELECT 1 FROM instruction_manifest_status_events
+                   WHERE instruction_manifest_id=? AND status='stale' LIMIT 1""",
+                (instruction_manifest_id,),
+            ).fetchone()
+            if previous_stale is not None:
+                return "stale"
+            rows = self._connection.execute(
+                """SELECT e.source_digest, e.disposition, src.source_id, src.locator,
+                          COALESCE((SELECT descriptor_value FROM repository_descriptors
+                                    WHERE repository_id=b.repository_id
+                                      AND descriptor_kind='canonical_path'
+                                    ORDER BY observed_at DESC LIMIT 1),
+                                   b.locator) AS repository_root
+                   FROM instruction_manifest_entries AS e
+                   JOIN instruction_sources AS src ON src.source_id=e.source_id
+                   JOIN instruction_manifests AS m ON m.instruction_manifest_id=e.instruction_manifest_id
+                   JOIN workspace_bindings AS b ON b.workspace_binding_id=m.workspace_binding_id
+                   WHERE e.instruction_manifest_id=? ORDER BY e.sequence""",
+                (instruction_manifest_id,),
+            ).fetchall()
+        facts: list[dict[str, object]] = []
+        stale = False
+        for row in rows:
+            if str(row["disposition"]) != "effective":
+                continue
+            expected = str(row["source_digest"])
+            locator = Path(str(row["locator"]))
+            boundary = Path(str(row["repository_root"])).resolve(strict=True)
+            actual: str | None = None
+            reason = "unchanged"
+            try:
+                resolved = locator.resolve(strict=True)
+                resolved.relative_to(boundary)
+                if not resolved.is_file():
+                    raise OSError("instruction source is no longer a regular file")
+                raw = resolved.read_bytes()
+                if len(raw) > MAX_SOURCE_BYTES:
+                    raise OSError("instruction source exceeds its byte bound")
+                raw.decode("utf-8")
+                actual = hashlib.sha256(raw).hexdigest()
+                if actual != expected:
+                    reason = "content_digest_changed"
+                    stale = True
+            except (OSError, RuntimeError, UnicodeDecodeError, ValueError):
+                reason = "source_unavailable_or_outside_boundary"
+                stale = True
+            facts.append({
+                "source_id": str(row["source_id"]), "expected": expected,
+                "actual": actual, "reason": reason,
+            })
+        observed_digest = hashlib.sha256(_json_dumps(facts).encode("utf-8")).hexdigest()
+        if stale:
+            timestamp = self.clock()
+            with self._lock:
+                with self._write_transaction():
+                    self._connection.execute(
+                        """INSERT OR IGNORE INTO instruction_manifest_status_events(
+                               status_event_id, instruction_manifest_id, status, reason,
+                               observed_digest, created_at)
+                           VALUES (?, ?, 'stale', 'live_source_drift', ?, ?)""",
+                        (str(uuid.uuid5(uuid.NAMESPACE_URL,
+                                       f"m3-manifest-stale:{instruction_manifest_id}:{observed_digest}")),
+                         instruction_manifest_id, observed_digest, timestamp),
+                    )
+            return "stale"
+        return "active"
+
+    def load_m3_context_snapshot(self, operation_id: str) -> dict[str, object]:
+        """Load and verify immutable Product input without consulting live files."""
+        admission = self.get_turn_admission(operation_id)
+        if admission is None:
+            raise ProductLifecycleConflict("turn admission was not found")
+        with self._lock:
+            latest = self._connection.execute(
+                """SELECT instruction_manifest_id, revision FROM instruction_manifests
+                   WHERE conversation_id=? ORDER BY revision DESC LIMIT 1""",
+                (admission.conversation_id,),
+            ).fetchone()
+        manifest_id = (
+            str(latest["instruction_manifest_id"]) if latest is not None
+            else admission.instruction_manifest.instruction_manifest_id
+        )
+        self._validate_instruction_manifest_snapshots(manifest_id, required=True)
+        instruction_status = self._observe_instruction_manifest_drift(manifest_id)
+        with self._lock:
+            row = self._connection.execute(
+                """SELECT c.product_version,
+                          (SELECT MAX(sequence) FROM conversation_semantic_events
+                           WHERE conversation_id=c.conversation_id) AS causal_frontier,
+                          i.payload_json
+                   FROM conversations AS c
+                   JOIN product_inputs AS i ON i.conversation_id=c.conversation_id
+                   WHERE i.operation_id=?""",
+                (operation_id,),
+            ).fetchone()
+            if row is None:
+                raise ProductLifecycleConflict("initial Product intent is unavailable")
+            snapshots = self._connection.execute(
+                """SELECT e.sequence, e.disposition, s.canonical_utf8
+                   FROM instruction_manifest_entries AS e
+                   LEFT JOIN instruction_snapshots AS s ON s.snapshot_id=e.snapshot_id
+                   WHERE e.instruction_manifest_id=? ORDER BY e.sequence""",
+                (manifest_id,),
+            ).fetchall()
+            semantic = self._connection.execute(
+                """SELECT sequence, event_type, provenance_kind, provenance_json
+                   FROM conversation_semantic_events WHERE conversation_id=? ORDER BY sequence""",
+                (admission.conversation_id,),
+            ).fetchall()
+            conflicts = self._connection.execute(
+                """SELECT conflict_key FROM instruction_manifest_conflicts
+                   WHERE instruction_manifest_id=? AND status='unresolved'
+                   ORDER BY conflict_key""", (manifest_id,),
+            ).fetchall()
+            current_inputs = self._connection.execute(
+                """SELECT input_kind, payload_json, correlation_id FROM product_inputs
+                   WHERE conversation_id=? AND turn_id=? AND input_kind IN ('steering','reply')
+                     AND status IN ('accepted','consumed') ORDER BY sequence""",
+                (admission.conversation_id, admission.turn_id),
+            ).fetchall()
+            observations = self._connection.execute(
+                """SELECT o.observation_id, o.status_kind, o.semantic_json, o.excerpt,
+                          o.projection_completeness, a.artifact_id, a.content,
+                          a.content_digest, a.capture_completeness
+                   FROM normalized_observations AS o
+                   JOIN tool_result_artifacts AS a ON a.artifact_id=o.artifact_id
+                   WHERE a.legacy_session_id=? ORDER BY o.created_at, o.observation_id""",
+                (admission.legacy_session_id,),
+            ).fetchall()
+            execution_binding = self._connection.execute(
+                "SELECT workspace_binding_id FROM runtime_executions WHERE runtime_execution_id=?",
+                (admission.runtime_execution_id,),
+            ).fetchone()
+            if execution_binding is None:
+                raise ProductLifecycleConflict("RuntimeExecution workspace binding is unavailable")
+            workspace_locator = self._connection.execute(
+                "SELECT locator FROM workspace_bindings WHERE workspace_binding_id=?",
+                (str(execution_binding["workspace_binding_id"]),),
+            ).fetchone()
+            if workspace_locator is None:
+                raise ProductLifecycleConflict("workspace binding locator is unavailable")
+            files = self._connection.execute(
+                """SELECT file_context_item_id, normalized_path, revision, content_hash,
+                          byte_start, byte_end, range_digest, origin_kind, origin_id, status,
+                          content, encoding, capture_completeness
+                   FROM file_context_items WHERE workspace_binding_id=?
+                   ORDER BY created_at, file_context_item_id""",
+                (str(execution_binding["workspace_binding_id"]),),
+            ).fetchall()
+            summaries = self._connection.execute(
+                """SELECT * FROM conversation_summary_artifacts
+                   WHERE conversation_id=? AND status='valid'
+                   ORDER BY source_end_sequence DESC, created_at DESC LIMIT 1""",
+                (admission.conversation_id,),
+            ).fetchall()
+            summary_claims = {
+                str(summary["summary_artifact_id"]): self._connection.execute(
+                    """SELECT claim_kind, claim_text, source_start_sequence,
+                              source_end_sequence, source_artifact_id, source_revision, status
+                       FROM conversation_summary_claims WHERE summary_artifact_id=? ORDER BY claim_id""",
+                    (str(summary["summary_artifact_id"]),),
+                ).fetchall()
+                for summary in summaries
+            }
+        payload = _json_loads(str(row["payload_json"]), description="initial Product request")
+        if not isinstance(payload, Mapping) or not isinstance(payload.get("text"), str):
+            raise PersistenceError("initial Product request is corrupt")
+        instruction_content = tuple(
+            bytes(item["canonical_utf8"]).decode("utf-8")
+            for item in snapshots
+            if str(item["disposition"]) == "effective" and item["canonical_utf8"] is not None
+        )
+        events = []
+        resolver_outcomes: list[str] = []
+        for item in semantic:
+            event_payload = _json_loads(str(item["provenance_json"]), description="semantic event")
+            events.append({
+                "sequence": int(item["sequence"]), "event_type": str(item["event_type"]),
+                "provenance_kind": str(item["provenance_kind"]), "payload": event_payload,
+            })
+            if (
+                str(item["event_type"]) == "instruction_conflict_resolved"
+                and isinstance(event_payload, Mapping)
+                and event_payload.get("instruction_manifest_id") == manifest_id
+            ):
+                resolver_outcomes.append(_json_dumps({
+                    "kind": "instruction_conflict_resolved",
+                    "conflict_keys": event_payload.get("conflict_keys"),
+                    "reply_input_id": event_payload.get("reply_input_id"),
+                    "reply_text": event_payload.get("reply_text"),
+                    "instruction_manifest_id": manifest_id,
+                }))
+        current_intent = [str(payload["text"])]
+        for item in current_inputs:
+            decoded = _json_loads(str(item["payload_json"]), description="Product input")
+            if not isinstance(decoded, Mapping) or not isinstance(decoded.get("text"), str):
+                raise PersistenceError("effective Product input is corrupt")
+            current_intent.append(str(decoded["text"]))
+            if str(item["input_kind"]) == "reply":
+                resolver_outcomes.append(_json_dumps({
+                    "kind": "user_reply", "correlation_id": item["correlation_id"],
+                    "text": decoded["text"],
+                }))
+        typed_sources: list[dict[str, object]] = []
+        verified_artifact_ids: set[str] = set()
+        current_file_revisions: set[str] = set()
+        for item in observations:
+            raw = bytes(item["content"]) if item["content"] is not None else b""
+            if hashlib.sha256(raw).hexdigest() != str(item["content_digest"]):
+                raise ProductLifecycleConflict("tool artifact content is corrupt")
+            verified_artifact_ids.add(str(item["artifact_id"]))
+            semantic_value = _json_loads(str(item["semantic_json"]), description="observation")
+            typed_sources.append({
+                "source_class": "observation", "source_id": str(item["observation_id"]),
+                "content": _json_dumps({"artifact_id": item["artifact_id"],
+                                        "status": item["status_kind"],
+                                        "semantic": semantic_value, "excerpt": item["excerpt"],
+                                        "capture_completeness": item["capture_completeness"]}),
+                "status": "eligible" if item["projection_completeness"] != "unknown" else "inactive",
+                "reason": "legacy_capture_unknown" if item["projection_completeness"] == "unknown" else None,
+            })
+        for item in files:
+            file_status = str(item["status"])
+            captured = bytes(item["content"]) if item["content"] is not None else None
+            start, end = int(item["byte_start"]), int(item["byte_end"])
+            if captured is not None and (
+                len(captured) != end - start
+                or hashlib.sha256(captured).hexdigest() != str(item["range_digest"])
+            ):
+                raise ProductLifecycleConflict("FileContextItem captured bytes are corrupt")
+            if file_status == "current":
+                try:
+                    boundary = Path(str(workspace_locator["locator"])).resolve(strict=True)
+                    candidate = (boundary / str(item["normalized_path"])).resolve(strict=True)
+                    candidate.relative_to(boundary)
+                    if candidate.stat().st_size > 1024 * 1024:
+                        raise ValueError("file context source exceeds bounded verification")
+                    with candidate.open("rb") as stream:
+                        raw = stream.read(1024 * 1024 + 1)
+                    if (
+                        len(raw) > 1024 * 1024
+                        or
+                        hashlib.sha256(raw).hexdigest() != str(item["content_hash"])
+                        or end > len(raw)
+                        or hashlib.sha256(raw[start:end]).hexdigest() != str(item["range_digest"])
+                    ):
+                        file_status = "stale"
+                except (OSError, ValueError, RuntimeError):
+                    file_status = "stale"
+            typed_sources.append({
+                "source_class": "file", "source_id": str(item["file_context_item_id"]),
+                "content": _json_dumps({"path": item["normalized_path"],
+                                        "revision": item["revision"],
+                                        "byte_range": [item["byte_start"], item["byte_end"]],
+                                        "range_digest": item["range_digest"],
+                                        "origin_kind": item["origin_kind"], "origin_id": item["origin_id"],
+                                        "encoding": item["encoding"],
+                                        "capture_completeness": item["capture_completeness"],
+                                        "content_base64": base64.b64encode(captured).decode("ascii")
+                                        if captured is not None else None,
+                                        "text": captured.decode("utf-8")
+                                        if captured is not None and item["encoding"] == "utf-8" else None}),
+                "status": "eligible" if file_status == "current" and captured is not None else "stale",
+                "reason": (None if file_status == "current" and captured is not None
+                           else "legacy_capture_unavailable" if captured is None else file_status),
+            })
+            if file_status == "current":
+                current_file_revisions.add(str(item["revision"]))
+        for item in summaries:
+            if hashlib.sha256(str(item["content"]).encode("utf-8")).hexdigest() != str(item["content_digest"]):
+                raise ProductLifecycleConflict("SummaryArtifact content is corrupt")
+            end = int(item["source_end_sequence"])
+            if end > len(events) or int(item["source_start_sequence"]) != 1 or hashlib.sha256(
+                _json_dumps(events[:end]).encode("utf-8")
+            ).hexdigest() != str(item["source_digest"]):
+                raise ProductLifecycleConflict("SummaryArtifact source prefix is corrupt")
+            if item["auxiliary_request_id"] is not None:
+                source_attempt = self._connection.execute(
+                    """SELECT request.semantic_prefix_end_sequence,
+                              request.semantic_prefix_digest, turn.conversation_id
+                       FROM frozen_model_requests AS request
+                       JOIN runtime_executions AS runtime
+                         ON runtime.runtime_execution_id=request.runtime_execution_id
+                       JOIN turns AS turn ON turn.turn_id=runtime.turn_id
+                       JOIN model_attempts AS attempt ON attempt.request_id=request.request_id
+                       JOIN model_attempt_outcomes AS outcome ON outcome.attempt_id=attempt.attempt_id
+                       WHERE request.request_id=? AND attempt.attempt_id=?
+                         AND request.request_kind='summary_auxiliary'
+                         AND outcome.outcome_kind='succeeded'""",
+                    (item["auxiliary_request_id"], item["auxiliary_attempt_id"]),
+                ).fetchone()
+                if (source_attempt is None
+                        or int(source_attempt["semantic_prefix_end_sequence"] or 0) != end
+                        or source_attempt["semantic_prefix_digest"] != item["source_digest"]
+                        or source_attempt["conversation_id"] != admission.conversation_id):
+                    raise ProductLifecycleConflict("SummaryArtifact auxiliary source binding is corrupt")
+                content_record = _json_loads(str(item["content"]), description="native summary content")
+                if (not isinstance(content_record, Mapping)
+                        or content_record.get("summary_id") != item["summary_artifact_id"]):
+                    raise ProductLifecycleConflict("native SummaryArtifact result content is corrupt")
+            valid_claims: list[str] = []
+            stale_claims: list[str] = []
+            for claim in summary_claims[str(item["summary_artifact_id"])]:
+                if (
+                    int(claim["source_start_sequence"]) < 1
+                    or int(claim["source_end_sequence"]) > end
+                    or int(claim["source_start_sequence"]) > int(claim["source_end_sequence"])
+                ):
+                    raise ProductLifecycleConflict("SummaryClaim source range is corrupt")
+                valid = str(claim["status"]) == "valid"
+                if claim["source_artifact_id"] is not None:
+                    valid = valid and str(claim["source_artifact_id"]) in verified_artifact_ids
+                if str(claim["claim_kind"]) == "repository_code_fact":
+                    valid = valid and str(claim["source_revision"]) in current_file_revisions
+                (valid_claims if valid else stale_claims).append(str(claim["claim_text"]))
+            typed_sources.append({
+                "source_class": "summary", "source_id": str(item["summary_artifact_id"]),
+                "content": _json_dumps({"valid_claims": valid_claims,
+                                        "historical_claims": stale_claims}),
+                "status": "eligible" if valid_claims else "stale",
+                "reason": None if valid_claims else "no_current_verified_claims",
+            })
+        return {
+            "conversation_id": admission.conversation_id,
+            "turn_id": admission.turn_id,
+            "runtime_execution_id": admission.runtime_execution_id,
+            "instruction_manifest_id": manifest_id,
+            "instruction_manifest_revision": int(latest["revision"]) if latest is not None else 0,
+            "instruction_status": instruction_status,
+            "instruction_conflicts": tuple(str(item["conflict_key"]) for item in conflicts),
+            "product_version": int(row["product_version"]),
+            "causal_frontier": int(row["causal_frontier"] or 0),
+            "current_intent": tuple(current_intent),
+            "resolver_outcomes": tuple(resolver_outcomes),
+            "instruction_content": instruction_content,
+            "semantic_events": tuple(events),
+            "typed_sources": tuple(typed_sources),
+        }
+
+    def record_m3_context_failure(
+        self, *, operation_id: str, proposed_request_id: str,
+        status: str, reason: str, policy_version: str,
+    ) -> None:
+        if status not in {"overflow", "rejected", "failed", "stale_rebuild"}:
+            raise ValueError("invalid context failure status")
+        timestamp = self.clock()
+        operation_key = str(uuid.uuid5(
+            uuid.NAMESPACE_URL,
+            f"m3-context-failure:{operation_id}:{proposed_request_id}:{status}:{reason}",
+        ))
+        with self._lock:
+            with self._write_transaction():
+                binding = self._connection.execute(
+                    """SELECT t.conversation_id, t.turn_id, a.runtime_execution_id
+                       FROM product_admissions AS a JOIN turns AS t ON t.turn_id=a.turn_id
+                       WHERE a.operation_id=?""", (operation_id,),
+                ).fetchone()
+                if binding is None:
+                    raise ProductLifecycleConflict("context failure has no Product admission")
+                self._connection.execute(
+                    """INSERT OR IGNORE INTO context_operations(
+                           context_operation_id, request_id, conversation_id,
+                           operation_kind, status, policy_version, started_at,
+                           finished_at, elapsed_ms, metrics_json, coverage_status)
+                       VALUES (?, NULL, ?, 'composition', ?, ?, ?, ?, NULL, ?, 'incomplete')""",
+                    (operation_key, str(binding["conversation_id"]), status,
+                     policy_version, timestamp, timestamp,
+                     _json_dumps({"reason": reason,
+                                  "proposed_request_id": proposed_request_id})),
+                )
+                self._connection.execute(
+                    """INSERT OR IGNORE INTO m3_metric_samples(
+                           metric_sample_id, metric_name, population_kind, conversation_id,
+                           turn_id, runtime_execution_id, request_id, attempt_id,
+                           context_operation_id, value, unit, classification,
+                           coverage_status, dimensions_json, created_at)
+                       VALUES (?, 'context_compaction_latency_ms', ?, ?, ?, ?,
+                               NULL, NULL, ?, NULL, 'ms', 'unknown', 'incomplete', ?, ?)""",
+                    (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-context-failure-metric:{operation_key}")),
+                     f"context_{status}", str(binding["conversation_id"]),
+                     str(binding["turn_id"]), str(binding["runtime_execution_id"]),
+                     operation_key,
+                     _json_dumps({"reason": reason,
+                                  "proposed_request_id": proposed_request_id}), timestamp),
+                )
+                self._record_m3_count_in_transaction(
+                    identity=operation_key, metric_name="context_operation_count",
+                    population_kind=status, timestamp=timestamp,
+                    conversation_id=str(binding["conversation_id"]),
+                    turn_id=str(binding["turn_id"]),
+                    runtime_execution_id=str(binding["runtime_execution_id"]),
+                    context_operation_id=operation_key,
+                    dimensions={"reason": reason, "proposed_request_id": proposed_request_id},
+                )
+
+    def record_tool_result_artifact(self, session_id: str, artifact: object, observation: object) -> str:
+        """Persist bounded raw bytes and their normalized prompt projection atomically."""
+        from coding_agent.product_domain import NormalizedObservation, ToolResultArtifact
+
+        if not isinstance(artifact, ToolResultArtifact) or not isinstance(observation, NormalizedObservation):
+            raise TypeError("invalid tool artifact evidence")
+        if observation.artifact_id != artifact.artifact_id:
+            raise InvariantViolation("normalized observation is bound to another artifact")
+        timestamp = self.clock()
+        with self._lock:
+            with self._write_transaction():
+                self._read_session_row(session_id)
+                self._connection.execute(
+                    """INSERT OR IGNORE INTO tool_result_artifacts(
+                           artifact_id, legacy_session_id, tool_call_id, channel, mime_type,
+                           encoding, content, content_digest, captured_size, range_start,
+                           range_end, capture_limit, capture_completeness, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (artifact.artifact_id, session_id, artifact.tool_call_id, artifact.channel,
+                     artifact.mime_type, artifact.encoding, artifact.content,
+                     artifact.content_digest, artifact.captured_size, artifact.range_start,
+                     artifact.range_end, artifact.capture_limit, artifact.capture_completeness,
+                     timestamp),
+                )
+                stored_artifact = self._connection.execute(
+                    """SELECT legacy_session_id, tool_call_id, channel, mime_type, encoding,
+                              content, content_digest, captured_size, range_start, range_end,
+                              capture_limit, capture_completeness
+                       FROM tool_result_artifacts WHERE artifact_id=?""",
+                    (artifact.artifact_id,),
+                ).fetchone()
+                if stored_artifact is None or tuple(stored_artifact) != (
+                    session_id, artifact.tool_call_id, artifact.channel, artifact.mime_type,
+                    artifact.encoding, artifact.content, artifact.content_digest,
+                    artifact.captured_size, artifact.range_start, artifact.range_end,
+                    artifact.capture_limit, artifact.capture_completeness,
+                ):
+                    raise InvariantViolation("tool artifact identity/content collision")
+                excerpt_digest = (
+                    hashlib.sha256(observation.excerpt.encode("utf-8")).hexdigest()
+                    if observation.excerpt is not None else None
+                )
+                self._connection.execute(
+                    """INSERT OR IGNORE INTO normalized_observations(
+                           observation_id, artifact_id, status_kind, semantic_json, excerpt,
+                           excerpt_digest, prompt_truncated, projection_completeness, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (observation.observation_id, observation.artifact_id,
+                     observation.status_kind, _json_dumps(dict(observation.semantic)),
+                     observation.excerpt,
+                     excerpt_digest,
+                     int(observation.prompt_truncated), observation.projection_completeness,
+                     timestamp),
+                )
+                stored_observation = self._connection.execute(
+                    """SELECT artifact_id, status_kind, semantic_json, excerpt, excerpt_digest,
+                              prompt_truncated, projection_completeness
+                       FROM normalized_observations WHERE observation_id=?""",
+                    (observation.observation_id,),
+                ).fetchone()
+                if stored_observation is None or tuple(stored_observation) != (
+                    artifact.artifact_id, observation.status_kind,
+                    _json_dumps(dict(observation.semantic)), observation.excerpt,
+                    excerpt_digest, int(observation.prompt_truncated),
+                    observation.projection_completeness,
+                ):
+                    raise InvariantViolation("normalized observation identity/content collision")
+                mapping = self._connection.execute(
+                    """SELECT t.conversation_id FROM runtime_executions AS r
+                       JOIN turns AS t ON t.turn_id=r.turn_id
+                       WHERE r.legacy_session_id=?""", (session_id,),
+                ).fetchone()
+                if mapping is not None:
+                    existing_semantic = self._connection.execute(
+                        """SELECT 1 FROM conversation_semantic_events
+                           WHERE conversation_id=? AND event_type='tool_observation_referenced'
+                             AND provenance_json LIKE ? LIMIT 1""",
+                        (str(mapping["conversation_id"]), f'%"artifact_id":"{artifact.artifact_id}"%'),
+                    ).fetchone()
+                    if existing_semantic is None:
+                        self._append_conversation_semantic_event(
+                            str(mapping["conversation_id"]), "tool_observation_referenced",
+                            "m3_tool_artifact",
+                            {"artifact_id": artifact.artifact_id,
+                             "observation_id": observation.observation_id,
+                             "tool_call_id": artifact.tool_call_id}, timestamp,
+                        )
+        return artifact.artifact_id
+
+    def record_file_context_item(self, item: object) -> str:
+        from coding_agent.product_domain import FileContextItem
+
+        if not isinstance(item, FileContextItem):
+            raise TypeError("invalid file context evidence")
+        timestamp = self.clock()
+        with self._lock:
+            with self._write_transaction():
+                if item.origin_kind == "tool_result" and self._connection.execute(
+                    "SELECT 1 FROM tool_result_artifacts WHERE artifact_id=?",
+                    (item.origin_id,),
+                ).fetchone() is None:
+                    raise InvariantViolation("FileContextItem source artifact is unavailable")
+                self._connection.execute(
+                    """INSERT OR IGNORE INTO file_context_items(
+                           file_context_item_id, workspace_binding_id, normalized_path,
+                           file_type, content_hash, revision, byte_start, byte_end,
+                           line_start, line_end, range_digest, origin_kind, origin_id,
+                           status, content, encoding, capture_completeness, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (item.file_context_item_id, item.workspace_binding_id,
+                     item.normalized_path, item.file_type, item.content_hash, item.revision,
+                     item.byte_start, item.byte_end, None, None,
+                     item.range_digest, item.origin_kind, item.origin_id, item.status,
+                     item.content, item.encoding, item.capture_completeness,
+                     timestamp),
+                )
+                stored_file = self._connection.execute(
+                    """SELECT workspace_binding_id, normalized_path, file_type,
+                              content_hash, revision, byte_start, byte_end,
+                              range_digest, origin_kind, origin_id, status,
+                              content, encoding, capture_completeness
+                       FROM file_context_items WHERE file_context_item_id=?""",
+                    (item.file_context_item_id,),
+                ).fetchone()
+                if stored_file is None or tuple(stored_file) != (
+                    item.workspace_binding_id, item.normalized_path, item.file_type,
+                    item.content_hash, item.revision, item.byte_start, item.byte_end,
+                    item.range_digest, item.origin_kind, item.origin_id, item.status,
+                    item.content, item.encoding, item.capture_completeness,
+                ):
+                    raise InvariantViolation("FileContextItem identity/content collision")
+        return item.file_context_item_id
+
+    def record_summary_artifact(
+        self, summary: object, *, instruction_manifest_id: str | None,
+        workspace_binding_id: str | None, supersedes: str | None = None,
+    ) -> str:
+        from coding_agent.product_domain import SummaryArtifact
+
+        if not isinstance(summary, SummaryArtifact):
+            raise TypeError("invalid SummaryArtifact")
+        timestamp = self.clock()
+        with self._lock:
+            with self._write_transaction():
+                semantic = self._connection.execute(
+                    """SELECT sequence, event_type, provenance_kind, provenance_json
+                       FROM conversation_semantic_events WHERE conversation_id=?
+                         AND sequence<=? ORDER BY sequence""",
+                    (summary.conversation_id, summary.source_end_sequence),
+                ).fetchall()
+                events = [
+                    {"sequence": int(row["sequence"]), "event_type": str(row["event_type"]),
+                     "provenance_kind": str(row["provenance_kind"]),
+                     "payload": _json_loads(str(row["provenance_json"]), description="summary source")}
+                    for row in semantic
+                ]
+                if (
+                    summary.source_start_sequence != 1
+                    or [event["sequence"] for event in events] != list(range(1, summary.source_end_sequence + 1))
+                    or hashlib.sha256(_json_dumps(events).encode("utf-8")).hexdigest() != summary.source_digest
+                    or hashlib.sha256(summary.content.encode("utf-8")).hexdigest() != summary.content_digest
+                ):
+                    raise InvariantViolation("SummaryArtifact is not a verified Conversation prefix")
+                for claim in summary.claims:
+                    if claim.source_artifact_id is not None:
+                        artifact = self._connection.execute(
+                            "SELECT 1 FROM tool_result_artifacts WHERE artifact_id=?",
+                            (claim.source_artifact_id,),
+                        ).fetchone()
+                        if artifact is None:
+                            raise InvariantViolation("SummaryClaim source artifact is unavailable")
+                    if claim.claim_kind in {"repository_code_fact", "tool_test_fact"} and (
+                        claim.source_artifact_id is None or claim.source_revision is None
+                    ):
+                        raise InvariantViolation("code/tool SummaryClaim needs artifact and revision")
+                if supersedes is not None:
+                    parent = self._connection.execute(
+                        """SELECT conversation_id, source_end_sequence, status
+                           FROM conversation_summary_artifacts WHERE summary_artifact_id=?""",
+                        (supersedes,),
+                    ).fetchone()
+                    if (
+                        parent is None or str(parent["conversation_id"]) != summary.conversation_id
+                        or int(parent["source_end_sequence"]) > summary.source_end_sequence
+                        or str(parent["status"]) != "valid"
+                    ):
+                        raise InvariantViolation("SummaryArtifact supersession is invalid")
+                self._connection.execute(
+                    """INSERT OR IGNORE INTO conversation_summary_artifacts(
+                           summary_artifact_id, conversation_id, source_start_sequence,
+                           source_end_sequence, source_digest, content, content_digest,
+                           policy_version, generator_version, parent_summary_id,
+                           instruction_manifest_id, workspace_binding_id, status,
+                           superseded_by, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)""",
+                    (summary.summary_artifact_id, summary.conversation_id,
+                     summary.source_start_sequence, summary.source_end_sequence,
+                     summary.source_digest, summary.content, summary.content_digest,
+                     summary.policy_version, summary.generator_version, supersedes,
+                     instruction_manifest_id, workspace_binding_id, summary.status, timestamp),
+                )
+                stored = self._connection.execute(
+                    """SELECT conversation_id, source_start_sequence, source_end_sequence,
+                              source_digest, content, content_digest, policy_version,
+                              generator_version, parent_summary_id,
+                              instruction_manifest_id, workspace_binding_id
+                       FROM conversation_summary_artifacts WHERE summary_artifact_id=?""",
+                    (summary.summary_artifact_id,),
+                ).fetchone()
+                if stored is None or tuple(stored) != (
+                    summary.conversation_id, summary.source_start_sequence,
+                    summary.source_end_sequence, summary.source_digest, summary.content,
+                    summary.content_digest, summary.policy_version, summary.generator_version,
+                    supersedes,
+                    instruction_manifest_id, workspace_binding_id,
+                ):
+                    raise InvariantViolation("SummaryArtifact identity/content collision")
+                for claim in summary.claims:
+                    self._connection.execute(
+                        """INSERT OR IGNORE INTO conversation_summary_claims(
+                               claim_id, summary_artifact_id, claim_kind, claim_text,
+                               source_start_sequence, source_end_sequence, source_artifact_id,
+                               source_revision, status, created_at)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (claim.claim_id, summary.summary_artifact_id, claim.claim_kind,
+                         claim.text, claim.source_start_sequence, claim.source_end_sequence,
+                         claim.source_artifact_id, claim.source_revision, claim.status, timestamp),
+                    )
+                    saved_claim = self._connection.execute(
+                        """SELECT summary_artifact_id, claim_kind, claim_text,
+                                  source_start_sequence, source_end_sequence,
+                                  source_artifact_id, source_revision
+                           FROM conversation_summary_claims WHERE claim_id=?""",
+                        (claim.claim_id,),
+                    ).fetchone()
+                    if saved_claim is None or tuple(saved_claim) != (
+                        summary.summary_artifact_id, claim.claim_kind, claim.text,
+                        claim.source_start_sequence, claim.source_end_sequence,
+                        claim.source_artifact_id, claim.source_revision,
+                    ):
+                        raise InvariantViolation("SummaryClaim identity/content collision")
+                if supersedes is not None:
+                    self._connection.execute(
+                        """UPDATE conversation_summary_artifacts
+                           SET status='superseded', superseded_by=?
+                           WHERE summary_artifact_id=? AND status='valid'""",
+                        (summary.summary_artifact_id, supersedes),
+                    )
+        return summary.summary_artifact_id
 
     def inspect_workspace_startup(self, workspace_binding_id: str) -> dict[str, object]:
         """Read-only discovery required before an M2 Product attachment is considered."""
@@ -1705,6 +3554,172 @@ class SQLiteRunJournal:
         )
         return digest
 
+    def _prepare_m3_instruction_manifest(
+        self, *, repository_id: str, project_scope_id: str,
+        workspace_binding_id: str, operation_id: str,
+        fresh_observation: Mapping[str, object] | None,
+        target_paths: tuple[str, ...] = (),
+    ) -> object:
+        """Prepare and revalidate read-only instruction evidence outside SQL writes."""
+        from coding_agent.product_instructions import (
+            discover_instruction_sources,
+            resolve_instruction_manifest,
+        )
+
+        with self._lock:
+            scope = self._connection.execute(
+                "SELECT relative_path FROM project_scopes WHERE project_scope_id=? AND repository_id=?",
+                (project_scope_id, repository_id),
+            ).fetchone()
+            binding = self._connection.execute(
+                """SELECT locator FROM workspace_bindings
+                   WHERE workspace_binding_id=? AND repository_id=? AND project_scope_id=?""",
+                (workspace_binding_id, repository_id, project_scope_id),
+            ).fetchone()
+            trust = self._connection.execute(
+                """SELECT 1 FROM instruction_trusts
+                   WHERE repository_id=? AND project_scope_id=?
+                     AND source_kind='agents_md'
+                     AND disposition='active'
+                     AND (workspace_binding_id IS NULL OR workspace_binding_id=?)
+                   ORDER BY workspace_binding_id DESC LIMIT 1""",
+                (repository_id, project_scope_id, workspace_binding_id),
+            ).fetchone()
+        if scope is None or binding is None:
+            raise ProductLifecycleConflict("instruction discovery scope is unavailable")
+        workspace_root = Path(str(binding["locator"])).resolve(strict=True)
+        observed_repository = (
+            fresh_observation.get("repository_root") if fresh_observation is not None else None
+        )
+        repository_root = Path(str(observed_repository or workspace_root)).resolve(strict=True)
+        relative_scope = Path(str(scope["relative_path"]))
+        project_root = (repository_root / relative_scope).resolve(strict=True)
+        try:
+            first = discover_instruction_sources(
+                repository_root=repository_root,
+                project_scope_root=project_root,
+                workspace_root=workspace_root,
+                target_paths=target_paths,
+            )
+            second = discover_instruction_sources(
+                repository_root=repository_root,
+                project_scope_root=project_root,
+                workspace_root=workspace_root,
+                target_paths=target_paths,
+            )
+        except (OSError, ValueError) as exc:
+            raise ProductLifecycleConflict("instruction discovery is unavailable") from exc
+        first_facts = tuple((item.locator, item.revision_digest, item.disposition, item.reason) for item in first.sources)
+        second_facts = tuple((item.locator, item.revision_digest, item.disposition, item.reason) for item in second.sources)
+        if first_facts != second_facts:
+            raise ProductLifecycleConflict("instruction sources drifted during admission preparation")
+        return resolve_instruction_manifest(
+            second, trusted=trust is not None,
+            manifest_id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-admission-manifest:{operation_id}")),
+        )
+
+    def _persist_m3_instruction_manifest_in_transaction(
+        self, *, resolved: object, repository_id: str, project_scope_id: str,
+        workspace_binding_id: str, conversation_id: str, turn_id: str,
+        timestamp: str, refresh_operation_id: str | None = None,
+        refresh_reason: str = "turn_admission",
+    ) -> None:
+        from coding_agent.product_instructions import ResolvedInstructionManifest, _structured_rules
+
+        if not isinstance(resolved, ResolvedInstructionManifest):
+            raise InvariantViolation("prepared instruction manifest has an invalid type")
+        status = "conflicted" if resolved.unresolved_conflicts else "active"
+        previous = self._connection.execute(
+            """SELECT instruction_manifest_id, revision FROM instruction_manifests
+               WHERE conversation_id=? ORDER BY revision DESC LIMIT 1""",
+            (conversation_id,),
+        ).fetchone()
+        revision = int(previous["revision"]) + 1 if previous is not None else 1
+        parent_manifest_id = str(previous["instruction_manifest_id"]) if previous is not None else None
+        self._connection.execute(
+            """INSERT INTO instruction_manifests(
+                   instruction_manifest_id, conversation_id, turn_id, workspace_binding_id,
+                   parent_manifest_id, revision, effective_digest, refresh_operation_id,
+                   refresh_reason, policy_version, load_sequence_frontier, status, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (resolved.manifest_id, conversation_id, turn_id, workspace_binding_id,
+             parent_manifest_id, revision, resolved.effective_digest, refresh_operation_id,
+             refresh_reason, resolved.policy_version,
+             len(resolved.entries), status, timestamp),
+        )
+        status_digest = hashlib.sha256(
+            _json_dumps({"status": status, "effective_digest": resolved.effective_digest}).encode("utf-8")
+        ).hexdigest()
+        self._connection.execute(
+            """INSERT INTO instruction_manifest_status_events(
+                   status_event_id, instruction_manifest_id, status, reason,
+                   observed_digest, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-manifest-status:{resolved.manifest_id}:{status_digest}")),
+             resolved.manifest_id, status, "manifest_published", status_digest, timestamp),
+        )
+        for entry in resolved.entries:
+            source = entry.source
+            self._connection.execute(
+                """INSERT OR IGNORE INTO instruction_sources(
+                       source_id, repository_id, project_scope_id, workspace_binding_id,
+                       provider_kind, locator, normalized_path, scope_kind, authority_rank,
+                       specificity, revision_digest, disposition, reason, discovered_at)
+                   VALUES (?, ?, ?, ?, 'agents_md', ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (source.source_id, repository_id, project_scope_id, workspace_binding_id,
+                 source.locator, source.normalized_path, source.scope_kind,
+                 source.authority_rank, source.specificity, source.revision_digest,
+                 source.disposition, source.reason, timestamp),
+            )
+            if source.snapshot is not None:
+                encoded = source.snapshot.content.encode("utf-8")
+                self._connection.execute(
+                    """INSERT OR IGNORE INTO instruction_snapshots(
+                           snapshot_id, content_digest, canonical_utf8, byte_count, created_at)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (source.snapshot.snapshot_id, source.snapshot.content_digest,
+                     encoded, len(encoded), timestamp),
+                )
+            self._connection.execute(
+                """INSERT INTO instruction_manifest_entries(
+                       entry_id, instruction_manifest_id, source_id, snapshot_id, sequence,
+                       authority_rank, specificity, trust_disposition, disposition, reason,
+                       source_digest)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (entry.entry_id, resolved.manifest_id, source.source_id,
+                 source.snapshot.snapshot_id if source.snapshot is not None else None,
+                 entry.sequence, source.authority_rank, source.specificity,
+                 entry.trust_disposition, entry.disposition, entry.reason,
+                 source.revision_digest),
+            )
+        for edge in resolved.overrides:
+            self._connection.execute(
+                """INSERT INTO instruction_override_edges(
+                       edge_id, instruction_manifest_id, winner_entry_id, loser_entry_id,
+                       conflict_key, resolution_kind, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (edge.edge_id, resolved.manifest_id, edge.winner_entry_id,
+                 edge.loser_entry_id, edge.conflict_key, edge.resolution_kind, timestamp),
+            )
+        for conflict_key in resolved.unresolved_conflicts:
+            candidates = []
+            for entry in resolved.entries:
+                snapshot = entry.source.snapshot
+                if snapshot is None:
+                    continue
+                keys = _structured_rules(snapshot.content)
+                if conflict_key in keys:
+                    candidates.append(entry.entry_id)
+            self._connection.execute(
+                """INSERT INTO instruction_manifest_conflicts(
+                       conflict_id, instruction_manifest_id, conflict_key,
+                       candidate_entry_ids_json, status, created_at)
+                   VALUES (?, ?, ?, ?, 'unresolved', ?)""",
+                (str(uuid.uuid5(uuid.NAMESPACE_URL,
+                                f"m3-instruction-conflict:{resolved.manifest_id}:{conflict_key}")),
+                 resolved.manifest_id, conflict_key, _json_dumps(sorted(candidates)), timestamp),
+            )
+
     def admit_turn(
         self,
         *,
@@ -1748,6 +3763,11 @@ class SQLiteRunJournal:
                 return TurnAdmission(**{**existing.__dict__, "idempotent": True})
         fresh_observation, captured_binding = self._capture_direct_binding_observation(
             workspace_binding_id
+        )
+        resolved_instruction_manifest = self._prepare_m3_instruction_manifest(
+            repository_id=repository_id, project_scope_id=project_scope_id,
+            workspace_binding_id=workspace_binding_id, operation_id=operation_id,
+            fresh_observation=fresh_observation,
         )
         timestamp = self.clock()
         with self._lock:
@@ -1858,7 +3878,10 @@ class SQLiteRunJournal:
                         baseline,
                         {**exclusions, "m3_instruction_protection": "unimplemented", "m4_mutation_coverage": "non_restorable"},
                     )
-                    manifest = InstructionManifest(str(uuid.uuid4()), "m2_placeholder_no_discovery")
+                    manifest = InstructionManifest(
+                        str(getattr(resolved_instruction_manifest, "manifest_id")),
+                        "m3_resolved_instruction_manifest",
+                    )
                     epoch = PolicyEpoch("m2-read-only-direct-tree-v1", "m2_read_only_direct_tree")
                     if fault_hook is not None:
                         fault_hook("before_session")
@@ -1878,6 +3901,15 @@ class SQLiteRunJournal:
                     )
                     if fault_hook is not None:
                         fault_hook("after_turn")
+                        fault_hook("before_instruction_manifest")
+                    self._persist_m3_instruction_manifest_in_transaction(
+                        resolved=resolved_instruction_manifest,
+                        repository_id=repository_id, project_scope_id=project_scope_id,
+                        workspace_binding_id=workspace_binding_id,
+                        conversation_id=conversation_id, turn_id=turn_id, timestamp=timestamp,
+                    )
+                    if fault_hook is not None:
+                        fault_hook("after_instruction_manifest")
                     if fault_hook is not None:
                         fault_hook("before_runtime_execution")
                     self._connection.execute(
@@ -2023,13 +4055,22 @@ class SQLiteRunJournal:
                     {"operation_id": operation_id, "input_id": input_id, "turn_id": str(turn_id)}, timestamp,
                 )
                 if input_kind == "reply":
+                    self._resolve_instruction_conflicts_from_reply_in_transaction(
+                        conversation_id, str(turn_id), str(correlation_id),
+                        input_id, str(payload.get("text", "")), timestamp,
+                    )
                     execution = self._connection.execute(
                         "SELECT legacy_session_id FROM runtime_executions WHERE turn_id=?", (str(turn_id),)
                     ).fetchone()
                     if execution is None:
                         raise PersistenceError("open Turn has no RuntimeExecution")
+                    session_row = self._read_session_row(str(execution["legacy_session_id"]))
+                    resume_state = (
+                        RuntimeState.BUILDING_CONTEXT if session_row["workspace_path"] is not None
+                        else RuntimeState.PREPARING_WORKSPACE
+                    )
                     self._transition_admitted_session_in_transaction(
-                        str(execution["legacy_session_id"]), RuntimeState.BUILDING_CONTEXT,
+                        str(execution["legacy_session_id"]), resume_state,
                         "ordinary_input_replied", {"request_id": correlation_id, "reply_input_id": input_id},
                         message=Message(role="user", content=str(payload.get("text", "")), metadata={
                             "m2_input_id": input_id, "m2_input_kind": "reply", "correlation_id": correlation_id,
@@ -2041,6 +4082,114 @@ class SQLiteRunJournal:
                     )
                 return input_id
 
+    def _resolve_instruction_conflicts_from_reply_in_transaction(
+        self, conversation_id: str, turn_id: str, correlation_id: str,
+        reply_input_id: str, reply_text: str, timestamp: str,
+    ) -> None:
+        """Publish an immutable successor after a correlated user resolution."""
+        request = self._connection.execute(
+            "SELECT payload_json FROM product_inputs WHERE input_id=?",
+            (correlation_id,),
+        ).fetchone()
+        if request is None:
+            raise ProductLifecycleConflict("instruction resolver request is unavailable")
+        request_payload = _json_loads(str(request["payload_json"]), description="resolver request")
+        if not isinstance(request_payload, Mapping) or not isinstance(
+            request_payload.get("instruction_manifest_id"), str,
+        ):
+            return
+        if not reply_text.strip():
+            raise ProductLifecycleConflict("instruction conflict resolution requires a nonempty reply")
+        parent_id = str(request_payload["instruction_manifest_id"])
+        parent = self._connection.execute(
+            """SELECT * FROM instruction_manifests
+               WHERE instruction_manifest_id=? AND conversation_id=? AND turn_id=?""",
+            (parent_id, conversation_id, turn_id),
+        ).fetchone()
+        latest = self._connection.execute(
+            """SELECT instruction_manifest_id FROM instruction_manifests
+               WHERE conversation_id=? ORDER BY revision DESC LIMIT 1""",
+            (conversation_id,),
+        ).fetchone()
+        if parent is None or latest is None or str(latest["instruction_manifest_id"]) != parent_id:
+            raise ProductLifecycleConflict("instruction resolver manifest is no longer active")
+        conflicts = self._connection.execute(
+            """SELECT conflict_key FROM instruction_manifest_conflicts
+               WHERE instruction_manifest_id=? AND status='unresolved' ORDER BY conflict_key""",
+            (parent_id,),
+        ).fetchall()
+        if not conflicts:
+            return
+        new_id = str(uuid.uuid5(uuid.NAMESPACE_URL,
+                                f"m3-resolved-manifest:{parent_id}:{reply_input_id}"))
+        resolution = {
+            "parent_manifest_id": parent_id,
+            "reply_input_id": reply_input_id,
+            "correlation_id": correlation_id,
+            "conflict_keys": [str(row["conflict_key"]) for row in conflicts],
+            "reply_text": reply_text,
+        }
+        effective_digest = hashlib.sha256(_json_dumps({
+            "parent_digest": parent["effective_digest"], "resolution": resolution,
+        }).encode("utf-8")).hexdigest()
+        self._connection.execute(
+            """INSERT INTO instruction_manifests(
+                   instruction_manifest_id, conversation_id, turn_id, workspace_binding_id,
+                   parent_manifest_id, revision, effective_digest, refresh_operation_id,
+                   refresh_reason, policy_version, load_sequence_frontier, status, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 'user_conflict_resolution', ?, ?, 'active', ?)""",
+            (new_id, conversation_id, turn_id, parent["workspace_binding_id"], parent_id,
+             int(parent["revision"]) + 1, effective_digest, parent["policy_version"],
+             parent["load_sequence_frontier"], timestamp),
+        )
+        entries = self._connection.execute(
+            "SELECT * FROM instruction_manifest_entries WHERE instruction_manifest_id=? ORDER BY sequence",
+            (parent_id,),
+        ).fetchall()
+        entry_ids: dict[str, str] = {}
+        for entry in entries:
+            new_entry = str(uuid.uuid5(uuid.NAMESPACE_URL,
+                                      f"m3-resolved-entry:{new_id}:{entry['entry_id']}"))
+            entry_ids[str(entry["entry_id"])] = new_entry
+            self._connection.execute(
+                """INSERT INTO instruction_manifest_entries(
+                       entry_id, instruction_manifest_id, source_id, snapshot_id, sequence,
+                       authority_rank, specificity, trust_disposition, disposition,
+                       reason, source_digest)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (new_entry, new_id, entry["source_id"], entry["snapshot_id"],
+                 entry["sequence"], entry["authority_rank"], entry["specificity"],
+                 entry["trust_disposition"], entry["disposition"], entry["reason"],
+                 entry["source_digest"]),
+            )
+        edges = self._connection.execute(
+            "SELECT * FROM instruction_override_edges WHERE instruction_manifest_id=? ORDER BY edge_id",
+            (parent_id,),
+        ).fetchall()
+        for edge in edges:
+            self._connection.execute(
+                """INSERT INTO instruction_override_edges(
+                       edge_id, instruction_manifest_id, winner_entry_id, loser_entry_id,
+                       conflict_key, resolution_kind, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-resolved-edge:{new_id}:{edge['edge_id']}")),
+                 new_id, entry_ids[str(edge["winner_entry_id"])],
+                 entry_ids[str(edge["loser_entry_id"])], edge["conflict_key"],
+                 edge["resolution_kind"], timestamp),
+            )
+        self._connection.execute(
+            """INSERT INTO instruction_manifest_status_events(
+                   status_event_id, instruction_manifest_id, status, reason,
+                   observed_digest, created_at)
+               VALUES (?, ?, 'active', 'user_conflict_resolution', ?, ?)""",
+            (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-resolved-status:{new_id}")),
+             new_id, effective_digest, timestamp),
+        )
+        self._append_conversation_semantic_event(
+            conversation_id, "instruction_conflict_resolved", "m3_user_reply",
+            {**resolution, "instruction_manifest_id": new_id}, timestamp,
+        )
+
     def apply_cancel_at_safe_boundary(
         self, *, conversation_id: str, legacy_session_id: str, operation_id: str,
         expected_conversation_version: int,
@@ -2050,7 +4199,7 @@ class SQLiteRunJournal:
         with self._lock:
             with self._write_transaction():
                 execution = self._connection.execute(
-                    "SELECT turn_id, workspace_binding_id FROM runtime_executions WHERE legacy_session_id=?",
+                    "SELECT runtime_execution_id, turn_id, workspace_binding_id FROM runtime_executions WHERE legacy_session_id=?",
                     (legacy_session_id,),
                 ).fetchone()
                 if execution is None:
@@ -2076,6 +4225,24 @@ class SQLiteRunJournal:
                 self._transition_admitted_session_in_transaction(
                     legacy_session_id, RuntimeState.CANCELLED, "cancel_safe_boundary",
                     {"cancel_input_id": str(intent["input_id"])},
+                )
+                latest_attempt = self._connection.execute(
+                    """SELECT request.request_id, attempt.attempt_id
+                       FROM frozen_model_requests AS request
+                       JOIN model_attempts AS attempt USING(request_id)
+                       WHERE request.legacy_session_id=?
+                       ORDER BY request.request_ordinal DESC, attempt.ordinal DESC LIMIT 1""",
+                    (legacy_session_id,),
+                ).fetchone()
+                self._record_m3_count_in_transaction(
+                    identity=str(intent["input_id"]), metric_name="run_cancel_count",
+                    population_kind="cancel_safe_boundary", timestamp=timestamp,
+                    conversation_id=conversation_id, turn_id=str(execution["turn_id"]),
+                    runtime_execution_id=str(execution["runtime_execution_id"]),
+                    request_id=(str(latest_attempt["request_id"])
+                                if latest_attempt is not None else None),
+                    attempt_id=(str(latest_attempt["attempt_id"])
+                                if latest_attempt is not None else None),
                 )
                 self._connection.execute("UPDATE product_inputs SET status='consumed' WHERE input_id=?", (str(intent["input_id"]),))
                 self._append_conversation_semantic_event(
@@ -3291,6 +5458,80 @@ class SQLiteRunJournal:
         )
         return result
 
+    def get_model_attempt_evidence(
+        self, session_id: str, request_id: str, attempt: int,
+    ) -> dict[str, Any] | None:
+        """Return append-only dispatch/outcome evidence for one frozen attempt."""
+        with self._lock:
+            self._read_session_row(session_id)
+            row = self._connection.execute(
+                """SELECT a.attempt_id, a.ordinal, d.dispatched_at,
+                          o.outcome_kind, o.coverage_status
+                   FROM model_attempts AS a
+                   JOIN frozen_model_requests AS r ON r.request_id=a.request_id
+                   LEFT JOIN model_attempt_dispatches AS d ON d.attempt_id=a.attempt_id
+                   LEFT JOIN model_attempt_outcomes AS o ON o.attempt_id=a.attempt_id
+                   WHERE r.legacy_session_id=? AND a.request_id=? AND a.ordinal=?""",
+                (session_id, request_id, attempt),
+            ).fetchone()
+        return dict(row) if row is not None else None
+
+    def get_pending_summary_attempt(self, session_id: str) -> dict[str, Any] | None:
+        """Return the one nonterminal auxiliary Summary attempt, if any."""
+        with self._lock:
+            self._read_session_row(session_id)
+            row = self._connection.execute(
+                """SELECT request.request_id, request.request_json,
+                          request.request_ordinal, attempt.ordinal AS attempt_ordinal,
+                          dispatch.dispatched_at
+                   FROM frozen_model_requests AS request
+                   JOIN model_attempts AS attempt USING(request_id)
+                   LEFT JOIN model_attempt_dispatches AS dispatch USING(attempt_id)
+                   LEFT JOIN model_attempt_outcomes AS outcome USING(attempt_id)
+                   WHERE request.legacy_session_id=?
+                     AND request.request_kind='summary_auxiliary'
+                     AND outcome.attempt_id IS NULL
+                   ORDER BY request.request_ordinal DESC LIMIT 1""",
+                (session_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        result = dict(row)
+        request = _json_loads(str(row["request_json"]), description="pending summary request")
+        if not isinstance(request, Mapping):
+            raise PersistenceError("pending summary request is corrupt")
+        result["request"] = dict(request)
+        return result
+
+    def mark_model_attempt_dispatched(
+        self, session_id: str, request_id: str, attempt: int,
+    ) -> None:
+        """Append the durable last boundary before invoking a provider."""
+        timestamp = self.clock()
+        with self._lock:
+            with self._write_transaction():
+                self._read_session_row(session_id)
+                row = self._connection.execute(
+                    """SELECT a.attempt_id, o.attempt_id AS outcome_attempt_id
+                       FROM model_attempts AS a
+                       JOIN frozen_model_requests AS r ON r.request_id=a.request_id
+                       LEFT JOIN model_attempt_outcomes AS o ON o.attempt_id=a.attempt_id
+                       WHERE r.legacy_session_id=? AND a.request_id=? AND a.ordinal=?""",
+                    (session_id, request_id, attempt),
+                ).fetchone()
+                if row is None:
+                    raise InvariantViolation("model attempt intent is unavailable")
+                if row["outcome_attempt_id"] is not None:
+                    raise InvariantViolation("terminal model attempt cannot be dispatched")
+                attempt_id = str(row["attempt_id"])
+                self._connection.execute(
+                    """INSERT OR IGNORE INTO model_attempt_dispatches(
+                           dispatch_id, attempt_id, dispatched_at, monotonic_started, created_at)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-dispatch:{attempt_id}")),
+                     attempt_id, timestamp, time.monotonic(), timestamp),
+                )
+
     def get_tool_call(self, session_id: str, call_id: str) -> dict[str, Any] | None:
         with self._lock:
             self._read_session_row(session_id)
@@ -3510,6 +5751,10 @@ class SQLiteRunJournal:
             self._insert_message(mutation.session_id, mutation.message_to_append, int(message_row[0]), timestamp)
         if mutation.model_call is not None:
             self._upsert_model_call(mutation.session_id, mutation.model_call, timestamp)
+        if mutation.auxiliary_model_call is not None:
+            self._upsert_auxiliary_model_call(
+                mutation.session_id, mutation.auxiliary_model_call, timestamp,
+            )
         if mutation.tool_call is not None:
             self._upsert_tool_call(mutation.session_id, mutation.tool_call, timestamp)
             if mutation.tool_call.status is ToolCallState.UNCERTAIN:
@@ -3517,13 +5762,27 @@ class SQLiteRunJournal:
                     mutation.session_id, mutation.tool_call.call_id, timestamp,
                 )
         if mutation.summary is not None:
-            self._upsert_summary(mutation.session_id, mutation.summary, timestamp)
+            self._upsert_summary(
+                mutation.session_id, mutation.summary, timestamp,
+                auxiliary_request_id=(mutation.auxiliary_model_call.request_id
+                                      if mutation.auxiliary_model_call is not None else None),
+            )
         event = self._new_event(
             session_id=mutation.session_id, sequence=sequence,
             event_type=mutation.event_type, state=committed_snapshot.state,
             timestamp=timestamp, payload=mutation.payload,
         )
         self._insert_event(event)
+        if mutation.event_type is EventType.FALLBACK_SELECTED:
+            self._record_m3_fallback_selection_in_transaction(
+                mutation.session_id, committed_snapshot.active_call_id,
+                mutation.payload, timestamp,
+            )
+        if (mutation.event_type is EventType.COMPRESSION_REJECTED
+                and mutation.auxiliary_model_call is None):
+            self._record_m3_compaction_rejection_in_transaction(
+                mutation.session_id, event.event_id, mutation.payload, timestamp,
+            )
         self._upsert_checkpoint(committed_snapshot, timestamp)
         # When M2 owns the mapped Runtime and Product projection, stable
         # lifecycle publication shares this journal transaction.  This closes
@@ -3549,6 +5808,142 @@ class SQLiteRunJournal:
                     (timestamp, str(admission["runtime_execution_id"])),
                 )
         return CommitResult(event=event, committed_version=committed_version)
+
+    def record_m3_response_reuse(self, session_id: str, request_id: str, attempt: int) -> None:
+        """Record response consumption after recovery; never duplicate usage or latency."""
+        with self._lock:
+            with self._write_transaction():
+                binding = self._connection.execute(
+                    """SELECT attempt.attempt_id, request.runtime_execution_id,
+                              turn.turn_id, turn.conversation_id
+                       FROM model_attempts AS attempt
+                       JOIN frozen_model_requests AS request USING(request_id)
+                       JOIN model_attempt_outcomes AS outcome USING(attempt_id)
+                       LEFT JOIN runtime_executions AS runtime
+                         ON runtime.runtime_execution_id=request.runtime_execution_id
+                       LEFT JOIN turns AS turn ON turn.turn_id=runtime.turn_id
+                       WHERE request.legacy_session_id=? AND request.request_id=?
+                         AND attempt.ordinal=? AND outcome.outcome_kind='succeeded'""",
+                    (session_id, request_id, attempt),
+                ).fetchone()
+                if binding is None:
+                    raise InvariantViolation("response reuse lacks a committed successful attempt")
+                self._record_m3_count_in_transaction(
+                    identity=str(binding["attempt_id"]),
+                    metric_name="model_response_reuse_count",
+                    population_kind="committed_response_reuse", timestamp=self.clock(),
+                    conversation_id=binding["conversation_id"], turn_id=binding["turn_id"],
+                    runtime_execution_id=binding["runtime_execution_id"],
+                    request_id=request_id, attempt_id=str(binding["attempt_id"]),
+                )
+
+    def _record_m3_fallback_selection_in_transaction(
+        self, session_id: str, request_id: str | None,
+        payload: Mapping[str, object], timestamp: str,
+    ) -> None:
+        """Count a selected fallback without duplicating failed-attempt timing or usage."""
+        if request_id is None:
+            raise InvariantViolation("fallback selection has no active model request")
+        failed = self._connection.execute(
+            """SELECT attempt.attempt_id, request.runtime_execution_id,
+                      turn.turn_id, turn.conversation_id
+               FROM model_attempts AS attempt
+               JOIN frozen_model_requests AS request USING(request_id)
+               JOIN model_attempt_outcomes AS outcome USING(attempt_id)
+               LEFT JOIN runtime_executions AS runtime
+                 ON runtime.runtime_execution_id=request.runtime_execution_id
+               LEFT JOIN turns AS turn ON turn.turn_id=runtime.turn_id
+               WHERE request.request_id=? AND request.legacy_session_id=?
+                 AND outcome.outcome_kind='failed'
+               ORDER BY attempt.ordinal DESC LIMIT 1""",
+            (request_id, session_id),
+        ).fetchone()
+        if failed is None:
+            raise InvariantViolation("fallback selection has no failed attempt")
+        if not isinstance(payload.get("from"), str) or not isinstance(payload.get("to"), str):
+            raise InvariantViolation("fallback selection has no backend lineage")
+        attempt_id = str(failed["attempt_id"])
+        self._connection.execute(
+            """INSERT OR IGNORE INTO m3_metric_samples(
+                   metric_sample_id, metric_name, population_kind, conversation_id, turn_id,
+                   runtime_execution_id, request_id, attempt_id, context_operation_id,
+                   value, unit, classification, coverage_status, dimensions_json, created_at)
+               VALUES (?, 'model_fallback_count', 'fallback_selected', ?, ?, ?, ?, ?, NULL,
+                       1, 'count', 'measured', 'complete', ?, ?)""",
+            (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-fallback:{attempt_id}")),
+             failed["conversation_id"], failed["turn_id"], failed["runtime_execution_id"],
+             request_id, attempt_id,
+             _json_dumps({"from": payload["from"], "to": payload["to"]}), timestamp),
+        )
+
+    def _record_m3_count_in_transaction(
+        self, *, identity: str, metric_name: str, population_kind: str,
+        timestamp: str, request_id: str | None = None,
+        attempt_id: str | None = None, context_operation_id: str | None = None,
+        conversation_id: str | None = None, turn_id: str | None = None,
+        runtime_execution_id: str | None = None,
+        dimensions: Mapping[str, object] | None = None,
+    ) -> None:
+        self._connection.execute(
+            """INSERT OR IGNORE INTO m3_metric_samples(
+                   metric_sample_id, metric_name, population_kind, conversation_id,
+                   turn_id, runtime_execution_id, request_id, attempt_id,
+                   context_operation_id, value, unit, classification,
+                   coverage_status, dimensions_json, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'count', 'measured',
+                       'complete', ?, ?)""",
+            (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-count:{metric_name}:{identity}")),
+             metric_name, population_kind, conversation_id, turn_id,
+             runtime_execution_id, request_id, attempt_id, context_operation_id,
+             _json_dumps(dict(dimensions or {})), timestamp),
+        )
+
+    def _record_m3_compaction_rejection_in_transaction(
+        self, session_id: str, event_id: str,
+        payload: Mapping[str, object], timestamp: str,
+    ) -> None:
+        """Retain a rejected compaction even when no auxiliary request was prepared."""
+        binding = self._connection.execute(
+            """SELECT turn.conversation_id, turn.turn_id, runtime.runtime_execution_id
+               FROM runtime_executions AS runtime JOIN turns AS turn USING(turn_id)
+               WHERE runtime.legacy_session_id=?""",
+            (session_id,),
+        ).fetchone()
+        operation_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-compaction-rejected:{event_id}"))
+        self._connection.execute(
+            """INSERT INTO context_operations(
+                   context_operation_id, request_id, conversation_id, operation_kind,
+                   status, policy_version, started_at, finished_at, elapsed_ms,
+                   metrics_json, coverage_status)
+               VALUES (?, NULL, ?, 'compaction', 'rejected', 'm3-summary-v1',
+                       ?, ?, NULL, ?, 'incomplete')""",
+            (operation_id, binding["conversation_id"] if binding is not None else None,
+             timestamp, timestamp, _json_dumps({"reason": payload.get("reason")})),
+        )
+        self._connection.execute(
+            """INSERT INTO m3_metric_samples(
+                   metric_sample_id, metric_name, population_kind, conversation_id,
+                   turn_id, runtime_execution_id, request_id, attempt_id,
+                   context_operation_id, value, unit, classification,
+                   coverage_status, dimensions_json, created_at)
+               VALUES (?, 'context_compaction_latency_ms', 'compaction_rejected', ?, ?, ?,
+                       NULL, NULL, ?, NULL, 'ms', 'unknown', 'incomplete', ?, ?)""",
+            (str(uuid.uuid5(uuid.NAMESPACE_URL, f"m3-compaction-rejected-metric:{event_id}")),
+             binding["conversation_id"] if binding is not None else None,
+             binding["turn_id"] if binding is not None else None,
+             binding["runtime_execution_id"] if binding is not None else None,
+             operation_id, _json_dumps({"reason": payload.get("reason")}), timestamp),
+        )
+        self._record_m3_count_in_transaction(
+            identity=event_id, metric_name="context_compaction_outcome_count",
+            population_kind="rejected", timestamp=timestamp,
+            conversation_id=str(binding["conversation_id"]) if binding is not None else None,
+            turn_id=str(binding["turn_id"]) if binding is not None else None,
+            runtime_execution_id=(str(binding["runtime_execution_id"])
+                                  if binding is not None else None),
+            context_operation_id=operation_id,
+            dimensions={"reason": payload.get("reason")},
+        )
 
     def _ensure_runtime_uncertain_barrier_in_transaction(
         self, session_id: str, call_id: str, timestamp: str,

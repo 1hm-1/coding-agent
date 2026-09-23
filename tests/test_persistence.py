@@ -31,6 +31,7 @@ from coding_agent.migrations import (
     V4,
     V5,
     V6,
+    V7,
 )
 from coding_agent.persistence import (
     JournalConflict,
@@ -96,7 +97,7 @@ class PersistenceFoundationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             db_path = Path(temporary) / "state.db"
             journal = SQLiteRunJournal(db_path)
-            self.assertEqual(journal.schema_version, 6)
+            self.assertEqual(journal.schema_version, 7)
             self.assertEqual(journal.connection.execute("PRAGMA foreign_keys").fetchone()[0], 1)
             self.assertEqual(
                 journal.connection.execute("PRAGMA journal_mode").fetchone()[0].lower(),
@@ -153,6 +154,29 @@ class PersistenceFoundationTest(unittest.TestCase):
                     "workspace_writer_operation_receipts",
                     "workspace_recovery_barriers",
                     "turn_finalizations",
+                    "instruction_trusts",
+                    "instruction_sources",
+                    "instruction_snapshots",
+                    "instruction_manifests",
+                    "instruction_manifest_entries",
+                    "instruction_override_edges",
+                    "instruction_manifest_status_events",
+                    "instruction_manifest_conflicts",
+                    "frozen_model_requests",
+                    "context_manifests",
+                    "model_attempts",
+                    "model_attempt_outcomes",
+                    "model_attempt_dispatches",
+                    "context_operations",
+                    "context_selection_items",
+                    "conversation_summary_artifacts",
+                    "conversation_summary_claims",
+                    "tool_result_artifacts",
+                    "normalized_observations",
+                    "context_excerpts",
+                    "file_context_items",
+                    "product_operation_receipts",
+                    "m3_metric_samples",
                     "sqlite_sequence",
                 },
             )
@@ -173,6 +197,60 @@ class PersistenceFoundationTest(unittest.TestCase):
             with self.assertRaises(FutureSchemaVersion):
                 SQLiteRunJournal(db_path)
 
+    def test_v6_inflight_model_request_is_imported_exactly_before_resume(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            db_path = Path(temporary) / "v6-inflight.db"
+            connection = sqlite3.connect(db_path)
+            MigrationRunner((V1, V2, V3, V4, V5, V6, Migration(7, ()))).migrate(connection)
+            connection.execute("DELETE FROM schema_migrations WHERE version=7")
+            snapshot = replace(
+                self.snapshot("v6-inflight"), state=RuntimeState.CALLING_MODEL,
+                active_call_id="v6-request", active_call_kind="model",
+            )
+            request_json = json.dumps({
+                "request_id": "v6-request",
+                "messages": [Message(role="user", content="frozen").to_dict()],
+                "tools": [], "max_output_tokens": 128,
+                "metadata": {"legacy": True},
+            }, sort_keys=True, separators=(",", ":"))
+            connection.execute(
+                """INSERT INTO sessions(
+                       id, task, source_path, workspace_path, state, policy_json,
+                       source_fingerprint, final_answer, failure_json, step_count,
+                       model_calls, tool_calls, last_event_sequence, version,
+                       created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, 1, 1, 0, 0, 0, ?, ?)""",
+                (snapshot.session_id, snapshot.task, snapshot.source_path,
+                 snapshot.workspace_path, snapshot.state.value,
+                 json.dumps(snapshot.policy.to_dict(), sort_keys=True, separators=(",", ":")),
+                 snapshot.source_fingerprint, snapshot.created_at, snapshot.updated_at),
+            )
+            connection.execute(
+                "INSERT INTO checkpoints(session_id, state, snapshot_json, updated_at) VALUES (?, ?, ?, ?)",
+                (snapshot.session_id, snapshot.state.value, snapshot.to_json(), snapshot.updated_at),
+            )
+            connection.execute(
+                """INSERT INTO model_calls(
+                       request_id, session_id, ordinal, attempt, backend, status,
+                       request_json, started_at)
+                   VALUES ('v6-request', 'v6-inflight', 1, 1, 'legacy', 'running', ?, ?)""",
+                (request_json, snapshot.updated_at),
+            )
+            connection.commit()
+            connection.close()
+            journal = SQLiteRunJournal(db_path)
+            frozen = journal.connection.execute(
+                "SELECT request_json, request_digest FROM frozen_model_requests WHERE request_id='v6-request'"
+            ).fetchone()
+            self.assertEqual(frozen["request_json"], request_json)
+            self.assertEqual(journal.connection.execute(
+                "SELECT COUNT(*) FROM model_attempts WHERE request_id='v6-request'"
+            ).fetchone()[0], 1)
+            self.assertEqual(journal.connection.execute(
+                "SELECT COUNT(*) FROM model_attempt_dispatches"
+            ).fetchone()[0], 0)
+            journal.close()
+
     def test_product_schema_migration_rolls_back_partial_version(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             for boundary in range(0, len(V5.statements) + 1):
@@ -183,7 +261,7 @@ class PersistenceFoundationTest(unittest.TestCase):
                         statements=(*V5.statements[:boundary], "THIS IS NOT VALID SQL"),
                     )
                     with self.assertRaises(sqlite3.OperationalError):
-                        MigrationRunner((V1, V2, V3, V4, broken_v5, V6)).migrate(connection)
+                        MigrationRunner((V1, V2, V3, V4, broken_v5, V6, V7)).migrate(connection)
                     self.assertIsNone(
                         connection.execute(
                             "SELECT name FROM sqlite_master WHERE name = 'repository_identities'"
@@ -208,7 +286,7 @@ class PersistenceFoundationTest(unittest.TestCase):
                         statements=("THIS IS NOT VALID SQL",),
                     )
                     with self.assertRaises(sqlite3.OperationalError):
-                        MigrationRunner((V1, V2, V3, V4, seed_v4, V6)).migrate(connection)
+                        MigrationRunner((V1, V2, V3, V4, seed_v4, V6, V7)).migrate(connection)
                     snapshot = self.snapshot(f"legacy-{fault_point}")
                     connection.execute(
                         """
@@ -289,7 +367,7 @@ class PersistenceFoundationTest(unittest.TestCase):
                     broken_v6 = Migration(version=6, statements=(*V6.statements[:boundary], "THIS IS NOT VALID SQL"))
                     seed_v5 = Migration(version=6, statements=("THIS IS NOT VALID SQL",))
                     with self.assertRaises(sqlite3.OperationalError):
-                        MigrationRunner((V1, V2, V3, V4, V5, seed_v5)).migrate(connection)
+                        MigrationRunner((V1, V2, V3, V4, V5, seed_v5, V7)).migrate(connection)
                     snapshot = self.snapshot(f"v5-{boundary}")
                     connection.execute(
                         """INSERT INTO sessions(id, task, source_path, workspace_path, state, policy_json,
@@ -308,17 +386,88 @@ class PersistenceFoundationTest(unittest.TestCase):
                                        (snapshot.session_id, snapshot.state.value, snapshot.to_json(), snapshot.updated_at))
                     connection.commit()
                     with self.assertRaises(sqlite3.OperationalError):
-                        MigrationRunner((V1, V2, V3, V4, V5, broken_v6)).migrate(connection)
+                        MigrationRunner((V1, V2, V3, V4, V5, broken_v6, V7)).migrate(connection)
                     self.assertEqual([row[0] for row in connection.execute("SELECT version FROM schema_migrations")], [1, 2, 3, 4, 5])
                     self.assertEqual(connection.execute("SELECT task FROM sessions WHERE id=?", (snapshot.session_id,)).fetchone()[0], snapshot.task)
                     self.assertIsNone(connection.execute("SELECT name FROM sqlite_master WHERE name='product_admissions'").fetchone())
+                    connection.close()
+
+    def test_m3_v7_failure_at_each_boundary_preserves_v6_authority(self) -> None:
+        """Every v7 statement/provenance/commit seam leaves v6 usable."""
+        with tempfile.TemporaryDirectory() as temporary:
+            for boundary in range(len(V7.statements) + 1):
+                with self.subTest(statement_boundary=boundary):
+                    connection = sqlite3.connect(Path(temporary) / f"m3-{boundary}.db")
+                    seed_v6 = Migration(version=7, statements=("THIS IS NOT VALID SQL",))
+                    with self.assertRaises(sqlite3.OperationalError):
+                        MigrationRunner((V1, V2, V3, V4, V5, V6, seed_v6)).migrate(connection)
+                    snapshot = self.snapshot(f"v6-{boundary}")
+                    connection.execute(
+                        """INSERT INTO sessions(id, task, source_path, workspace_path, state, policy_json,
+                           source_fingerprint, final_answer, failure_json, step_count, model_calls, tool_calls,
+                           last_event_sequence, version, created_at, updated_at, lease_owner, lease_expires_at,
+                           interrupt_requested_at, resume_target_state, context_version)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, NULL, NULL, ?, ?, ?)""",
+                        (snapshot.session_id, snapshot.task, snapshot.source_path, snapshot.workspace_path,
+                         snapshot.state.value, json.dumps(snapshot.policy.to_dict(), sort_keys=True),
+                         snapshot.source_fingerprint, snapshot.final_answer, json.dumps(snapshot.failure, sort_keys=True),
+                         snapshot.step_count, snapshot.model_calls, snapshot.tool_calls, snapshot.version,
+                         snapshot.created_at, snapshot.updated_at, snapshot.interrupt_requested_at,
+                         snapshot.resume_target_state.value if snapshot.resume_target_state else None,
+                         snapshot.context_version),
+                    )
+                    connection.execute(
+                        "INSERT INTO checkpoints(session_id, state, snapshot_json, updated_at) VALUES (?, ?, ?, ?)",
+                        (snapshot.session_id, snapshot.state.value, snapshot.to_json(), snapshot.updated_at),
+                    )
+                    connection.commit()
+                    broken = Migration(
+                        version=7,
+                        statements=(*V7.statements[:boundary], "THIS IS NOT VALID SQL"),
+                    )
+                    with self.assertRaises(sqlite3.OperationalError):
+                        MigrationRunner((V1, V2, V3, V4, V5, V6, broken)).migrate(connection)
+                    self.assertEqual(
+                        [row[0] for row in connection.execute("SELECT version FROM schema_migrations")],
+                        [1, 2, 3, 4, 5, 6],
+                    )
+                    self.assertEqual(
+                        snapshot.task,
+                        connection.execute(
+                            "SELECT task FROM sessions WHERE id=?", (snapshot.session_id,),
+                        ).fetchone()[0],
+                    )
+                    self.assertIsNone(connection.execute(
+                        "SELECT name FROM sqlite_master WHERE name='frozen_model_requests'"
+                    ).fetchone())
+                    connection.close()
+            for point in ("before_provenance_insert", "before_commit"):
+                with self.subTest(fault_point=point):
+                    connection = sqlite3.connect(Path(temporary) / f"m3-{point}.db")
+                    seed_v6 = Migration(version=7, statements=("THIS IS NOT VALID SQL",))
+                    with self.assertRaises(sqlite3.OperationalError):
+                        MigrationRunner((V1, V2, V3, V4, V5, V6, seed_v6)).migrate(connection)
+
+                    def fail(version: int, actual: str) -> None:
+                        if version == 7 and actual == point:
+                            raise RuntimeError(point)
+
+                    with self.assertRaisesRegex(RuntimeError, point):
+                        MigrationRunner(migration_fault_hook=fail).migrate(connection)
+                    self.assertEqual(
+                        [row[0] for row in connection.execute("SELECT version FROM schema_migrations")],
+                        [1, 2, 3, 4, 5, 6],
+                    )
+                    self.assertIsNone(connection.execute(
+                        "SELECT name FROM sqlite_master WHERE name='instruction_manifests'"
+                    ).fetchone())
                     connection.close()
             for point in ("before_provenance_insert", "before_commit"):
                 with self.subTest(fault_point=point):
                     connection = sqlite3.connect(Path(temporary) / f"m2-{point}.db")
                     seed_v5 = Migration(version=6, statements=("THIS IS NOT VALID SQL",))
                     with self.assertRaises(sqlite3.OperationalError):
-                        MigrationRunner((V1, V2, V3, V4, V5, seed_v5)).migrate(connection)
+                        MigrationRunner((V1, V2, V3, V4, V5, seed_v5, V7)).migrate(connection)
                     def fail(version: int, actual: str) -> None:
                         if version == 6 and actual == point:
                             raise RuntimeError(point)

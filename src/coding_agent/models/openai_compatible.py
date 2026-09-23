@@ -109,6 +109,8 @@ class OpenAICompatibleBackend:
             usage=Usage(
                 input_tokens=usage_token_count(input_tokens, "OpenAI input token usage"),
                 output_tokens=usage_token_count(output_tokens, "OpenAI output token usage"),
+                present=("prompt_tokens" in usage_raw or "input_tokens" in usage_raw)
+                and ("completion_tokens" in usage_raw or "output_tokens" in usage_raw),
             ),
             finish_reason=finish_reason,
             provider_metadata=safe_provider_metadata(

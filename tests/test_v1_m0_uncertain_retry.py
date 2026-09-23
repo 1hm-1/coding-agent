@@ -164,20 +164,31 @@ class M0UncertainRetryCharacterizationTest(unittest.TestCase):
             application.close()
             return evidence
 
-    def test_current_behavior_reconstructs_and_overwrites_uncertain_request(self) -> None:
+    def test_current_behavior_reuses_frozen_uncertain_request(self) -> None:
         temporary, application, result, first_provider, resumed_provider, evidence = self._reproduce()
         self.addCleanup(temporary.cleanup)
         self.addCleanup(application.close)
         self.assertIs(result.state, RuntimeState.COMPLETED)
         self.assertEqual(len(first_provider.requests), 1)
         self.assertEqual(len(resumed_provider.requests), 1)
-        self.assertNotEqual(evidence["original_digest"], evidence["resumed_digest"])
-        self.assertEqual(evidence["resumed_digest"], evidence["stored_digest_after_resume"])
+        self.assertEqual(evidence["original_digest"], evidence["resumed_digest"])
+        self.assertEqual(evidence["original_digest"], evidence["stored_digest_after_resume"])
         self.assertEqual(evidence["attempt_after_resume"], 2)
         self.assertIn(EventType.MODEL_CALL_UNCERTAIN.value, evidence["event_types"])
         self.assertIn(EventType.RETRY_SCHEDULED.value, evidence["event_types"])
+        samples = application.journal.connection.execute(
+            """SELECT population_kind, classification, coverage_status, value, request_id,
+                      attempt_id FROM m3_metric_samples WHERE metric_name='token_usage'
+               ORDER BY created_at, metric_sample_id"""
+        ).fetchall()
+        self.assertEqual({row["population_kind"] for row in samples}, {"unknown", "succeeded"})
+        self.assertTrue(all(row["request_id"] and row["attempt_id"] for row in samples))
+        unknown = next(row for row in samples if row["population_kind"] == "unknown")
+        self.assertEqual((unknown["classification"], unknown["coverage_status"], unknown["value"]),
+                         ("unknown", "censored", None))
+        success = next(row for row in samples if row["population_kind"] == "succeeded")
+        self.assertEqual((success["classification"], success["value"]), ("measured", 8.0))
 
-    @unittest.expectedFailure
     def test_future_m3_invariant_reuses_exact_frozen_request(self) -> None:
         temporary, application, _, _, _, evidence = self._reproduce()
         self.addCleanup(temporary.cleanup)

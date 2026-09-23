@@ -56,6 +56,8 @@ files = [
     "src/coding_agent/models",
     "src/coding_agent/persistence.py",
     "src/coding_agent/product_domain.py",
+    "src/coding_agent/product_context.py",
+    "src/coding_agent/product_instructions.py",
     "src/coding_agent/product_application.py",
     "src/coding_agent/product_persistence.py",
     "src/coding_agent/product_workspace.py",

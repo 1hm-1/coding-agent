@@ -114,6 +114,7 @@ class AnthropicBackend:
                 output_tokens=usage_token_count(
                     usage.get("output_tokens", 0), "Anthropic output token usage"
                 ),
+                present="input_tokens" in usage and "output_tokens" in usage,
             ),
             finish_reason=stop_reason,
             provider_metadata=safe_provider_metadata(

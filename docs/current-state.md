@@ -10,17 +10,19 @@
 > **Product-Layer M0 Architecture Freeze + Characterization 已获 owner Accepted 并完成；不要与
 > 已完成的历史 Runtime M0 混淆。正式 [`M1 execution contract`](./execution-contracts/m1-execution-contract.md)
 > 已 Accepted/完成；正式 [`M2 execution contract`](./execution-contracts/m2-execution-contract.md)
-> 已于 2026-09-23 Accepted/完成，M3–M7 仍未激活且 M3 未发布。M2 已实现 additive Schema v6 的
+> 已于 2026-09-23 Accepted/完成；正式
+> [`M3 execution contract`](./execution-contracts/m3-execution-contract.md) 已于 2026-09-23
+> 获 owner Accepted/完成，M4–M7 仍未激活。M3 additive Schema v7、bounded Instructions、
+> deterministic Context、frozen request/attempt recovery 与 provenance 已通过验收；M2 已实现 additive Schema v6 的
 > direct read-only WorkspaceBinding、Conversation/Turn admission、typed input、rebind 与 writer/recovery
-> coordination；** M1 已实现 additive Schema v5 product identity/legacy mapping；`sessions`、copied workspace、Runtime IPC、Memory wiring 与所有 M3–M7 target
-> product behavior 仍保持 legacy compatibility boundary，详见 [`m1-product-persistence-design.md`](./m1-product-persistence-design.md)。
-> M1 verification 为 197 run：196 passed、1 个保留 M3 expected failure，coverage 79.9%（高于 70%
+> coordination；M1 已实现 additive Schema v5 product identity/legacy mapping。`sessions`、copied workspace、Runtime IPC 与 Memory wiring 保持 legacy compatibility boundary；M4–M7 product behavior 未激活，详见 [`m1-product-persistence-design.md`](./m1-product-persistence-design.md)。
+> M1 verification 为 197 run：196 passed、1 个当时保留的 M3 expected failure，coverage 79.9%（高于 70%
 > 门槛），owner acceptance 已完成；完整证据见
 > [`evidence/m1-implementation-verification-2026-09-22.md`](./evidence/m1-implementation-verification-2026-09-22.md)。
 > V1 开发能力与验收范围已冻结在
 > [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)，但这只是未来 M4/M7
 > acceptance contract，不表示其中的 direct-tree、Git、delete、完整 Python workflow 或 interactive
-> responsiveness 已实现。P2-R1 不再是下一候选；M3+ 必须等待各自正式契约发布与明确激活。
+> responsiveness 已实现。P2-R1 不再是下一候选；M3 已收口，M4+ 必须等待各自正式契约发布与明确激活。
 > M0 报告与证据见 [`coding-agent-v1-m0-characterization.md`](./coding-agent-v1-m0-characterization.md)：
 > M0 证据收口后的测试总数为 183：182 pass、1 个 M3-owned expected failure；14-run 完整 scripted baseline 与
 > 25-run stability baseline 均无 infrastructure failure。未运行 live Provider，未改生产代码或 Schema。
@@ -588,9 +590,9 @@ PYTHONPATH=src .venv/bin/python examples/memory_retrieval_holdout.py
     只在 `MODEL_CALL_SUCCEEDED` 上记录 model latency，provider usage 缺失可能映射为 0，历史
     `permission_violations` 统计 denial；这些是 M0 必须版本化的测量限制，不能把 0 重解释为 measured
     zero，或把 denial 重解释为已执行的越权副作用。
-19. Product-Layer M0 已证明 uncertain provider retry 在 context 改变后保留 request ID、将 attempt
-    增至 2，但重建并覆盖 `request_json`；它不能证明远端第一次调用是否执行或计费。缺陷归 M3，
-    M0 未修复。完整请求摘要、事件与 committed-response 正控制见
+19. Product-Layer M0 曾证明 uncertain provider retry 会重建并覆盖 `request_json`。M3 现以不可变
+    `FrozenModelRequest` 修复该缺陷：未派发 intent 恢复同一 attempt，已派发且 outcome unknown 时以
+    新 attempt 精确重放相同 request bytes；历史 M0 证据保持不变。完整原始证据见
     [`evidence/v1-m0/uncertain-retry-v1.json`](./evidence/v1-m0/uncertain-retry-v1.json)。
 
 ## 6. 不允许虚构的项目事实

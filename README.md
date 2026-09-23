@@ -25,7 +25,7 @@ P2-M2 的 Memory governance lifecycle 已实现，但 P2-M2.3 没有合格的 Dy
 Core Snapshot 和 generic auto top-k 保持关闭，V1 只要求显式 UserPreference，且不阻塞核心路径。
 Product-Layer M0 已 Accepted/完成；正式 [M1 execution contract](docs/execution-contracts/m1-execution-contract.md)
 已 Accepted/完成；正式 [M2 execution contract](docs/execution-contracts/m2-execution-contract.md)
-已于 2026-09-23 Accepted/完成，M3–M7 仍未激活且 M3 未发布。M2 已实现 additive Schema v6 lifecycle/admission
+已于 2026-09-23 Accepted/完成；M3 正式合同及 Schema v7 实现已于 2026-09-23 获 owner Accepted/完成；M4–M7 未激活。M2 已实现 additive Schema v6 lifecycle/admission
 and direct-tree read-only composition；M1 已实现 additive Schema v5 product mapping；legacy
 one-shot、copied workspace 与 Runtime kernel 保持兼容，详见 [M1 persistence design](docs/m1-product-persistence-design.md)。
 
@@ -38,7 +38,8 @@ Memory as optional M2-lite: default Core Snapshot and generic automatic top-k re
 requires explicit UserPreference, and Memory does not block the critical path. Product-Layer M0 is
 Accepted and complete; the formal [M1 execution contract](docs/execution-contracts/m1-execution-contract.md)
 is Accepted and M1 is complete. The formal [M2 execution contract](docs/execution-contracts/m2-execution-contract.md)
-is Accepted and M2 is complete as of 2026-09-23, while M3–M7 remain inactive and M3 is not issued. M2
+is Accepted and M2 is complete as of 2026-09-23. M3 is Accepted and complete as of 2026-09-23;
+M4–M7 remain inactive. M2
 implements additive Schema v6 lifecycle/admission and direct-tree read-only composition. M1 implements additive Schema v5
 product mappings while retaining legacy one-shot Sessions, copied workspaces, and the Runtime
 kernel; see the [M1 persistence design](docs/m1-product-persistence-design.md).
@@ -262,7 +263,7 @@ retrieval、P50/P95 latency、工具/失败与安全不变量，但不保存 rea
 |---|---|
 | Runtime | 显式 FSM；step/model/tool budgets；结构化失败；安全中断与恢复 / Explicit FSM, budgets, classified failures, safe interruption and recovery |
 | Tools | `read_file`, `search_files`, `edit_file`, `restricted_test`, `run_command` |
-| Persistence | SQLite schema v6；原子 Runtime journal、M1 Product 映射/恢复边界、M2 lifecycle/admission projection 与 Memory record/lifecycle/retrieval audit / SQLite v6, atomic Runtime journal, M1 mapping/recovery, M2 lifecycle/admission projection, and Memory audit |
+| Persistence | SQLite schema v7；原子 Runtime journal、M1 Product 映射/恢复边界、M2 lifecycle/admission、M3 frozen request/context 与 Memory audit / SQLite v7 with atomic Runtime journal, Product lineage, and Memory audit |
 | Context | 分区预算、hard retention、原子 tool-call 组裁剪、带 lineage 的压缩 / Section budgets, hard retention, atomic tool-call groups, lineage-aware compression |
 | Memory | 受控 episodic/semantic lifecycle 与审计；scope/revision/provenance 隔离；无生产检索候选，lexical 仅供显式实验 / Governed lifecycle and audit with scoped provenance; no production retrieval candidate, lexical experimental only |
 | Sandbox | Rootless Linux namespaces、只读 rootfs、默认禁网、资源限制、进程清理 / Rootless namespaces, read-only rootfs, no network, limits, cleanup |
@@ -351,7 +352,7 @@ the compression A/B did not save tokens and remains a small local benchmark.
 | [开发交接 / Handoff](docs/HANDOFF.md) | 新开发窗口的唯一入口 / Entry point for a new development session |
 | [架构快照 / Target architecture](docs/target-architecture-snapshot.md) | 冻结后的产品主干与 authority / Frozen product spine and authority |
 | [一致性审计 / Consistency audit](docs/architecture-consistency-audit.md) | 旧假设的 supersession / Supersession of legacy assumptions |
-| [实施路线 / Implementation roadmap](docs/coding-agent-v1-implementation-roadmap.md) | M0–M2 已 Accepted/完成；M3–M7 未激活 / M0–M2 Accepted/complete; M3–M7 inactive |
+| [实施路线 / Implementation roadmap](docs/coding-agent-v1-implementation-roadmap.md) | M0–M3 已 Accepted/完成；M4–M7 inactive |
 | [M1 执行契约 / M1 execution contract](docs/execution-contracts/m1-execution-contract.md) | 已完成 M1 范围、禁区、验收与停机条件 / Completed M1 scope, prohibitions, acceptance, and stop conditions |
 | [M2 执行契约 / M2 execution contract](docs/execution-contracts/m2-execution-contract.md) | accepted M2 范围、原子 admission、只读 real-tree 门禁与验收 / Accepted M2 scope, atomic admission, read-only real-tree gate, and acceptance |
 | [Runtime 架构 / Runtime architecture](docs/architecture.md) | 当前内核与安全边界 / Current kernel and safety boundaries |

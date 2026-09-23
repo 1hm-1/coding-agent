@@ -1,7 +1,7 @@
 # Coding Agent V1 Product-Layer Implementation Roadmap
 
 Date: 2026-09-23
-Status: **Architecture frozen; Product-Layer M0–M2 Accepted/complete; M3–M7 inactive; M3 not issued**
+Status: **Architecture frozen; Product-Layer M0–M3 Accepted/complete; M4–M7 inactive**
 
 ## Purpose
 
@@ -18,7 +18,9 @@ The user explicitly activated Product-Layer M0 for architecture freeze and chara
 accepted it as complete on 2026-09-21. The formal
 [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) was issued and completed
 on 2026-09-22. The formal [`M2 execution contract`](./execution-contracts/m2-execution-contract.md)
-was accepted and completed on 2026-09-23. M3–M7 remain inactive, and M3 has not been issued. M1 implements its additive domain/persistence scope;
+was accepted and completed on 2026-09-23. The formal
+[`M3 execution contract`](./execution-contracts/m3-execution-contract.md) was issued, activated,
+and accepted as complete on 2026-09-23. M4–M7 remain inactive. M1 implements its additive domain/persistence scope;
 the physical choices are recorded in [`m1-product-persistence-design.md`](./m1-product-persistence-design.md).
 No target product behavior from M2–M7 was implemented by M0 or M1. This Product-Layer M0 must not be confused with the completed historical Runtime M0 milestone in
 [`roadmap.md`](./roadmap.md).
@@ -290,8 +292,8 @@ Schema v5 migration, synthetic compatibility mappings, and the required evidence
 completion M2–M7 were inactive; no direct-working-tree, Turn Admission, product CLI, context, permission, or Memory
 behavior is included. Its completed checklist evidence is in
 [`evidence/m1-implementation-verification-2026-09-22.md`](./evidence/m1-implementation-verification-2026-09-22.md);
-owner acceptance has been recorded. M2 was activated later by its own formal contract; M3–M7
-remain inactive.
+owner acceptance has been recorded. M2 was activated and completed later by its own formal
+contract; M3 was subsequently activated by its own formal contract, while M4–M7 remain inactive.
 
 ### Scope
 
@@ -384,7 +386,9 @@ Formal milestone execution contract: [`execution-contracts/m2-execution-contract
 **Completed boundary:** M2 was accepted on 2026-09-23. Its execution contract limits
 direct-working-tree Product paths to read-only behavior and preserves every legacy
 copied-workspace/IPC surface. Its success, failure, recovery, rollback, compatibility, and real-tree
-non-mutation gates passed. M3–M7 remain inactive, and M3 has not been issued.
+non-mutation gates passed. M3 was subsequently activated by
+[`execution-contracts/m3-execution-contract.md`](./execution-contracts/m3-execution-contract.md);
+M4–M7 remain inactive.
 
 ### Scope
 
@@ -498,6 +502,14 @@ rewind authority, or permission safety.
 - execution lease even after workspace writer authority exists.
 
 ## M3 — Project Instructions, Context/Compaction, and Frozen ModelRequest
+
+Formal milestone execution contract:
+[`execution-contracts/m3-execution-contract.md`](./execution-contracts/m3-execution-contract.md).
+
+**Completed boundary:** M3 was activated and accepted as complete on 2026-09-23. Initial contract
+publication changed documentation only; implementation verification and owner acceptance are now
+recorded. M4–M7 remain inactive and real user
+trees remain read-only.
 
 ### Scope
 

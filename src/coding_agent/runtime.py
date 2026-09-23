@@ -9,6 +9,7 @@ from typing import Callable, Mapping, Sequence
 
 from coding_agent.compression import (
     CompressionEngine,
+    EventRange,
     SummaryValidationError,
     select_event_range,
     stale_summary,
@@ -41,7 +42,13 @@ from coding_agent.domain import (
 )
 from coding_agent.models.base import ModelBackend
 from coding_agent.models.retry import bounded_exponential_backoff
-from coding_agent.persistence import ModelCallMutation, SummaryMutation, ToolCallMutation
+from coding_agent.persistence import (
+    AuxiliaryModelCallMutation,
+    ModelCallMutation,
+    SummaryMutation,
+    StaleProductContext,
+    ToolCallMutation,
+)
 from coding_agent.tools.base import ToolContext, ToolRegistry
 from coding_agent.tools.harness import ToolHarness
 from coding_agent.trajectory import TrajectoryRecorder
@@ -111,6 +118,10 @@ class AgentRuntime:
         fault_injector: Callable[[str], None] | None = None,
         external_interrupt_requested: Callable[[], bool] | None = None,
         product_input_provider: Callable[[Session], Sequence[Message]] | None = None,
+        product_model_request_provider: Callable[
+            [str, Session, Sequence[Message], Sequence[Mapping[str, object]]],
+            tuple[ModelRequest, Mapping[str, object]],
+        ] | None = None,
     ):
         self.session = session
         self.backend = backend
@@ -131,11 +142,15 @@ class AgentRuntime:
         self.fault_injector = fault_injector
         self.external_interrupt_requested = external_interrupt_requested
         self.product_input_provider = product_input_provider
+        self.product_model_request_provider = product_model_request_provider
         self._resumed = False
         self.machine = StateMachine(recorder)
         self._model_input: tuple[Message, ...] = ()
         self._seen_tool_call_ids: set[str] = set()
         self._latest_summary = None
+        self._pending_context_manifest: Mapping[str, object] | None = None
+        self._stale_product_recompositions = 0
+        self._product_frozen_replay = False
         self._compression_attempts: set[tuple[int, int, str]] = set()
         self._handlers: dict[RuntimeState, Callable[[], None]] = {
             RuntimeState.CREATED: self._on_created,
@@ -233,13 +248,34 @@ class AgentRuntime:
             RuntimeState.CALLING_MODEL,
             RuntimeState.RETRY_WAIT,
         }:
-            self._model_input = self._build_context(emit_event=False).messages
+            existing_frozen = (
+                self.session.state is RuntimeState.CALLING_MODEL
+                and self._model_call_row(self.session.active_call_id) is not None
+            )
+            if not existing_frozen:
+                self._model_input = self._build_context(emit_event=False).messages
 
     def attach_product_input_provider(
         self, provider: Callable[[Session], Sequence[Message]],
     ) -> None:
         """Attach the M2 ordered-input boundary without moving FSM authority."""
         self.product_input_provider = provider
+
+    def attach_product_model_request_provider(
+        self,
+        provider: Callable[
+            [str, Session, Sequence[Message], Sequence[Mapping[str, object]]],
+            tuple[ModelRequest, Mapping[str, object]],
+        ],
+    ) -> None:
+        """Attach M3 composition at the sole pre-provider request boundary."""
+        self.product_model_request_provider = provider
+
+    def refresh_product_state(self) -> None:
+        """Refresh a Product-owned lifecycle transition through journal authority."""
+        if self.recorder.journal is None:
+            raise InvariantViolation("Product state refresh requires a durable journal")
+        apply_snapshot(self.session, self.recorder.refresh_from_journal())
 
     def _consume_product_inputs_at_safe_boundary(self) -> None:
         if self.product_input_provider is None or self.session.state not in {
@@ -519,6 +555,13 @@ class AgentRuntime:
         request: ContextBuildInput,
         built: BuiltContext,
     ) -> SummaryRecord | None:
+        if self.session.pending_tool_calls or self.session.active_call_id is not None:
+            self._commit_event(
+                EventType.COMPRESSION_REJECTED, self.session.state,
+                {"reason": "unsafe_protocol_frontier"},
+                snapshot_after=self.session.to_snapshot(),
+            )
+            return None
         events = self._events()
         latest = request.latest_summary
         after_sequence = latest.source_event_end if latest is not None else 2
@@ -534,17 +577,6 @@ class AgentRuntime:
         started_count = sum(
             event.event_type is EventType.COMPRESSION_STARTED for event in events
         )
-        if started_count >= self.max_compression_calls:
-            self._commit_event(
-                EventType.COMPRESSION_REJECTED,
-                self.session.state,
-                {
-                    "reason": "compression_budget_exhausted",
-                    "max_compression_calls": self.max_compression_calls,
-                },
-                snapshot_after=self.session.to_snapshot(),
-            )
-            return None
         if self.compression_engine is None:
             self._commit_event(
                 EventType.COMPRESSION_REJECTED,
@@ -565,23 +597,100 @@ class AgentRuntime:
                 snapshot_after=self.session.to_snapshot(),
             )
             return None
-        self._commit_event(
-            EventType.COMPRESSION_STARTED,
-            self.session.state,
-            {
-                "source_event_start": selected.start,
-                "source_event_end": selected.end,
-                "source_event_hash": selected.source_event_hash,
-                "workspace_revision": request.repository_snapshot.workspace_revision,
-                "target_tokens": built.target_after_compression_tokens,
-            },
-            snapshot_after=self.session.to_snapshot(),
+        pending_summary = (
+            self.recorder.journal.get_pending_summary_attempt(self.session.id)
+            if self.recorder.journal is not None else None
         )
+        if pending_summary is not None:
+            compression_request = ModelRequest.from_dict(pending_summary["request"])
+            metadata = compression_request.metadata
+            selected = EventRange(
+                int(metadata["source_event_start"]), int(metadata["source_event_end"]),
+                str(metadata["source_event_hash"]),
+            )
+            selected_events = tuple(
+                event for event in events
+                if selected.start <= event.sequence <= selected.end
+            )
+            evidence = self.recorder.journal.get_model_attempt_evidence(
+                self.session.id, compression_request.request_id,
+                int(pending_summary["attempt_ordinal"]),
+            )
+        else:
+            compression_request, selected_events = self.compression_engine.prepare_request(
+                request, events=events, event_range=selected,
+            )
+            evidence = (
+                self.recorder.journal.get_model_attempt_evidence(
+                    self.session.id, compression_request.request_id, 1,
+                )
+                if self.recorder.journal is not None else None
+            )
+        resumable = (
+            evidence is not None
+            and evidence.get("dispatched_at") is None
+            and evidence.get("outcome_kind") is None
+        )
+        if evidence is not None and evidence.get("dispatched_at") is not None \
+                and evidence.get("outcome_kind") is None:
+            self._commit_event(
+                EventType.COMPRESSION_REJECTED,
+                self.session.state,
+                {"reason": "compression_outcome_unknown"},
+                snapshot_after=self.session.to_snapshot(),
+                auxiliary_model_call=AuxiliaryModelCallMutation(
+                    request_id=compression_request.request_id,
+                    ordinal=max(1, started_count), backend=self.compression_engine.summarizer.name,
+                    status="uncertain", request=compression_request.to_dict(),
+                    error={"kind": "unknown_outcome", "message": "dispatch has no outcome"},
+                ),
+            )
+            return None
+        if started_count >= self.max_compression_calls and not resumable:
+            self._commit_event(
+                EventType.COMPRESSION_REJECTED,
+                self.session.state,
+                {
+                    "reason": "compression_budget_exhausted",
+                    "max_compression_calls": self.max_compression_calls,
+                    "request_id": compression_request.request_id,
+                    "resumable": resumable,
+                },
+                snapshot_after=self.session.to_snapshot(),
+            )
+            return None
+        auxiliary_ordinal = max(1, started_count) if resumable else started_count + 1
+        auxiliary_backend = self.compression_engine.summarizer.name
+        if not resumable:
+            self._commit_event(
+                EventType.COMPRESSION_STARTED,
+                self.session.state,
+                {
+                    "source_event_start": selected.start,
+                    "source_event_end": selected.end,
+                    "source_event_hash": selected.source_event_hash,
+                    "workspace_revision": request.repository_snapshot.workspace_revision,
+                    "target_tokens": built.target_after_compression_tokens,
+                },
+                snapshot_after=self.session.to_snapshot(),
+                auxiliary_model_call=AuxiliaryModelCallMutation(
+                    request_id=compression_request.request_id,
+                    ordinal=auxiliary_ordinal,
+                    backend=auxiliary_backend,
+                    status="running",
+                    request=compression_request.to_dict(),
+                ),
+            )
+        self._fault("after_summary_start")
+        if self.recorder.journal is not None:
+            self.recorder.journal.mark_model_attempt_dispatched(
+                self.session.id, compression_request.request_id, 1,
+            )
+        self._fault("after_summary_dispatch")
         try:
-            result = self.compression_engine.compress(
-                request,
-                events=events,
-                event_range=selected,
+            result = self.compression_engine.complete_prepared(
+                request, compression_request=compression_request,
+                selected_events=selected_events, event_range=selected,
             )
         except SummaryValidationError as exc:
             self._commit_event(
@@ -594,6 +703,14 @@ class AgentRuntime:
                     "source_event_end": selected.end,
                 },
                 snapshot_after=self.session.to_snapshot(),
+                auxiliary_model_call=AuxiliaryModelCallMutation(
+                    request_id=compression_request.request_id,
+                    ordinal=auxiliary_ordinal,
+                    backend=auxiliary_backend,
+                    status="failed",
+                    request=compression_request.to_dict(),
+                    error={"kind": exc.kind, "message": str(exc)},
+                ),
             )
             return None
         except BackendError as exc:
@@ -607,6 +724,14 @@ class AgentRuntime:
                     "source_event_end": selected.end,
                 },
                 snapshot_after=self.session.to_snapshot(),
+                auxiliary_model_call=AuxiliaryModelCallMutation(
+                    request_id=compression_request.request_id,
+                    ordinal=auxiliary_ordinal,
+                    backend=auxiliary_backend,
+                    status="failed",
+                    request=compression_request.to_dict(),
+                    error={"kind": exc.kind, "message": str(exc)},
+                ),
             )
             return None
         except Exception as exc:
@@ -620,6 +745,17 @@ class AgentRuntime:
                     "source_event_end": selected.end,
                 },
                 snapshot_after=self.session.to_snapshot(),
+                auxiliary_model_call=AuxiliaryModelCallMutation(
+                    request_id=compression_request.request_id,
+                    ordinal=auxiliary_ordinal,
+                    backend=auxiliary_backend,
+                    status="failed",
+                    request=compression_request.to_dict(),
+                    error={
+                        "kind": "compression_exception",
+                        "message": f"{type(exc).__name__}: {exc}",
+                    },
+                ),
             )
             return None
         payload = {
@@ -631,16 +767,39 @@ class AgentRuntime:
             "workspace_revision": request.repository_snapshot.workspace_revision,
             "usage": result.response.usage.to_dict(),
         }
-        self._commit_event(
-            EventType.COMPRESSION_FINISHED,
-            self.session.state,
-            payload,
-            snapshot_after=self.session.to_snapshot(),
-            summary=SummaryMutation(
-                record=result.summary,
-                supersedes=(latest.summary_id if latest is not None else None),
-            ),
-        )
+        try:
+            self._commit_event(
+                EventType.COMPRESSION_FINISHED,
+                self.session.state,
+                payload,
+                snapshot_after=self.session.to_snapshot(),
+                summary=SummaryMutation(
+                    record=result.summary,
+                    supersedes=(latest.summary_id if latest is not None else None),
+                ),
+                auxiliary_model_call=AuxiliaryModelCallMutation(
+                    request_id=compression_request.request_id,
+                    ordinal=auxiliary_ordinal,
+                    backend=auxiliary_backend,
+                    status="succeeded",
+                    request=compression_request.to_dict(),
+                    response=result.response.to_dict(),
+                ),
+            )
+        except StaleProductContext:
+            self._commit_event(
+                EventType.COMPRESSION_REJECTED, self.session.state,
+                {"reason": "conversation_prefix_drift", "request_id": compression_request.request_id},
+                snapshot_after=self.session.to_snapshot(),
+                auxiliary_model_call=AuxiliaryModelCallMutation(
+                    request_id=compression_request.request_id,
+                    ordinal=auxiliary_ordinal, backend=auxiliary_backend,
+                    status="failed", request=compression_request.to_dict(),
+                    error={"kind": "conversation_prefix_drift",
+                           "message": "Conversation changed during summary generation"},
+                ),
+            )
+            return None
         self._latest_summary = result.summary
         return result.summary
 
@@ -689,7 +848,19 @@ class AgentRuntime:
 
     def _on_calling_model(self) -> None:
         existing = self._model_call_row(self.session.active_call_id)
+        # A Product retry/recovery consumes the already-frozen request.  The
+        # live tree is relevant to a new decision, never to this exact replay.
+        self._product_frozen_replay = (
+            existing is not None and self.product_model_request_provider is not None
+        )
+        reuse_committed_attempt = False
         if existing is not None and existing.get("response") is not None:
+            if self._product_frozen_replay and self.recorder.journal is not None:
+                record_reuse = getattr(self.recorder.journal, "record_m3_response_reuse", None)
+                if callable(record_reuse):
+                    record_reuse(
+                        self.session.id, str(existing["request_id"]), int(existing["attempt"]),
+                    )
             self._consume_model_response(ModelResponse.from_dict(existing["response"]))
             return
 
@@ -697,36 +868,50 @@ class AgentRuntime:
             request_payload = existing.get("request")
             if not isinstance(request_payload, Mapping):
                 raise InvariantViolation("persisted model request is not an object")
-            uncertain = BackendError(
-                "previous model call ended without a persisted response",
-                kind="provider_unavailable",
-            )
-            self._commit_event(
-                EventType.MODEL_CALL_UNCERTAIN,
-                self.session.state,
-                {
-                    "request_id": existing["request_id"],
-                    "attempt": int(existing["attempt"]),
-                    "kind": "missing_response",
-                },
-                snapshot_after=self.session.to_snapshot(),
-                model_call=ModelCallMutation(
-                    request_id=str(existing["request_id"]),
-                    ordinal=int(existing["ordinal"]),
-                    attempt=int(existing["attempt"]),
-                    backend=str(existing["backend"]),
-                    status="uncertain",
-                    request=dict(request_payload),
-                    error={"kind": "missing_response", "message": str(uncertain)},
-                ),
-            )
-            if self._can_retry(uncertain):
-                self._schedule_retry(uncertain)
+            attempt_evidence = None
+            if self.recorder.journal is not None:
+                attempt_evidence = self.recorder.journal.get_model_attempt_evidence(
+                    self.session.id, str(existing["request_id"]), int(existing["attempt"]),
+                )
+            if (
+                attempt_evidence is not None
+                and attempt_evidence.get("dispatched_at") is None
+                and attempt_evidence.get("outcome_kind") is None
+            ):
+                # The atomic start transaction committed, but the provider gate
+                # was never crossed. Resume this same attempt and exact request.
+                reuse_committed_attempt = True
             else:
-                self._fail("model_call_uncertain", str(uncertain))
-            return
+                uncertain = BackendError(
+                    "previous model call ended without a persisted response",
+                    kind="provider_unavailable",
+                )
+                self._commit_event(
+                    EventType.MODEL_CALL_UNCERTAIN,
+                    self.session.state,
+                    {
+                        "request_id": existing["request_id"],
+                        "attempt": int(existing["attempt"]),
+                        "kind": "missing_response",
+                    },
+                    snapshot_after=self.session.to_snapshot(),
+                    model_call=ModelCallMutation(
+                        request_id=str(existing["request_id"]),
+                        ordinal=int(existing["ordinal"]),
+                        attempt=int(existing["attempt"]),
+                        backend=str(existing["backend"]),
+                        status="uncertain",
+                        request=dict(request_payload),
+                        error={"kind": "missing_response", "message": str(uncertain)},
+                    ),
+                )
+                if self._can_retry(uncertain):
+                    self._schedule_retry(uncertain)
+                else:
+                    self._fail("model_call_uncertain", str(uncertain))
+                return
 
-        if self.session.model_calls >= self.session.policy.max_model_calls:
+        if not reuse_committed_attempt and self.session.model_calls >= self.session.policy.max_model_calls:
             self._fail("model_budget_exhausted", "maximum model calls exceeded")
             return
 
@@ -736,43 +921,108 @@ class AgentRuntime:
         if request_id is None:
             request_id = f"{self.session.id}:model:{self._next_model_ordinal()}"
         ordinal = int(existing["ordinal"]) if existing is not None else self._next_model_ordinal()
-        attempt = int(existing.get("attempt", 0)) + 1 if existing is not None else 1
-        request = ModelRequest(
-            request_id=request_id,
-            messages=self._model_input,
-            tools=tuple(
+        attempt = (
+            int(existing["attempt"]) if reuse_committed_attempt
+            else int(existing.get("attempt", 0)) + 1 if existing is not None else 1
+        )
+        if existing is not None:
+            persisted_request = existing.get("request")
+            if not isinstance(persisted_request, Mapping):
+                raise InvariantViolation("persisted model request is not an object")
+            try:
+                request = ModelRequest.from_dict(persisted_request)
+            except (KeyError, TypeError, ValueError) as exc:
+                raise InvariantViolation("persisted frozen model request is invalid") from exc
+            if request.request_id != request_id:
+                raise InvariantViolation("persisted frozen request identity changed")
+        else:
+            tool_schemas = tuple(
                 self.registry.schemas_for(self.session.policy.allowed_permissions)
-            ),
-            max_output_tokens=self.session.policy.max_output_tokens,
-            metadata={"session_id": self.session.id},
-        )
-        next_model_calls = self.session.model_calls + 1
-        self._commit_event(
-            EventType.MODEL_CALL_STARTED,
-            self.session.state,
-            {
-                "request_id": request_id,
-                "backend": self.backend.name,
-                "message_count": len(request.messages),
-                "tool_count": len(request.tools),
-                "attempt": attempt,
-            },
-            snapshot_after=replace(
-                self.session.to_snapshot(),
-                model_calls=next_model_calls,
-                active_call_id=request_id,
-                active_call_kind="model",
-            ),
-            model_call=ModelCallMutation(
-                request_id=request_id,
-                ordinal=ordinal,
-                attempt=attempt,
-                backend=self.backend.name,
-                status="running",
-                request=request.to_dict(),
-            ),
-        )
+            )
+            if self.product_model_request_provider is not None:
+                request, self._pending_context_manifest = self.product_model_request_provider(
+                    request_id, self.session, self._model_input, tool_schemas,
+                )
+                if request.request_id != request_id:
+                    raise InvariantViolation("Product composer changed the request identity")
+            else:
+                request = ModelRequest(
+                    request_id=request_id,
+                    messages=self._model_input,
+                    tools=tool_schemas,
+                    max_output_tokens=self.session.policy.max_output_tokens,
+                    metadata={"session_id": self.session.id},
+                )
+        next_model_calls = self.session.model_calls + (0 if reuse_committed_attempt else 1)
+        if not reuse_committed_attempt:
+            try:
+                self._publish_model_start(
+                    request_id=request_id, ordinal=ordinal, attempt=attempt,
+                    request=request, next_model_calls=next_model_calls,
+                )
+            except StaleProductContext:
+                self._pending_context_manifest = None
+                operation_id = request.metadata.get("m3_admission_operation_id")
+                record_failure = getattr(self.recorder.journal, "record_m3_context_failure", None)
+                if isinstance(operation_id, str) and callable(record_failure):
+                    record_failure(
+                        operation_id=operation_id, proposed_request_id=request_id,
+                        status="stale_rebuild", reason="product_frontier_changed_before_freeze",
+                        policy_version="m3-hybrid-v1",
+                    )
+                self._stale_product_recompositions += 1
+                if self._stale_product_recompositions > 2:
+                    raise
+                self._model_input = self._build_context(emit_event=False).messages
+                self._on_calling_model()
+                return
+            self._stale_product_recompositions = 0
+            self._pending_context_manifest = None
         self._fault("after_model_start")
+        self._dispatch_model(request, request_id, ordinal, attempt)
+
+    def _publish_model_start(
+        self, *, request_id: str, ordinal: int, attempt: int,
+        request: ModelRequest, next_model_calls: int,
+    ) -> None:
+            self._commit_event(
+                EventType.MODEL_CALL_STARTED,
+                self.session.state,
+                {
+                    "request_id": request_id,
+                    "backend": self.backend.name,
+                    "message_count": len(request.messages),
+                    "tool_count": len(request.tools),
+                    "attempt": attempt,
+                },
+                snapshot_after=replace(
+                    self.session.to_snapshot(),
+                    model_calls=next_model_calls,
+                    active_call_id=request_id,
+                    active_call_kind="model",
+                ),
+                model_call=ModelCallMutation(
+                    request_id=request_id,
+                    ordinal=ordinal,
+                    attempt=attempt,
+                    backend=self.backend.name,
+                    status="running",
+                    request=request.to_dict(),
+                    context_manifest=(
+                        dict(self._pending_context_manifest)
+                        if self._pending_context_manifest is not None else None
+                    ),
+                ),
+            )
+
+    def _dispatch_model(
+        self, request: ModelRequest, request_id: str, ordinal: int, attempt: int,
+    ) -> None:
+        if self.recorder.journal is not None:
+            self.recorder.journal.mark_model_attempt_dispatched(
+                self.session.id, request_id, attempt,
+            )
+        self._fault("after_model_dispatch")
         try:
             response = self.backend.complete(request)
         except BackendError as exc:
@@ -931,7 +1181,7 @@ class AgentRuntime:
         if not response.text.strip():
             self._fail("empty_model_response", "model returned neither text nor tool calls")
             return
-        if not self._source_is_unchanged():
+        if not self._product_frozen_replay and not self._source_is_unchanged():
             self._fail(
                 "source_repository_modified",
                 "source repository fingerprint changed during isolated execution",
@@ -1529,7 +1779,9 @@ class AgentRuntime:
                 "steps": self.session.step_count,
                 "model_calls": self.session.model_calls,
                 "tool_calls": self.session.tool_calls,
-                "source_unchanged": self._source_is_unchanged(),
+                "source_unchanged": (
+                    None if self._product_frozen_replay else self._source_is_unchanged()
+                ),
                 "failure": self.session.failure,
             },
             snapshot_after=self.session.to_snapshot(),
@@ -1545,6 +1797,7 @@ class AgentRuntime:
         message_to_append: Message | None = None,
         expected_state: RuntimeState | None = None,
         model_call: ModelCallMutation | None = None,
+        auxiliary_model_call: AuxiliaryModelCallMutation | None = None,
         tool_call: ToolCallMutation | None = None,
         summary: SummaryMutation | None = None,
         clear_interrupt: bool = False,
@@ -1557,6 +1810,7 @@ class AgentRuntime:
             expected_state=expected_state,
             message_to_append=message_to_append,
             model_call=model_call,
+            auxiliary_model_call=auxiliary_model_call,
             tool_call=tool_call,
             summary=summary,
             clear_interrupt=clear_interrupt,

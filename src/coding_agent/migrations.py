@@ -7,7 +7,7 @@ from typing import Callable, Sequence
 from coding_agent.domain import utc_now
 
 
-LATEST_SCHEMA_VERSION = 6
+LATEST_SCHEMA_VERSION = 7
 
 
 class MigrationError(RuntimeError):
@@ -464,7 +464,354 @@ V6 = Migration(
 )
 
 
-MIGRATIONS: tuple[Migration, ...] = (V1, V2, V3, V4, V5, V6)
+# M3 adds immutable instruction/context/request evidence.  It does not alter
+# sessions, Runtime events, legacy model_calls, or any M1/M2 semantics.
+V7 = Migration(
+    version=7,
+    statements=(
+        """CREATE TABLE instruction_trusts (
+            trust_id TEXT PRIMARY KEY,
+            repository_id TEXT NOT NULL REFERENCES repository_identities(repository_id),
+            project_scope_id TEXT NOT NULL REFERENCES project_scopes(project_scope_id),
+            workspace_binding_id TEXT REFERENCES workspace_bindings(workspace_binding_id),
+            source_kind TEXT NOT NULL,
+            disposition TEXT NOT NULL CHECK(disposition IN ('active','revoked')),
+            operation_id TEXT NOT NULL UNIQUE,
+            payload_digest TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            revoked_at TEXT,
+            CHECK((disposition='active' AND revoked_at IS NULL) OR
+                  (disposition='revoked' AND revoked_at IS NOT NULL))
+        )""",
+        """CREATE TABLE instruction_sources (
+            source_id TEXT PRIMARY KEY,
+            repository_id TEXT NOT NULL REFERENCES repository_identities(repository_id),
+            project_scope_id TEXT NOT NULL REFERENCES project_scopes(project_scope_id),
+            workspace_binding_id TEXT REFERENCES workspace_bindings(workspace_binding_id),
+            provider_kind TEXT NOT NULL,
+            locator TEXT NOT NULL,
+            normalized_path TEXT NOT NULL,
+            scope_kind TEXT NOT NULL,
+            authority_rank INTEGER NOT NULL,
+            specificity INTEGER NOT NULL,
+            revision_digest TEXT NOT NULL,
+            disposition TEXT NOT NULL CHECK(disposition IN ('effective','inactive','unavailable','stale','overridden','conflict')),
+            reason TEXT,
+            discovered_at TEXT NOT NULL,
+            UNIQUE(project_scope_id, workspace_binding_id, provider_kind, locator, revision_digest)
+        )""",
+        """CREATE TABLE instruction_snapshots (
+            snapshot_id TEXT PRIMARY KEY,
+            content_digest TEXT NOT NULL UNIQUE,
+            canonical_utf8 BLOB NOT NULL,
+            byte_count INTEGER NOT NULL CHECK(byte_count>=0 AND byte_count<=262144),
+            created_at TEXT NOT NULL,
+            CHECK(length(canonical_utf8)=byte_count)
+        )""",
+        """CREATE TABLE instruction_manifests (
+            instruction_manifest_id TEXT PRIMARY KEY,
+            conversation_id TEXT REFERENCES conversations(conversation_id),
+            turn_id TEXT REFERENCES turns(turn_id),
+            workspace_binding_id TEXT NOT NULL REFERENCES workspace_bindings(workspace_binding_id),
+            parent_manifest_id TEXT REFERENCES instruction_manifests(instruction_manifest_id),
+            revision INTEGER NOT NULL CHECK(revision>=1),
+            effective_digest TEXT NOT NULL,
+            refresh_operation_id TEXT UNIQUE,
+            refresh_reason TEXT NOT NULL,
+            policy_version TEXT NOT NULL,
+            load_sequence_frontier INTEGER NOT NULL CHECK(load_sequence_frontier>=0),
+            status TEXT NOT NULL CHECK(status IN ('active','stale','conflicted','legacy_placeholder')),
+            created_at TEXT NOT NULL,
+            UNIQUE(conversation_id, revision)
+        )""",
+        """CREATE TABLE instruction_manifest_entries (
+            entry_id TEXT PRIMARY KEY,
+            instruction_manifest_id TEXT NOT NULL REFERENCES instruction_manifests(instruction_manifest_id),
+            source_id TEXT NOT NULL REFERENCES instruction_sources(source_id),
+            snapshot_id TEXT REFERENCES instruction_snapshots(snapshot_id),
+            sequence INTEGER NOT NULL CHECK(sequence>=1),
+            authority_rank INTEGER NOT NULL,
+            specificity INTEGER NOT NULL,
+            trust_disposition TEXT NOT NULL,
+            disposition TEXT NOT NULL,
+            reason TEXT,
+            source_digest TEXT NOT NULL,
+            UNIQUE(instruction_manifest_id, sequence),
+            UNIQUE(instruction_manifest_id, source_id)
+        )""",
+        """CREATE TABLE instruction_override_edges (
+            edge_id TEXT PRIMARY KEY,
+            instruction_manifest_id TEXT NOT NULL REFERENCES instruction_manifests(instruction_manifest_id),
+            winner_entry_id TEXT NOT NULL REFERENCES instruction_manifest_entries(entry_id),
+            loser_entry_id TEXT NOT NULL REFERENCES instruction_manifest_entries(entry_id),
+            conflict_key TEXT NOT NULL,
+            resolution_kind TEXT NOT NULL CHECK(resolution_kind IN ('authority','specificity','unresolved')),
+            created_at TEXT NOT NULL,
+            UNIQUE(instruction_manifest_id, winner_entry_id, loser_entry_id, conflict_key),
+            CHECK(winner_entry_id<>loser_entry_id)
+        )""",
+        """CREATE TABLE instruction_manifest_status_events (
+            status_event_id TEXT PRIMARY KEY,
+            instruction_manifest_id TEXT NOT NULL REFERENCES instruction_manifests(instruction_manifest_id),
+            status TEXT NOT NULL CHECK(status IN ('active','stale','conflicted')),
+            reason TEXT NOT NULL,
+            observed_digest TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(instruction_manifest_id, status, observed_digest)
+        )""",
+        """CREATE TABLE instruction_manifest_conflicts (
+            conflict_id TEXT PRIMARY KEY,
+            instruction_manifest_id TEXT NOT NULL REFERENCES instruction_manifests(instruction_manifest_id),
+            conflict_key TEXT NOT NULL,
+            candidate_entry_ids_json TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('unresolved','resolved')),
+            created_at TEXT NOT NULL,
+            UNIQUE(instruction_manifest_id, conflict_key)
+        )""",
+        """CREATE TABLE frozen_model_requests (
+            request_id TEXT PRIMARY KEY,
+            runtime_execution_id TEXT REFERENCES runtime_executions(runtime_execution_id),
+            legacy_session_id TEXT NOT NULL REFERENCES sessions(id),
+            request_ordinal INTEGER NOT NULL CHECK(request_ordinal>=1),
+            request_kind TEXT NOT NULL CHECK(request_kind IN ('agent','summary_auxiliary','legacy_import')),
+            context_manifest_id TEXT NOT NULL UNIQUE,
+            request_digest TEXT NOT NULL,
+            request_json TEXT NOT NULL,
+            audit_json TEXT NOT NULL,
+            semantic_prefix_end_sequence INTEGER,
+            semantic_prefix_digest TEXT,
+            legacy_model_call_id TEXT REFERENCES model_calls(request_id),
+            runtime_event_sequence INTEGER NOT NULL CHECK(runtime_event_sequence>=0),
+            runtime_version INTEGER NOT NULL CHECK(runtime_version>=0),
+            created_at TEXT NOT NULL,
+            UNIQUE(legacy_session_id, request_ordinal, request_kind),
+            FOREIGN KEY(context_manifest_id) REFERENCES context_manifests(context_manifest_id)
+                DEFERRABLE INITIALLY DEFERRED
+        )""",
+        """CREATE TABLE context_manifests (
+            context_manifest_id TEXT PRIMARY KEY,
+            request_id TEXT NOT NULL UNIQUE,
+            request_digest TEXT NOT NULL,
+            manifest_digest TEXT NOT NULL UNIQUE,
+            manifest_json TEXT NOT NULL,
+            policy_version TEXT NOT NULL,
+            token_counter_version TEXT NOT NULL,
+            provider_capability_json TEXT NOT NULL,
+            context_window INTEGER NOT NULL CHECK(context_window>0),
+            output_reserve INTEGER NOT NULL CHECK(output_reserve>=0),
+            framing_margin INTEGER NOT NULL CHECK(framing_margin>=0),
+            tool_schema_tokens INTEGER NOT NULL CHECK(tool_schema_tokens>=0),
+            required_tokens INTEGER NOT NULL CHECK(required_tokens>=0),
+            optional_tokens INTEGER NOT NULL CHECK(optional_tokens>=0),
+            memory_status TEXT NOT NULL CHECK(memory_status='absent'),
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(request_id) REFERENCES frozen_model_requests(request_id)
+                DEFERRABLE INITIALLY DEFERRED
+        )""",
+        """CREATE TABLE model_attempts (
+            attempt_id TEXT PRIMARY KEY,
+            request_id TEXT NOT NULL REFERENCES frozen_model_requests(request_id),
+            ordinal INTEGER NOT NULL CHECK(ordinal>=1),
+            backend TEXT NOT NULL,
+            intent_status TEXT NOT NULL CHECK(intent_status IN ('committed_not_dispatched','dispatched')),
+            wall_started_at TEXT NOT NULL,
+            monotonic_started REAL,
+            created_at TEXT NOT NULL,
+            UNIQUE(request_id, ordinal)
+        )""",
+        """CREATE TABLE model_attempt_outcomes (
+            outcome_id TEXT PRIMARY KEY,
+            attempt_id TEXT NOT NULL UNIQUE REFERENCES model_attempts(attempt_id),
+            outcome_kind TEXT NOT NULL CHECK(outcome_kind IN ('succeeded','failed','cancelled','unknown','reused')),
+            response_json TEXT,
+            error_json TEXT,
+            usage_json TEXT,
+            usage_classification TEXT NOT NULL CHECK(usage_classification IN ('measured','estimated','synthetic','unknown')),
+            wall_finished_at TEXT,
+            monotonic_elapsed_ms REAL,
+            coverage_status TEXT NOT NULL CHECK(coverage_status IN ('complete','censored','incomplete','unknown')),
+            created_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE model_attempt_dispatches (
+            dispatch_id TEXT PRIMARY KEY,
+            attempt_id TEXT NOT NULL UNIQUE REFERENCES model_attempts(attempt_id),
+            dispatched_at TEXT NOT NULL,
+            monotonic_started REAL,
+            created_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE context_operations (
+            context_operation_id TEXT PRIMARY KEY,
+            request_id TEXT REFERENCES frozen_model_requests(request_id),
+            conversation_id TEXT REFERENCES conversations(conversation_id),
+            operation_kind TEXT NOT NULL CHECK(operation_kind IN ('composition','selection','compaction')),
+            status TEXT NOT NULL CHECK(status IN ('started','succeeded','overflow','rejected',
+                                                 'failed','stale_rebuild','unknown','cancelled')),
+            policy_version TEXT NOT NULL,
+            started_at TEXT NOT NULL,
+            finished_at TEXT,
+            elapsed_ms REAL,
+            metrics_json TEXT NOT NULL,
+            coverage_status TEXT NOT NULL
+        )""",
+        """CREATE TABLE context_selection_items (
+            selection_id TEXT PRIMARY KEY,
+            context_operation_id TEXT NOT NULL REFERENCES context_operations(context_operation_id),
+            source_class TEXT NOT NULL,
+            source_id TEXT NOT NULL,
+            sequence INTEGER NOT NULL CHECK(sequence>=1),
+            disposition TEXT NOT NULL CHECK(disposition IN ('included','omitted','stale','inactive','untrusted','superseded')),
+            reason TEXT NOT NULL,
+            token_count INTEGER NOT NULL CHECK(token_count>=0),
+            token_classification TEXT NOT NULL CHECK(token_classification IN ('measured','estimated','synthetic','unknown')),
+            source_digest TEXT NOT NULL,
+            UNIQUE(context_operation_id, source_class, source_id)
+        )""",
+        """CREATE TABLE conversation_summary_artifacts (
+            summary_artifact_id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL REFERENCES conversations(conversation_id),
+            source_start_sequence INTEGER NOT NULL CHECK(source_start_sequence>=1),
+            source_end_sequence INTEGER NOT NULL CHECK(source_end_sequence>=source_start_sequence),
+            source_digest TEXT NOT NULL,
+            auxiliary_request_id TEXT REFERENCES frozen_model_requests(request_id),
+            auxiliary_attempt_id TEXT REFERENCES model_attempts(attempt_id),
+            content TEXT NOT NULL,
+            content_digest TEXT NOT NULL,
+            policy_version TEXT NOT NULL,
+            generator_version TEXT NOT NULL,
+            parent_summary_id TEXT REFERENCES conversation_summary_artifacts(summary_artifact_id),
+            instruction_manifest_id TEXT REFERENCES instruction_manifests(instruction_manifest_id),
+            workspace_binding_id TEXT REFERENCES workspace_bindings(workspace_binding_id),
+            status TEXT NOT NULL CHECK(status IN ('valid','stale','failed','legacy_unavailable','superseded')),
+            superseded_by TEXT REFERENCES conversation_summary_artifacts(summary_artifact_id),
+            created_at TEXT NOT NULL,
+            UNIQUE(conversation_id, source_digest, policy_version)
+        )""",
+        """CREATE TABLE conversation_summary_claims (
+            claim_id TEXT PRIMARY KEY,
+            summary_artifact_id TEXT NOT NULL REFERENCES conversation_summary_artifacts(summary_artifact_id),
+            claim_kind TEXT NOT NULL CHECK(claim_kind IN ('conversational_intent','explicit_decision','completed_work','unresolved_decision','repository_code_fact','tool_test_fact')),
+            claim_text TEXT NOT NULL,
+            source_start_sequence INTEGER NOT NULL,
+            source_end_sequence INTEGER NOT NULL,
+            source_artifact_id TEXT,
+            source_revision TEXT,
+            status TEXT NOT NULL CHECK(status IN ('valid','stale','historical')),
+            created_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE tool_result_artifacts (
+            artifact_id TEXT PRIMARY KEY,
+            legacy_session_id TEXT NOT NULL REFERENCES sessions(id),
+            tool_call_id TEXT NOT NULL,
+            channel TEXT NOT NULL,
+            mime_type TEXT NOT NULL,
+            encoding TEXT NOT NULL,
+            content BLOB,
+            content_digest TEXT NOT NULL,
+            captured_size INTEGER NOT NULL CHECK(captured_size>=0),
+            range_start INTEGER NOT NULL CHECK(range_start>=0),
+            range_end INTEGER NOT NULL CHECK(range_end>=range_start),
+            capture_limit INTEGER NOT NULL CHECK(capture_limit>=0),
+            capture_completeness TEXT NOT NULL CHECK(capture_completeness IN ('complete','incomplete','unknown')),
+            created_at TEXT NOT NULL,
+            UNIQUE(legacy_session_id, tool_call_id, channel, range_start, range_end)
+        )""",
+        """CREATE TABLE normalized_observations (
+            observation_id TEXT PRIMARY KEY,
+            artifact_id TEXT NOT NULL REFERENCES tool_result_artifacts(artifact_id),
+            status_kind TEXT NOT NULL,
+            semantic_json TEXT NOT NULL,
+            excerpt TEXT,
+            excerpt_digest TEXT,
+            prompt_truncated INTEGER NOT NULL CHECK(prompt_truncated IN (0,1)),
+            projection_completeness TEXT NOT NULL CHECK(projection_completeness IN ('complete','incomplete','unknown')),
+            created_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE context_excerpts (
+            excerpt_id TEXT PRIMARY KEY,
+            artifact_id TEXT NOT NULL REFERENCES tool_result_artifacts(artifact_id),
+            range_start INTEGER NOT NULL,
+            range_end INTEGER NOT NULL,
+            content_digest TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            CHECK(range_start>=0 AND range_end>=range_start)
+        )""",
+        """CREATE TABLE file_context_items (
+            file_context_item_id TEXT PRIMARY KEY,
+            workspace_binding_id TEXT NOT NULL REFERENCES workspace_bindings(workspace_binding_id),
+            normalized_path TEXT NOT NULL,
+            file_type TEXT NOT NULL,
+            content_hash TEXT NOT NULL,
+            revision TEXT NOT NULL,
+            byte_start INTEGER NOT NULL,
+            byte_end INTEGER NOT NULL,
+            line_start INTEGER,
+            line_end INTEGER,
+            range_digest TEXT NOT NULL,
+            origin_kind TEXT NOT NULL,
+            origin_id TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('current','historical','excluded','unavailable')),
+            content BLOB,
+            encoding TEXT NOT NULL DEFAULT 'binary',
+            capture_completeness TEXT NOT NULL DEFAULT 'unknown'
+                CHECK(capture_completeness IN ('complete','incomplete','unknown')),
+            created_at TEXT NOT NULL,
+            CHECK(byte_start>=0 AND byte_end>=byte_start)
+        )""",
+        """CREATE TABLE product_operation_receipts (
+            operation_id TEXT PRIMARY KEY,
+            payload_digest TEXT NOT NULL,
+            operation_kind TEXT NOT NULL,
+            result_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE m3_metric_samples (
+            metric_sample_id TEXT PRIMARY KEY,
+            metric_name TEXT NOT NULL,
+            population_kind TEXT NOT NULL,
+            conversation_id TEXT REFERENCES conversations(conversation_id),
+            turn_id TEXT REFERENCES turns(turn_id),
+            runtime_execution_id TEXT REFERENCES runtime_executions(runtime_execution_id),
+            request_id TEXT REFERENCES frozen_model_requests(request_id),
+            attempt_id TEXT REFERENCES model_attempts(attempt_id),
+            context_operation_id TEXT REFERENCES context_operations(context_operation_id),
+            value REAL,
+            unit TEXT NOT NULL,
+            classification TEXT NOT NULL CHECK(classification IN ('measured','estimated','synthetic','unknown','censored')),
+            coverage_status TEXT NOT NULL CHECK(coverage_status IN ('complete','incomplete','unknown','censored')),
+            dimensions_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX IF NOT EXISTS instruction_manifest_entries_order ON instruction_manifest_entries(instruction_manifest_id, sequence)",
+        "CREATE INDEX IF NOT EXISTS instruction_sources_scope ON instruction_sources(repository_id, project_scope_id, workspace_binding_id, normalized_path)",
+        "CREATE INDEX IF NOT EXISTS instruction_manifests_revision ON instruction_manifests(conversation_id, revision)",
+        "CREATE INDEX IF NOT EXISTS instruction_manifest_status_history ON instruction_manifest_status_events(instruction_manifest_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS model_attempts_request_order ON model_attempts(request_id, ordinal)",
+        "CREATE INDEX IF NOT EXISTS model_attempt_dispatches_attempt ON model_attempt_dispatches(attempt_id)",
+        "CREATE INDEX IF NOT EXISTS context_selection_operation_order ON context_selection_items(context_operation_id, sequence)",
+        "CREATE INDEX IF NOT EXISTS summary_prefix ON conversation_summary_artifacts(conversation_id, source_end_sequence)",
+        "CREATE INDEX IF NOT EXISTS file_context_binding_path ON file_context_items(workspace_binding_id, normalized_path, revision)",
+        "CREATE INDEX IF NOT EXISTS m3_metrics_population ON m3_metric_samples(metric_name, population_kind, created_at)",
+        """CREATE TRIGGER instruction_snapshots_no_update BEFORE UPDATE ON instruction_snapshots BEGIN SELECT RAISE(ABORT, 'instruction snapshots are immutable'); END""",
+        """CREATE TRIGGER instruction_snapshots_no_delete BEFORE DELETE ON instruction_snapshots BEGIN SELECT RAISE(ABORT, 'instruction snapshots are immutable'); END""",
+        """CREATE TRIGGER instruction_manifests_no_update BEFORE UPDATE ON instruction_manifests BEGIN SELECT RAISE(ABORT, 'instruction manifests are immutable'); END""",
+        """CREATE TRIGGER instruction_manifests_no_delete BEFORE DELETE ON instruction_manifests BEGIN SELECT RAISE(ABORT, 'instruction manifests are immutable'); END""",
+        """CREATE TRIGGER instruction_manifest_entries_no_update BEFORE UPDATE ON instruction_manifest_entries BEGIN SELECT RAISE(ABORT, 'instruction manifest entries are immutable'); END""",
+        """CREATE TRIGGER instruction_manifest_entries_no_delete BEFORE DELETE ON instruction_manifest_entries BEGIN SELECT RAISE(ABORT, 'instruction manifest entries are immutable'); END""",
+        """CREATE TRIGGER frozen_model_requests_no_update BEFORE UPDATE ON frozen_model_requests BEGIN SELECT RAISE(ABORT, 'frozen model requests are immutable'); END""",
+        """CREATE TRIGGER frozen_model_requests_no_delete BEFORE DELETE ON frozen_model_requests BEGIN SELECT RAISE(ABORT, 'frozen model requests are immutable'); END""",
+        """CREATE TRIGGER context_manifests_no_update BEFORE UPDATE ON context_manifests BEGIN SELECT RAISE(ABORT, 'context manifests are immutable'); END""",
+        """CREATE TRIGGER context_manifests_no_delete BEFORE DELETE ON context_manifests BEGIN SELECT RAISE(ABORT, 'context manifests are immutable'); END""",
+        """CREATE TRIGGER model_attempts_no_update BEFORE UPDATE ON model_attempts BEGIN SELECT RAISE(ABORT, 'model attempts are append-only'); END""",
+        """CREATE TRIGGER model_attempts_no_delete BEFORE DELETE ON model_attempts BEGIN SELECT RAISE(ABORT, 'model attempts are append-only'); END""",
+        """CREATE TRIGGER model_attempt_dispatches_no_update BEFORE UPDATE ON model_attempt_dispatches BEGIN SELECT RAISE(ABORT, 'model dispatches are append-only'); END""",
+        """CREATE TRIGGER model_attempt_dispatches_no_delete BEFORE DELETE ON model_attempt_dispatches BEGIN SELECT RAISE(ABORT, 'model dispatches are append-only'); END""",
+        """CREATE TRIGGER model_attempt_outcomes_no_update BEFORE UPDATE ON model_attempt_outcomes BEGIN SELECT RAISE(ABORT, 'model outcomes are append-only'); END""",
+        """CREATE TRIGGER model_attempt_outcomes_no_delete BEFORE DELETE ON model_attempt_outcomes BEGIN SELECT RAISE(ABORT, 'model outcomes are append-only'); END""",
+    ),
+)
+
+
+MIGRATIONS: tuple[Migration, ...] = (V1, V2, V3, V4, V5, V6, V7)
 
 
 def _validate_migrations(migrations: Sequence[Migration]) -> None:

@@ -106,6 +106,7 @@ class ModelCapability:
     protocol_margin_tokens: int = 0
     token_counter: TokenCounter | None = None
     source: str = "registry"
+    version: str = "registry-v1"
 
     def __post_init__(self) -> None:
         if not self.provider or not self.model:

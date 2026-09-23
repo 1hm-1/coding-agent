@@ -244,7 +244,7 @@ class RecoveryTest(unittest.TestCase):
             self.assertEqual(calls[0]["tool_name"], "search_files")
             self.assertEqual(calls[0]["attempt"], 1)
 
-    def test_model_running_crash_is_marked_uncertain_before_retry(self) -> None:
+    def test_model_start_commit_before_dispatch_resumes_same_attempt(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = self._source(root)
@@ -268,11 +268,16 @@ class RecoveryTest(unittest.TestCase):
                 backend=ScriptedBackend([{"final": "verified"}]),
             )
             self.assertIs(resumed.state, RuntimeState.COMPLETED)
-            self.assertEqual(resumed.model_calls, 2)
-            self.assertIn(
+            self.assertEqual(resumed.model_calls, 1)
+            self.assertNotIn(
                 EventType.MODEL_CALL_UNCERTAIN,
                 [event.event_type for event in application.journal.list_events(session_id)],
             )
+            self.assertEqual(application.journal.connection.execute(
+                "SELECT COUNT(*) FROM model_attempts WHERE request_id IN "
+                "(SELECT request_id FROM frozen_model_requests WHERE legacy_session_id=?)",
+                (session_id,),
+            ).fetchone()[0], 1)
 
     def test_unknown_edit_effect_requires_explicit_resolution(self) -> None:
         resolutions = ("effect-not-applied", "effect-applied", "abort")

@@ -8,8 +8,8 @@ Scope: this file applies to `/home/hmli/code/coding-agent` only.
    M0 Architecture Freeze + Characterization is Accepted and complete; the formal M1 execution
    contract is Accepted and **M1 is complete**. M1 additive Schema v5 identity/mapping work is
    implemented while the legacy Runtime compatibility boundary remains intact. The formal M2
-   execution contract is **Accepted** and **M2 is complete** as of 2026-09-23. M3–M7 remain
-   inactive; M3 has not been issued or activated.
+   execution contract is **Accepted** and **M2 is complete** as of 2026-09-23. The formal M3
+   execution contract is **Accepted** and **M3 is complete** as of 2026-09-23. M4–M7 remain inactive.
    P2-R1 is historical/superseded, not the next candidate.
 3. Preserve the M1/M1.5 vertical slice and all four semantic golden tests.
 4. Do not add a general Shell tool. In the current legacy implementation, `restricted_test` accepts
@@ -43,12 +43,14 @@ Scope: this file applies to `/home/hmli/code/coding-agent` only.
 17. Do not confuse the Accepted, completed Product-Layer M0 with the completed historical Runtime
     M0. Product-Layer M0 was characterization only and did not itself implement target product
     behavior. M1 work was authorized only by its issued contract and is now complete. M2 work is
-    authorized only by the then-active M2 contract; M3–M7 require future activation. Contract-publication
+    authorized only by the then-active M2 contract; M3 work was authorized by the accepted M3
+    contract, and M4–M7 require future activation. Contract-publication
     turns authorize no code, schema, semantic, or metrics implementation. The historical
     narrowly scoped M0 testability exception is closed with M0 completion.
 18. Store published formal milestone contracts at
     `docs/execution-contracts/mN-execution-contract.md`; issuance includes the repository copy and
     navigation links, with scope and activation explicit. The completed M1 contract is
     `docs/execution-contracts/m1-execution-contract.md`; the accepted M2 contract is
-    `docs/execution-contracts/m2-execution-contract.md`. Do not invent or autoactivate M3–M7.
+    `docs/execution-contracts/m2-execution-contract.md`; the accepted M3 contract is
+    `docs/execution-contracts/m3-execution-contract.md`. Do not invent or autoactivate M4–M7.
     Record material amendments explicitly instead of silently rewriting issued scope.

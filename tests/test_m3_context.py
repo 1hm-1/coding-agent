@@ -443,6 +443,17 @@ class SummaryAndPersistenceTest(unittest.TestCase):
                 ]
                 self.assertTrue(rejected)
                 self.assertEqual(application.journal.list_summaries(result.session_id), [])
+                lineage = application.journal.connection.execute(
+                    """SELECT request_kind, outcome_kind
+                       FROM frozen_model_requests AS request
+                       JOIN model_attempts AS attempt USING(request_id)
+                       JOIN model_attempt_outcomes AS outcome USING(attempt_id)
+                       WHERE request.legacy_session_id=? AND request.request_kind='summary_auxiliary'""",
+                    (result.session_id,),
+                ).fetchall()
+                self.assertEqual([(row["request_kind"], row["outcome_kind"]) for row in lineage], [
+                    ("summary_auxiliary", "failed"),
+                ])
 
     def test_compression_round_trip_is_observable_and_keeps_raw_events(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -515,6 +526,20 @@ class SummaryAndPersistenceTest(unittest.TestCase):
             self.assertIn(EventType.COMPRESSION_FINISHED, [event.event_type for event in events])
             summaries = application.journal.list_summaries(result.session_id)
             self.assertEqual(len(summaries), 1)
+            lineage = application.journal.connection.execute(
+                """SELECT request.request_kind, outcome.outcome_kind,
+                          dispatch.dispatched_at, request.legacy_model_call_id
+                   FROM frozen_model_requests AS request
+                   JOIN model_attempts AS attempt USING(request_id)
+                   JOIN model_attempt_dispatches AS dispatch USING(attempt_id)
+                   JOIN model_attempt_outcomes AS outcome USING(attempt_id)
+                   WHERE request.legacy_session_id=? AND request.request_kind='summary_auxiliary'""",
+                (result.session_id,),
+            ).fetchone()
+            self.assertEqual((lineage["request_kind"], lineage["outcome_kind"]),
+                             ("summary_auxiliary", "succeeded"))
+            self.assertIsNotNone(lineage["dispatched_at"])
+            self.assertIsNone(lineage["legacy_model_call_id"])
             self.assertEqual(
                 application.replay_session(result.session_id).final_state,
                 RuntimeState.COMPLETED,
@@ -523,6 +548,14 @@ class SummaryAndPersistenceTest(unittest.TestCase):
                 len([event for event in events if event.event_type is EventType.MESSAGE_ADDED]),
                 4,
             )
+            database = application.journal.db_path
+            application.journal.close()
+            with SQLiteRunJournal(database) as reopened:
+                self.assertEqual(reopened.connection.execute(
+                    """SELECT COUNT(*) FROM frozen_model_requests
+                       WHERE legacy_session_id=? AND request_kind='summary_auxiliary'""",
+                    (result.session_id,),
+                ).fetchone()[0], 1)
 
 
 if __name__ == "__main__":

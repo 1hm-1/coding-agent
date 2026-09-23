@@ -6,9 +6,11 @@
 > Characterization 已获 owner Accepted 并完成。正式
 > [`M1 execution contract`](./execution-contracts/m1-execution-contract.md) 已 Accepted/完成；
 > [`M2 execution contract`](./execution-contracts/m2-execution-contract.md) 已于 2026-09-23
-> Accepted/完成；M3–M7 仍未激活且 M3 未发布。M2 additive Schema v6 与受限 Product lifecycle
-> 已完成；legacy Runtime kernel、copied workspace 与 M3–M7 target
-> behavior 保持兼容边界，见 [`m2-product-lifecycle-design.md`](./m2-product-lifecycle-design.md)。
+> Accepted/完成；[`M3 execution contract`](./execution-contracts/m3-execution-contract.md) 已于
+> 2026-09-23 获 owner Accepted/完成；M3 additive Schema v7、Instructions、ContextComposer、frozen
+> request/attempt、artifact 与 metric implementation 已通过验收；
+> M4–M7 仍未激活。M2 additive Schema v6 与受限 Product lifecycle 已完成；legacy Runtime
+> kernel、copied workspace 保持兼容边界，见 [`m3-instruction-context-design.md`](./m3-instruction-context-design.md)。
 > V1 capability/metrics/responsiveness acceptance 已补齐；P2-R1 不再是下一候选。M0 只允许
 > characterization，不表示未来 target product behavior 已实现。
 > 固定版本：`v0.1.0`；安装、测试、离线 Eval、Demo 和支持边界见 `docs/releases/v0.1.0.md`。
@@ -28,6 +30,7 @@
    [已完成的 M0 milestone execution contract](./execution-contracts/m0-execution-contract.md)、
    [completed M1 milestone execution contract](./execution-contracts/m1-execution-contract.md)、
    [accepted M2 milestone execution contract](./execution-contracts/m2-execution-contract.md)、
+   [completed M3 milestone execution contract](./execution-contracts/m3-execution-contract.md)、
    [`v1-development-capability-matrix.md`](./v1-development-capability-matrix.md)、全部 accepted ADR，以及
    已完成的 P2-M1/P2-M2 和 Runtime IPC 权威规范。旧
    `conversation-runtime-refactor-plan.md` 只作历史记录，不得从中激活实施。
@@ -77,8 +80,8 @@ spike 的 8 个隔离/一致性测试和 S3.8 audit 的 3 个测试）。Ruff、
 - `v0.1.0` 没有 `protocol-info`、`run-headless` 或 Runtime IPC v1；这些能力只属于当前 `0.2.0.dev0` 开发树。
 - **Product-Layer M0** 已 Accepted/完成，不要与已完成的历史 Runtime M0 混淆。M0 仅做
   architecture freeze/characterization，未实现 target product behavior。M1 已由正式契约实施并
-  Accepted/完成 additive Schema v5 identity/mapping；M2 已按正式契约于 2026-09-23 Accepted/完成，M3–M7
-  仍未授权且 M3 未发布；M0 历史 testability exception
+  Accepted/完成 additive Schema v5 identity/mapping；M2 已按正式契约于 2026-09-23 Accepted/完成；M3
+  已于 2026-09-23 获 owner Accepted/完成，M4–M7 仍未授权；M0 历史 testability exception
   已随 M0 完成而关闭。
 
 ## 4. M2/M3/M4/M5.1 完成事实与下一步推荐入口
@@ -286,9 +289,10 @@ governance/control-plane 部分继续有效。Memory 实施尚未激活。本次
 [`architecture-consistency-audit.md`](./architecture-consistency-audit.md) 与
 [`coding-agent-v1-implementation-roadmap.md`](./coding-agent-v1-implementation-roadmap.md)。旧
 [`conversation-runtime-refactor-plan.md`](./conversation-runtime-refactor-plan.md) 已 superseded；新路线
-Product-Layer M0–M2 已 Accepted/完成；M1 additive Schema v5 identity/mapping 与 M2 additive
-Schema v6/Product lifecycle 已实现。M2 于 2026-09-23 获 owner acceptance；M3–M7 与其 target
-behavior 仍未激活，M3 未发布。
+Product-Layer M0–M3 已 Accepted/完成；M1 additive Schema v5 identity/mapping 与 M2 additive
+Schema v6/Product lifecycle 已实现。M2 于 2026-09-23 获 owner acceptance；M3 正式合同已于
+2026-09-23 获 owner Accepted/完成，additive Schema v7 与 M3 target implementation 已通过验收；
+M4–M7 仍未激活。
 
 后续开发协作采用“主控发布任务、审阅成果并检查代码；Terra High 执行已批准的具体修改”的分工。
 这是仓库开发流程，不是产品 multi-Agent 功能，也不激活任何 milestone。
@@ -305,7 +309,7 @@ behavior 仍未激活，M3 未发布。
   门槛，不能用改题或真实 Provider 未运行来填补该证据缺口。L3.5 v2 首轮也未达到 recall 门槛，且
   observation-only runner 不是 Provider A/B；P2-M2.3 已以无合格后端收口，不执行真实 Provider L4；
 - 在最终说明中给出测试数量、golden 状态、迁移版本、覆盖率/类型检查/CI 状态和仍未实现项；
-  当前 SQLite latest schema 为 additive v6（保留 v4 Memory 与 v5 Product identity 含义），M4.1/M4.2 native backend 不等同于 OCI container；
+  当前开发树 SQLite latest schema 为 additive v7（保留 v4 Memory、v5 Product identity 与 v6 Product lifecycle 含义），M4.1/M4.2 native backend 不等同于 OCI container；
 - 不使用“生产可用”“完全安全”等超出证据的表述。
 
 ## 6. 新窗口建议首条指令
@@ -318,14 +322,15 @@ docs/target-architecture-snapshot.md、docs/architecture-consistency-audit.md、
 docs/coding-agent-v1-implementation-roadmap.md、docs/execution-contracts/m0-execution-contract.md、
 docs/execution-contracts/m1-execution-contract.md、
 docs/execution-contracts/m2-execution-contract.md、
+docs/execution-contracts/m3-execution-contract.md、
 docs/v1-development-capability-matrix.md、全部 accepted ADR 和 Runtime IPC v1/compatibility
 权威规范。P2-M1/P2-M2 已完成；169/169 是 M0 前历史基线，M0 证据收口为 183 个测试：
 182 pass、1 个 M3-owned expected failure，不要将这些数字当作本窗口新运行。横向产品架构已冻结，
 Product-Layer M0 characterization 已 Accepted/完成；不要与历史 Runtime M0 混淆。正式 M1 execution
 contract 已 Accepted/完成，M1 additive Schema v5 identity/mapping 已实现，legacy Runtime
-compatibility 保持不变。正式 M2 execution contract 已于 2026-09-23 Accepted/完成；M3–M7 和其
-target product behavior 均未激活，M3 未发布。P2-R1 不再是下一候选，Memory 定位为 optional M2-lite。
-后续 Product work 必须等待下一正式契约；不得提前加入 M3–M7 的 Product behavior、Skill、MCP、多 Agent、RAG/vector、
+compatibility 保持不变。正式 M2 execution contract 已于 2026-09-23 Accepted/完成；正式 M3
+execution contract 已于 2026-09-23 获 owner Accepted/完成；M4–M7 未激活。P2-R1 不再是下一候选，Memory 定位为 optional M2-lite。
+当前不得提前加入 M4–M7 的 Product behavior、Skill、MCP、多 Agent、RAG/vector、
 shell 字符串或默认网络。
 ```
 

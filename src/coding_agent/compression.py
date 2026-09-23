@@ -344,6 +344,22 @@ class CompressionEngine:
         events: Sequence[Event],
         event_range: EventRange,
     ) -> CompressionResult:
+        compression_request, selected_events = self.prepare_request(
+            request, events=events, event_range=event_range,
+        )
+        return self.complete_prepared(
+            request, compression_request=compression_request,
+            selected_events=selected_events, event_range=event_range,
+        )
+
+    def prepare_request(
+        self,
+        request: ContextBuildInput,
+        *,
+        events: Sequence[Event],
+        event_range: EventRange,
+    ) -> tuple[ModelRequest, tuple[Event, ...]]:
+        """Build the exact auxiliary request without invoking its provider."""
         selected_events = tuple(
             event
             for event in events
@@ -369,8 +385,20 @@ class CompressionEngine:
                 "call_kind": "compression",
                 "source_event_start": event_range.start,
                 "source_event_end": event_range.end,
+                "source_event_hash": event_range.source_event_hash,
             },
         )
+        return compression_request, selected_events
+
+    def complete_prepared(
+        self,
+        request: ContextBuildInput,
+        *,
+        compression_request: ModelRequest,
+        selected_events: Sequence[Event],
+        event_range: EventRange,
+    ) -> CompressionResult:
+        """Invoke and validate a request already frozen by the Runtime journal."""
         response = self.summarizer.complete(compression_request)
         if response.tool_calls:
             raise SummaryValidationError(

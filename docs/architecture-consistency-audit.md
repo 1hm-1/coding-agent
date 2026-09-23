@@ -1,7 +1,7 @@
 # Cross-ADR Architecture Consistency Audit
 
 Date: 2026-09-22
-Status: **Architecture frozen; Product-Layer M0–M2 Accepted and complete; M3–M7 inactive; M3 not issued**
+Status: **Architecture frozen; Product-Layer M0–M3 Accepted and complete; M4–M7 inactive**
 
 ## Purpose
 
@@ -209,3 +209,12 @@ inactive, and the M3+M4 real-tree mutation gate remains closed.
 **M2 completion annotation (2026-09-23):** the owner accepted M2 as complete after its Schema v6,
 Product lifecycle, read-only direct-tree, recovery, and compatibility evidence passed. M3–M7 remain
 inactive; M3 has not been issued or activated. This closure changes no Accepted ADR text.
+
+**M3 activation annotation (2026-09-23):** the formal
+[`M3 execution contract`](./execution-contracts/m3-execution-contract.md) is now published and M3
+is ACTIVE. This publication changes no code, Schema, metric implementation, Accepted ADR, or M2
+evidence. M4–M7 remain inactive, and the M3+M4 real-tree mutation gate remains closed.
+
+**M3 completion annotation (2026-09-23):** the owner accepted the completed Schema v7,
+instruction/context/frozen-request implementation and verification. M3 is Accepted/complete;
+M4–M7 remain inactive, and real user trees remain read-only until the separate full M4 gate passes.

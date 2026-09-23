@@ -20,7 +20,12 @@ from coding_agent.domain import (
     utc_now,
 )
 from coding_agent.persistence import JournalMutation, RunJournal
-from coding_agent.persistence import ModelCallMutation, SummaryMutation, ToolCallMutation
+from coding_agent.persistence import (
+    AuxiliaryModelCallMutation,
+    ModelCallMutation,
+    SummaryMutation,
+    ToolCallMutation,
+)
 
 
 class EventStore(Protocol):
@@ -163,6 +168,7 @@ class TrajectoryRecorder:
         expected_state: RuntimeState | None = None,
         message_to_append: Message | None = None,
         model_call: ModelCallMutation | None = None,
+        auxiliary_model_call: AuxiliaryModelCallMutation | None = None,
         tool_call: ToolCallMutation | None = None,
         summary: SummaryMutation | None = None,
         clear_interrupt: bool = False,
@@ -189,6 +195,7 @@ class TrajectoryRecorder:
                     payload=payload or {},
                     message_to_append=message_to_append,
                     model_call=model_call,
+                    auxiliary_model_call=auxiliary_model_call,
                     tool_call=tool_call,
                     summary=summary,
                     clear_interrupt=clear_interrupt,

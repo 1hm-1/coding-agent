@@ -86,6 +86,7 @@ class ScriptedBackend:
                 usage=Usage(
                     input_tokens=int(raw_usage.get("input_tokens", 0)),
                     output_tokens=int(raw_usage.get("output_tokens", 0)),
+                    present="input_tokens" in raw_usage and "output_tokens" in raw_usage,
                 ),
                 finish_reason=str(
                     item.get("finish_reason", "tool_calls" if calls else "stop")

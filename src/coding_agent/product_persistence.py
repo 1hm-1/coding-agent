@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Mapping, Protocol, runtime_checkable
+from typing import Any, Mapping, Protocol, runtime_checkable
 
 from coding_agent.domain import Message, RunPolicy, RuntimeSnapshot
 from coding_agent.product_domain import (
@@ -19,6 +19,15 @@ from coding_agent.product_domain import (
 @runtime_checkable
 class ProductRepository(Protocol):
     """The M1 Product persistence boundary; SQLite remains its sole implementation."""
+
+    def get_model_call(self, session_id: str, request_id: str) -> dict[str, Any] | None:
+        ...
+
+    def canonical_input_digest(
+        self, *, conversation_id: str, input_kind: str, payload: Mapping[str, object],
+        correlation_id: str | None, expected_conversation_version: int,
+    ) -> str:
+        ...
 
     def register_repository_identity(
         self, descriptors: Mapping[str, str], *, repository_id: str | None = None
@@ -114,6 +123,29 @@ class ProductRepository(Protocol):
         ...
 
     def resume_execution(self, operation_id: str) -> TurnAdmission:
+        ...
+
+    def load_m3_context_snapshot(self, operation_id: str) -> dict[str, object]:
+        """Load one immutable Product snapshot for stateless Context composition."""
+        ...
+
+    def record_m3_context_failure(
+        self, *, operation_id: str, proposed_request_id: str,
+        status: str, reason: str, policy_version: str,
+    ) -> None:
+        ...
+
+    def configure_instruction_trust(
+        self, *, operation_id: str, payload_digest: str, repository_id: str,
+        project_scope_id: str, workspace_binding_id: str | None,
+        source_kind: str, trusted: bool,
+    ) -> str:
+        ...
+
+    def refresh_instruction_manifest(
+        self, *, operation_id: str, payload_digest: str, conversation_id: str,
+        expected_version: int, reason: str, target_paths: tuple[str, ...],
+    ) -> str:
         ...
 
     def inspect_workspace_startup(self, workspace_binding_id: str) -> dict[str, object]:
